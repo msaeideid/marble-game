@@ -1,0 +1,16 @@
+{
+  "id": "hero.swinger",
+  "displayName": "SWINGER (placeholder name)",
+  "movement": {
+    "runSpeed": 9,
+    "groundAccel": 60,
+    "airAccel": 20,
+    "gravity": 28,
+    "jumpSpeed": 10,
+    "maxFallSpeed": 50,
+    "coyoteTime": 0.1,
+    "jumpBufferTime": 0.1,
+    "halfWidth": 0.35,
+    "height": 1.8
+  }
+}

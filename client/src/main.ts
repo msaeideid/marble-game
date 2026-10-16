@@ -1,16 +1,10 @@
-import { createGameView } from './render/scene';
-import { FixedStepper } from './sim/fixedStep';
+import { Game } from './game/game';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
-const view = createGameView(canvas);
-const stepper = new FixedStepper(1 / 30);
+const hud = document.getElementById('build') as HTMLElement;
 
-let simTicks = 0;
-view.engine.runRenderLoop(() => {
-  stepper.advance(view.engine.getDeltaTime() / 1000, () => {
-    simTicks++;
-  });
-  view.scene.render();
-});
+const game = new Game(canvas, hud);
+game.start();
 
-(window as unknown as { __vanguard: object }).__vanguard = { view, ticks: () => simTicks };
+// Handy for debugging and automated browser checks.
+(window as unknown as { __vanguard: Game }).__vanguard = game;

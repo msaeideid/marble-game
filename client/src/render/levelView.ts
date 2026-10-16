@@ -1,0 +1,50 @@
+import { Color3 } from '@babylonjs/core/Maths/math.color';
+import '@babylonjs/core/Meshes/instancedMesh';
+import { CreateBox } from '@babylonjs/core/Meshes/Builders/boxBuilder';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import type { Mesh } from '@babylonjs/core/Meshes/mesh';
+import type { Scene } from '@babylonjs/core/scene';
+import type { ColliderKind } from '../sim/types';
+import type { World } from '../sim/world';
+
+const PALETTE: Record<ColliderKind, Color3[]> = {
+  ground: [new Color3(0.5, 0.78, 0.5)],
+  building: [
+    new Color3(0.93, 0.45, 0.45),
+    new Color3(0.4, 0.62, 0.95),
+    new Color3(0.98, 0.78, 0.35),
+    new Color3(0.62, 0.5, 0.9),
+  ],
+  crate: [new Color3(1, 0.65, 0.25)],
+};
+
+function flatMaterial(scene: Scene, name: string, color: Color3): StandardMaterial {
+  const m = new StandardMaterial(name, scene);
+  m.diffuseColor = color;
+  m.specularColor = Color3.Black();
+  return m;
+}
+
+/** Draws the sim's collider boxes as flat-shaded instances (S1 greybox; real art replaces this later). */
+export function buildLevelView(scene: Scene, world: World): void {
+  const sources = new Map<string, Mesh>();
+  const sourceFor = (kind: ColliderKind, variant: number): Mesh => {
+    const key = `${kind}:${variant}`;
+    let mesh = sources.get(key);
+    if (!mesh) {
+      mesh = CreateBox(`src-${key}`, { size: 1 }, scene);
+      mesh.material = flatMaterial(scene, `mat-${key}`, PALETTE[kind][variant]!);
+      mesh.isVisible = false;
+      sources.set(key, mesh);
+    }
+    return mesh;
+  };
+
+  world.colliders.forEach((c, i) => {
+    const variant = i % PALETTE[c.kind].length;
+    const inst = sourceFor(c.kind, variant).createInstance(`c${i}`);
+    inst.scaling.set(c.max.x - c.min.x, c.max.y - c.min.y, c.max.z - c.min.z);
+    inst.position.set((c.min.x + c.max.x) / 2, (c.min.y + c.max.y) / 2, (c.min.z + c.max.z) / 2);
+    inst.freezeWorldMatrix();
+  });
+}

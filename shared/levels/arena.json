@@ -1,0 +1,28 @@
+{
+ "id": "arena",
+ "spawn": [0, 0.01, 0],
+ "killY": -40,
+ "colliders": [
+  {"kind":"ground","min":[-120,-2,-120],"max":[120,0,120]},
+  {"kind":"building","min":[-41,0,-41],"max":[-31,8,-31]},
+  {"kind":"building","min":[-41,0,-17],"max":[-31,23,-7]},
+  {"kind":"building","min":[-41,0,7],"max":[-31,8,17]},
+  {"kind":"building","min":[-41,0,31],"max":[-31,23,41]},
+  {"kind":"building","min":[-17,0,-41],"max":[-7,33,-31]},
+  {"kind":"building","min":[-17,0,-17],"max":[-7,23,-7]},
+  {"kind":"building","min":[-17,0,7],"max":[-7,13,17]},
+  {"kind":"building","min":[-17,0,31],"max":[-7,33,41]},
+  {"kind":"building","min":[7,0,-41],"max":[17,28,-31]},
+  {"kind":"building","min":[7,0,-17],"max":[17,23,-7]},
+  {"kind":"building","min":[7,0,7],"max":[17,18,17]},
+  {"kind":"building","min":[7,0,31],"max":[17,13,41]},
+  {"kind":"building","min":[31,0,-41],"max":[41,23,-31]},
+  {"kind":"building","min":[31,0,-17],"max":[41,23,-7]},
+  {"kind":"building","min":[31,0,7],"max":[41,23,17]},
+  {"kind":"building","min":[31,0,31],"max":[41,23,41]},
+  {"kind":"crate","min":[6,0,-2],"max":[8,1.2,2]},
+  {"kind":"crate","min":[8,0,-2],"max":[10,2.4,2]},
+  {"kind":"crate","min":[10,0,-2],"max":[12,3.5999999999999996,2]},
+  {"kind":"crate","min":[12,0,-2],"max":[14,4.8,2]}
+ ]
+}
