@@ -28,10 +28,27 @@ export interface PlayerIntent {
   moveZ: number;
   /** Camera heading the stick is relative to, in radians. */
   yaw: number;
+  /** Camera elevation in radians (positive = camera above, looking down). Aim comes from yaw + pitch. */
+  pitch: number;
   /** True only on the tick the jump button went down. */
   jumpPressed: boolean;
+  /** Swing button is held (a quick tap between ticks still counts for one tick). */
+  swingHeld: boolean;
+  /** Reel-in button is held. */
+  reelHeld: boolean;
+  /** True only on the tick the zip button went down. */
+  zipPressed: boolean;
 }
 
-export const NEUTRAL_INTENT: PlayerIntent = { moveX: 0, moveZ: 0, yaw: 0, jumpPressed: false };
+export const NEUTRAL_INTENT: PlayerIntent = {
+  moveX: 0,
+  moveZ: 0,
+  yaw: 0,
+  pitch: 0,
+  jumpPressed: false,
+  swingHeld: false,
+  reelHeld: false,
+  zipPressed: false,
+};
 
 export const vec3 = (x = 0, y = 0, z = 0): Vec3 => ({ x, y, z });

@@ -11,7 +11,10 @@ export interface RayHit {
   distance: number;
   point: Vec3;
   normal: Vec3;
+  collider: Collider;
 }
+
+type BoxHit = Omit<RayHit, 'collider'>;
 
 /** Static collision world made of axis-aligned boxes. Same shape the (future) Python server loads. */
 export class World {
@@ -37,7 +40,7 @@ export class World {
     let best: RayHit | null = null;
     for (const c of this.colliders) {
       const hit = rayVsBox(origin, d, c.min, c.max, maxDistance);
-      if (hit && (!best || hit.distance < best.distance)) best = hit;
+      if (hit && (!best || hit.distance < best.distance)) best = { ...hit, collider: c };
     }
     return best;
   }
@@ -46,7 +49,7 @@ export class World {
 const AXES = ['x', 'y', 'z'] as const;
 
 /** Slab test. Rays starting inside a box report no hit, which suits camera and anchor queries. */
-export function rayVsBox(o: Vec3, d: Vec3, min: Vec3, max: Vec3, maxDistance: number): RayHit | null {
+export function rayVsBox(o: Vec3, d: Vec3, min: Vec3, max: Vec3, maxDistance: number): BoxHit | null {
   let tNear = 0;
   let tFar = maxDistance;
   let nAxis: (typeof AXES)[number] = 'x';

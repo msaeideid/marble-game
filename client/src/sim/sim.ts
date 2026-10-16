@@ -1,4 +1,5 @@
-import { createPlayerState, stepPlayer, type MovementParams, type PlayerState } from './controller';
+import { createPlayerState, stepPlayer, type PlayerState } from './controller';
+import type { HeroParams } from './params';
 import { NEUTRAL_INTENT, type PlayerIntent } from './types';
 import type { World } from './world';
 
@@ -9,11 +10,11 @@ export class Sim {
 
   constructor(
     readonly world: World,
-    readonly movement: MovementParams,
+    readonly hero: HeroParams,
   ) {}
 
   addPlayer(id: string): PlayerState {
-    const state = createPlayerState(this.world.spawn);
+    const state = createPlayerState(this.world.spawn, this.hero);
     this.players.set(id, state);
     return state;
   }
@@ -21,16 +22,15 @@ export class Sim {
   /** Advance every player one fixed tick using the intents supplied this tick. */
   step(dt: number, intents: ReadonlyMap<string, PlayerIntent>): void {
     for (const [id, state] of this.players) {
-      stepPlayer(state, intents.get(id) ?? NEUTRAL_INTENT, this.movement, this.world.colliders, dt);
-      if (state.pos.y < this.world.killY) this.respawn(state);
+      stepPlayer(state, intents.get(id) ?? NEUTRAL_INTENT, this.hero, this.world, dt);
+      if (state.pos.y < this.world.killY) this.respawn(id);
     }
     this.tick++;
   }
 
-  private respawn(state: PlayerState): void {
-    state.pos = { ...this.world.spawn };
-    state.prevPos = { ...this.world.spawn };
-    state.vel = { x: 0, y: 0, z: 0 };
-    state.grounded = false;
+  /** Reset in place so references held by views and tests stay valid. */
+  private respawn(id: string): void {
+    const state = this.players.get(id);
+    if (state) Object.assign(state, createPlayerState(this.world.spawn, this.hero));
   }
 }

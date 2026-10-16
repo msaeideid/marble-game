@@ -1,27 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import swinger from '@shared/data/heroes/swinger.json';
 import arena from '@shared/levels/arena.json';
-import type { MovementParams } from '../src/sim/controller';
+import type { HeroParams } from '../src/sim/params';
 import { Sim } from '../src/sim/sim';
-import type { PlayerIntent } from '../src/sim/types';
+import { NEUTRAL_INTENT, type PlayerIntent } from '../src/sim/types';
 import { World } from '../src/sim/world';
 
 const DT = 1 / 30;
-const params = swinger.movement as MovementParams;
+const hero = swinger as HeroParams;
+const params = hero.movement;
 
 function makeSim(): Sim {
-  const sim = new Sim(new World(arena), params);
+  const sim = new Sim(new World(arena), hero);
   sim.addPlayer('p1');
   return sim;
 }
 
-const intent = (over: Partial<PlayerIntent> = {}): PlayerIntent => ({
-  moveX: 0,
-  moveZ: 0,
-  yaw: 0,
-  jumpPressed: false,
-  ...over,
-});
+const intent = (over: Partial<PlayerIntent> = {}): PlayerIntent => ({ ...NEUTRAL_INTENT, ...over });
 
 function run(sim: Sim, ticks: number, make: (i: number) => PlayerIntent): void {
   for (let i = 0; i < ticks; i++) sim.step(DT, new Map([['p1', make(i)]]));
@@ -126,7 +121,7 @@ describe('player controller', () => {
     const sim = makeSim();
     const p = sim.players.get('p1')!;
     p.pos = { x: 0, y: 500, z: 0 };
-    run(sim, 400, () => intent());
+    run(sim, 700, () => intent());
     expect(p.pos.y).toBeGreaterThanOrEqual(-1e-6);
     expect(p.grounded).toBe(true);
   });

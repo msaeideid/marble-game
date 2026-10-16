@@ -1,13 +1,16 @@
 const LOOK_SENSITIVITY = 0.0025; // radians per pixel
 const PAD_LOOK_SPEED = 2.8; // radians per second at full stick
 const DEADZONE = 0.15;
-const MIN_PITCH = -0.15;
+const MIN_PITCH = -0.85; // looking well up, to aim tethers at rooftops
 const MAX_PITCH = 1.3;
 
 export interface MoveInput {
   moveX: number;
   moveZ: number;
   jumpPressed: boolean;
+  swingHeld: boolean;
+  reelHeld: boolean;
+  zipPressed: boolean;
 }
 
 function deadzone(v: number): number {
@@ -25,6 +28,10 @@ export class InputController {
 
   private readonly keys = new Set<string>();
   private jumpLatch = false;
+  private zipLatch = false;
+  private swingLatch = false;
+  private rmbHeld = false;
+  private padZipHeld = false;
   private padJumpHeld = false;
   private dragging = false;
   private lastX = 0;
@@ -38,6 +45,8 @@ export class InputController {
         this.jumpLatch = true;
         e.preventDefault();
       }
+      if (e.code === 'KeyE') this.swingLatch = true;
+      if (e.code === 'KeyF') this.zipLatch = true;
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
@@ -55,13 +64,22 @@ export class InputController {
         }
       }
     });
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     canvas.addEventListener('pointerdown', (e) => {
+      if (e.button === 2) {
+        this.rmbHeld = true;
+        this.swingLatch = true;
+        return;
+      }
       this.dragging = true;
       this.lastX = e.clientX;
       this.lastY = e.clientY;
       canvas.setPointerCapture?.(e.pointerId);
     });
-    const endDrag = () => (this.dragging = false);
+    const endDrag = (e: PointerEvent) => {
+      if (e.button === 2) this.rmbHeld = false;
+      else this.dragging = false;
+    };
     window.addEventListener('pointerup', endDrag);
     window.addEventListener('pointercancel', endDrag);
     window.addEventListener('pointermove', (e) => {
@@ -96,6 +114,9 @@ export class InputController {
     const jumpDown = pad.buttons[0]?.pressed ?? false;
     if (jumpDown && !this.padJumpHeld) this.jumpLatch = true;
     this.padJumpHeld = jumpDown;
+    const zipDown = pad.buttons[2]?.pressed ?? false;
+    if (zipDown && !this.padZipHeld) this.zipLatch = true;
+    this.padZipHeld = zipDown;
   }
 
   /** Call once per sim tick. Consumes the jump latch. */
@@ -111,8 +132,23 @@ export class InputController {
       x += deadzone(pad.axes[0] ?? 0);
       z -= deadzone(pad.axes[1] ?? 0);
     }
+    const padSwing = (pad?.buttons[7]?.pressed || pad?.buttons[5]?.pressed) ?? false;
+    const padReel = (pad?.buttons[6]?.pressed || pad?.buttons[4]?.pressed) ?? false;
+    // A quick tap between sim ticks still counts as held for one tick.
+    const swingHeld = this.keys.has('KeyE') || this.rmbHeld || padSwing || this.swingLatch;
+    const reelHeld = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight') || padReel;
     const jumpPressed = this.jumpLatch;
+    const zipPressed = this.zipLatch;
     this.jumpLatch = false;
-    return { moveX: Math.max(-1, Math.min(1, x)), moveZ: Math.max(-1, Math.min(1, z)), jumpPressed };
+    this.zipLatch = false;
+    this.swingLatch = false;
+    return {
+      moveX: Math.max(-1, Math.min(1, x)),
+      moveZ: Math.max(-1, Math.min(1, z)),
+      jumpPressed,
+      swingHeld,
+      reelHeld,
+      zipPressed,
+    };
   }
 }
