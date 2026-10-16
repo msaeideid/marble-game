@@ -1,0 +1,16 @@
+[project]
+name = "vanguard-server"
+version = "0.0.1"
+description = "VANGUARD game server (FastAPI)"
+requires-python = ">=3.12,<3.13"
+dependencies = ["fastapi>=0.115", "uvicorn[standard]>=0.30", "pydantic>=2.7"]
+
+[dependency-groups]
+dev = ["pytest>=8", "httpx2", "ruff>=0.6"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
