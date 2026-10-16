@@ -9,9 +9,11 @@ export const DT = 1 / 30;
 export const hero: HeroParams = getHero('hero.swinger');
 export { content };
 
-export function makeSim(withPlayer = true): Sim {
-  const sim = new Sim(new World(arena), hero, content.enemies);
-  if (withPlayer) sim.addPlayer('p1');
+/** `withBase` keeps the healing base pad at the spawn; most tests turn it off so nothing heals mid-test. */
+export function makeSim(withPlayer = true, withBase = false): Sim {
+  const sim = new Sim(new World(withBase ? arena : { ...arena, base: undefined }), hero, content.enemies);
+  // Most tests want a mortal player; spawn protection has its own tests.
+  if (withPlayer) sim.addPlayer('p1').invulnerable = 0;
   return sim;
 }
 

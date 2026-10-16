@@ -54,13 +54,15 @@ export class PlayerView {
     this.marker.isVisible = false;
   }
 
-  update(state: PlayerState, alpha: number, aimAnchor: Vec3 | null): void {
+  update(state: PlayerState, alpha: number, aimAnchor: Vec3 | null, clock = 0): void {
     const { pos, prevPos } = state;
     const x = prevPos.x + (pos.x - prevPos.x) * alpha;
     const y = prevPos.y + (pos.y - prevPos.y) * alpha;
     const z = prevPos.z + (pos.z - prevPos.z) * alpha;
     this.body.position.set(x, y + this.height / 2, z);
     this.body.rotation.y = state.facing;
+    // Blink while spawn-protected; hide while down.
+    this.body.setEnabled(state.defeatedTimer === null && (state.invulnerable <= 0 || Math.floor(clock * 12) % 2 === 0));
 
     const attached = state.tether?.anchor ?? state.zip?.anchor ?? null;
     if (attached) {

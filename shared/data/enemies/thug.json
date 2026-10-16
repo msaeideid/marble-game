@@ -21,8 +21,8 @@
   "aggroRange": 28,
   "attack": {
     "range": 2.2,
-    "damage": 10,
-    "windup": 0.45,
+    "damage": 8,
+    "windup": 0.5,
     "recovery": 0.7,
     "cooldown": 1.2,
     "knockback": 6

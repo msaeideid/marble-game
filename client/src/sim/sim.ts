@@ -11,7 +11,7 @@ import type { World } from './world';
 
 /** Things that happened this tick. Views use them for effects; netcode will broadcast them. */
 export type SimEvent =
-  | { type: 'melee'; attacker: string; step: number; hits: string[] }
+  | { type: 'melee'; attacker: string; step: number; yaw: number; hits: string[] }
   | { type: 'damage'; target: string; source: string | null; amount: number; shieldLost: number; coreLost: number }
   | { type: 'defeated'; id: string }
   | { type: 'respawn'; id: string }
@@ -67,6 +67,8 @@ export class Sim {
       this.stepPlayerMelee(id, player, intent, dt);
       this.stepPlayerSnare(id, player, intent, dt);
       regenHealth(player.health, this.hero.health, dt);
+      player.invulnerable = Math.max(0, player.invulnerable - dt);
+      this.applyBaseRegen(player, dt);
       if (player.pos.y < this.world.killY) this.respawn(id);
     }
 
@@ -111,7 +113,27 @@ export class Sim {
       e.vel.z += (dz / d) * step.knockback;
       this.damageEnemy(e, step.damage, id);
     }
-    this.events.push({ type: 'melee', attacker: id, step: hitStep, hits: struck.map((s) => s.e.id) });
+    this.events.push({ type: 'melee', attacker: id, step: hitStep, yaw: intent.yaw, hits: struck.map((s) => s.e.id) });
+  }
+
+  /**
+   * Standing on the base pad refills shield and energy fast and core health slowly, but only out of combat
+   * (after the normal damage-regen delay has passed), so the pad is a place to recover, not to tank.
+   */
+  private applyBaseRegen(player: PlayerState, dt: number): void {
+    const base = this.world.base;
+    if (!base || !this.world.isOnBase(player.pos)) return;
+    const h = this.hero;
+    const outOfCombat = player.health.shieldDelay <= 0;
+    if (outOfCombat) {
+      player.health.shield = Math.min(h.health.shield.max, player.health.shield + base.regenPerSecond * dt);
+      player.health.core = Math.min(h.health.core.max, player.health.core + base.regenPerSecond * 0.25 * dt);
+    }
+    player.energy = Math.min(h.energy.max, player.energy + base.regenPerSecond * 2 * dt);
+  }
+
+  get currentWave(): number {
+    return this.wave;
   }
 
   private stepPlayerSnare(id: string, player: PlayerState, intent: PlayerIntent, dt: number): void {
@@ -180,7 +202,7 @@ export class Sim {
 
   damagePlayer(id: string, amount: number, sourceId: string | null): void {
     const player = this.players.get(id);
-    if (!player || player.defeatedTimer !== null) return;
+    if (!player || player.defeatedTimer !== null || player.invulnerable > 0) return;
     const r = applyDamage(player.health, amount, this.hero.health);
     this.events.push({ type: 'damage', target: id, source: sourceId, amount, shieldLost: r.shieldLost, coreLost: r.coreLost });
     if (r.defeated) {

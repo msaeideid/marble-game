@@ -8,6 +8,7 @@ export class Hud {
   private readonly snareChip = document.getElementById('snare-chip') as HTMLElement;
   private readonly hurt = document.getElementById('hurt') as HTMLElement;
   private hurtTimer = 0;
+  private readonly waveText = document.getElementById('wave') as HTMLElement;
   private readonly status = document.getElementById('build') as HTMLElement;
 
   setEnergy(current: number, max: number): void {
@@ -42,6 +43,10 @@ export class Hud {
       this.hurtTimer -= dt;
       if (this.hurtTimer <= 0) this.hurt.classList.remove('on');
     }
+  }
+
+  setWave(text: string): void {
+    if (this.waveText.textContent !== text) this.waveText.textContent = text;
   }
 
   setAimValid(valid: boolean): void {

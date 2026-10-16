@@ -14,6 +14,7 @@ const FOLLOW_RATE = 14; // 1/s, exponential smoothing of the look target
 export class FollowCamera {
   readonly camera: FreeCamera;
   private target: Vec3 | null = null;
+  private shakeAmp = 0;
 
   constructor(scene: Scene) {
     this.camera = new FreeCamera('follow', new Vector3(0, 5, -8), scene);
@@ -21,6 +22,11 @@ export class FollowCamera {
     this.camera.maxZ = 600;
     this.camera.fov = 1.0;
     scene.activeCamera = this.camera;
+  }
+
+  /** Add camera shake (metres of jitter); it decays quickly on its own. */
+  shake(amount: number): void {
+    this.shakeAmp = Math.min(0.5, Math.max(this.shakeAmp, amount));
   }
 
   update(focus: Vec3, yaw: number, pitch: number, world: World, dtSeconds: number): void {
@@ -35,7 +41,15 @@ export class FollowCamera {
     const hit = world.raycast(this.target, dir, DISTANCE + WALL_MARGIN);
     const dist = hit ? Math.max(0.8, hit.distance - WALL_MARGIN) : DISTANCE;
 
-    this.camera.position.set(this.target.x + dir.x * dist, this.target.y + dir.y * dist, this.target.z + dir.z * dist);
+    const j = this.shakeAmp;
+    this.shakeAmp = Math.max(0, this.shakeAmp - dtSeconds * 1.2);
+    const jx = j > 0 ? (Math.random() - 0.5) * 2 * j : 0;
+    const jy = j > 0 ? (Math.random() - 0.5) * 2 * j : 0;
+    this.camera.position.set(
+      this.target.x + dir.x * dist + jx,
+      this.target.y + dir.y * dist + jy,
+      this.target.z + dir.z * dist,
+    );
     this.camera.setTarget(new Vector3(this.target.x, this.target.y, this.target.z));
   }
 }

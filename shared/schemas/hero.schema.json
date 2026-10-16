@@ -3,37 +3,90 @@
   "$id": "hero.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "displayName", "movement", "energy", "health", "respawnDelay", "abilities"],
+  "required": [
+    "id",
+    "displayName",
+    "movement",
+    "energy",
+    "health",
+    "respawnDelay",
+    "abilities",
+    "respawnInvulnerable"
+  ],
   "properties": {
-    "id": { "$ref": "common.schema.json#/$defs/id" },
-    "displayName": { "type": "string", "minLength": 1 },
+    "id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1
+    },
     "movement": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "runSpeed", "groundAccel", "airAccel", "gravity", "jumpSpeed", "maxFallSpeed",
-        "coyoteTime", "jumpBufferTime", "halfWidth", "height"
+        "runSpeed",
+        "groundAccel",
+        "airAccel",
+        "gravity",
+        "jumpSpeed",
+        "maxFallSpeed",
+        "coyoteTime",
+        "jumpBufferTime",
+        "halfWidth",
+        "height"
       ],
       "properties": {
-        "runSpeed": { "$ref": "common.schema.json#/$defs/positive" },
-        "groundAccel": { "$ref": "common.schema.json#/$defs/positive" },
-        "airAccel": { "$ref": "common.schema.json#/$defs/nonNegative" },
-        "gravity": { "$ref": "common.schema.json#/$defs/positive" },
-        "jumpSpeed": { "$ref": "common.schema.json#/$defs/positive" },
-        "maxFallSpeed": { "$ref": "common.schema.json#/$defs/positive" },
-        "coyoteTime": { "$ref": "common.schema.json#/$defs/nonNegative" },
-        "jumpBufferTime": { "$ref": "common.schema.json#/$defs/nonNegative" },
-        "halfWidth": { "$ref": "common.schema.json#/$defs/positive" },
-        "height": { "$ref": "common.schema.json#/$defs/positive" }
+        "runSpeed": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "groundAccel": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "airAccel": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "gravity": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "jumpSpeed": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "maxFallSpeed": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "coyoteTime": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "jumpBufferTime": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "halfWidth": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "height": {
+          "$ref": "common.schema.json#/$defs/positive"
+        }
       }
     },
-    "energy": { "$ref": "common.schema.json#/$defs/pool" },
-    "health": { "$ref": "common.schema.json#/$defs/health" },
-    "respawnDelay": { "$ref": "common.schema.json#/$defs/nonNegative" },
+    "energy": {
+      "$ref": "common.schema.json#/$defs/pool"
+    },
+    "health": {
+      "$ref": "common.schema.json#/$defs/health"
+    },
+    "respawnDelay": {
+      "$ref": "common.schema.json#/$defs/nonNegative"
+    },
     "abilities": {
       "type": "array",
-      "items": { "$ref": "common.schema.json#/$defs/id" },
+      "items": {
+        "$ref": "common.schema.json#/$defs/id"
+      },
       "uniqueItems": true
+    },
+    "respawnInvulnerable": {
+      "$ref": "common.schema.json#/$defs/nonNegative"
     }
   }
 }

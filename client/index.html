@@ -28,6 +28,35 @@
       #abilities .chip.cooling { opacity: .4; }
       #hurt { position: absolute; inset: 0; background: radial-gradient(transparent 55%, rgba(255,40,40,.55)); opacity: 0; transition: opacity .35s ease-out; }
       #hurt.on { opacity: 1; transition: none; }
+      #wave { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); font-size: 15px; font-weight: 600;
+        background: rgba(0,0,0,.35); padding: 3px 12px; border-radius: 12px; }
+      #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+      .enemy-bar { position: absolute; left: 0; top: 0; width: 40px; height: 5px; background: rgba(0,0,0,.55); border-radius: 3px; overflow: hidden; }
+      .enemy-bar > div { height: 100%; background: #ff6b6b; }
+      .enemy-bar.held > div { background: #7ad8ff; }
+      .dmg-number { position: absolute; left: 0; top: 0; color: #fff; font-weight: 800; font-size: 18px; text-shadow: 0 2px 3px #000; }
+      .dmg-number.big { color: #ffd34d; font-size: 26px; }
+      #overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center;
+        background: rgba(15, 25, 45, .78); backdrop-filter: blur(3px); color: #fff; cursor: pointer; z-index: 10; }
+      #overlay { overflow-y: auto; align-items: flex-start; }
+      #overlay .card { margin: auto; }
+      #overlay.hidden { display: none; }
+      @media (max-width: 600px) {
+        #wave { top: 56px; left: 12px; transform: none; font-size: 12px; }
+        #overlay .card { padding: 14px 12px; }
+        #overlay h1 { font-size: 24px; }
+        #overlay table, #overlay tbody, #overlay tr, #overlay td { display: block; }
+        #overlay td { padding: 0 4px; font-size: 12px; }
+        #overlay td:first-child { margin-top: 6px; }
+      }
+      #overlay .card { max-width: 520px; padding: 24px 28px; }
+      #overlay h1 { margin: 0 0 4px; font-size: 34px; letter-spacing: 2px; }
+      #overlay p { margin: 4px 0 14px; opacity: .8; }
+      #overlay table { margin: 0 auto 16px; text-align: left; font-size: 14px; border-collapse: collapse; }
+      #overlay td { padding: 3px 10px; }
+      #overlay td:first-child { font-weight: 700; color: #9fe8ff; white-space: nowrap; }
+      #overlay .go { font-size: 18px; font-weight: 700; animation: pulse 1.2s infinite; }
+      @keyframes pulse { 50% { opacity: .45; } }
       #energy-fill.low { background: linear-gradient(90deg, #ff6b6b, #ffb36b); }
     </style>
   </head>
@@ -40,6 +69,7 @@
         <div class="bar"><div id="core-fill"></div></div>
       </div>
       <div id="hurt"></div>
+      <div id="wave"></div>
       <div id="abilities"><div class="chip" id="snare-chip">Q &middot; Snare</div></div>
       <div id="banner"></div>
       <div id="energy"><div id="energy-fill"></div></div>
@@ -47,6 +77,24 @@
       <div class="help">
         WASD move · Space jump · drag/click to look<br />
         Hold E or right-mouse: swing · Shift: reel in · F: zip-pull · J (or click when mouse is captured): strike · Q: snare
+      </div>
+    </div>
+    <div id="labels"></div>
+    <div id="overlay">
+      <div class="card">
+        <h1>VANGUARD</h1>
+        <p>Prototype &middot; hero codename is a placeholder</p>
+        <table>
+          <tr><td>WASD</td><td>Move (Space to jump)</td></tr>
+          <tr><td>Mouse</td><td>Look (click to capture, or hold the button and drag)</td></tr>
+          <tr><td>E / right-mouse</td><td>Hold to swing from the crosshair's green marker</td></tr>
+          <tr><td>Shift</td><td>Reel in while swinging</td></tr>
+          <tr><td>F</td><td>Zip-pull to the marker (aim just under a roof edge to climb up)</td></tr>
+          <tr><td>J / left-click</td><td>Strike (tap in rhythm for a 3-hit combo)</td></tr>
+          <tr><td>Q</td><td>Snare a thug in your sights</td></tr>
+          <tr><td>M / P</td><td>Mute / pause</td></tr>
+        </table>
+        <div class="go">Click to play</div>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

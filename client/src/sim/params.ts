@@ -127,6 +127,8 @@ export interface HeroParams {
   energy: EnergyParams;
   health: HealthParams;
   respawnDelay: number;
+  /** Seconds of damage immunity after (re)spawning at base. */
+  respawnInvulnerable: number;
   swing: SwingParams;
   zip: ZipParams;
   melee: MeleeParams;

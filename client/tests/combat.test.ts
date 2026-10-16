@@ -72,6 +72,21 @@ describe('player defeat and respawn', () => {
     expect(Math.hypot(p.pos.x - sim.world.spawn.x, p.pos.z - sim.world.spawn.z)).toBeLessThan(1);
   });
 
+  it('spawn protection blocks damage for a couple of seconds after respawn', () => {
+    const sim = makeSim();
+    const p = sim.players.get('p1')!;
+    p.invulnerable = hero.respawnInvulnerable;
+    sim.damagePlayer('p1', 10, 'x');
+    expect(p.health.shield).toBe(hero.health.shield.max);
+    run(sim, Math.ceil((hero.respawnInvulnerable + 0.2) / DT), () => intent());
+    sim.damagePlayer('p1', 10, 'x');
+    expect(p.health.shield).toBe(hero.health.shield.max - 10);
+    // After a defeat the protection returns with the respawn.
+    sim.damagePlayer('p1', 10_000, null);
+    run(sim, Math.ceil((hero.respawnDelay + 0.5) / DT), () => intent());
+    expect(p.invulnerable).toBeGreaterThan(0);
+  });
+
   it('cannot be damaged again while down', () => {
     const sim = makeSim();
     sim.damagePlayer('p1', 10_000, null);

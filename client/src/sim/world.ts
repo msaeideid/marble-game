@@ -5,6 +5,7 @@ export interface LevelData {
   spawn: number[];
   killY: number;
   waveDelay?: number;
+  base?: { pos: number[]; radius: number; regenPerSecond: number };
   enemySpawns?: { type: string; pos: number[] }[];
   colliders: { kind: string; min: number[]; max: number[] }[];
 }
@@ -24,6 +25,8 @@ export class World {
   readonly spawn: Vec3;
   readonly killY: number;
   readonly waveDelay: number;
+  /** Safe pad where players recover: shield and energy refill quickly, core health slowly. */
+  readonly base: { pos: Vec3; radius: number; regenPerSecond: number } | null;
   readonly enemySpawns: { type: string; pos: Vec3 }[];
 
   constructor(level: LevelData) {
@@ -35,10 +38,22 @@ export class World {
     this.spawn = { x: level.spawn[0]!, y: level.spawn[1]!, z: level.spawn[2]! };
     this.killY = level.killY;
     this.waveDelay = level.waveDelay ?? 5;
+    this.base = level.base
+      ? {
+          pos: { x: level.base.pos[0]!, y: level.base.pos[1]!, z: level.base.pos[2]! },
+          radius: level.base.radius,
+          regenPerSecond: level.base.regenPerSecond,
+        }
+      : null;
     this.enemySpawns = (level.enemySpawns ?? []).map((e) => ({
       type: e.type,
       pos: { x: e.pos[0]!, y: e.pos[1]!, z: e.pos[2]! },
     }));
+  }
+
+  isOnBase(pos: Vec3): boolean {
+    const b = this.base;
+    return !!b && Math.hypot(pos.x - b.pos.x, pos.z - b.pos.z) <= b.radius && Math.abs(pos.y - b.pos.y) < 3;
   }
 
   /** Nearest hit of a ray (dir need not be normalised) within `maxDistance`, or null. */

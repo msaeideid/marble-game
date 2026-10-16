@@ -1,49 +1,103 @@
 import arena from '@shared/levels/arena.json';
+import { Sfx } from '../audio/sfx';
 import { content, getHero } from '../data';
 import { InputController } from '../input/inputController';
+import { Effects } from '../render/effects';
 import { EnemyView } from '../render/enemyView';
 import { FollowCamera } from '../render/followCamera';
-import { buildLevelView } from '../render/levelView';
+import { buildBaseView, buildLevelView } from '../render/levelView';
 import { PlayerView } from '../render/playerView';
 import { createGameView, type GameView } from '../render/scene';
 import { aimDir } from '../sim/aim';
 import { handPos } from '../sim/controller';
+import type { AiState } from '../sim/enemy';
 import { FixedStepper } from '../sim/fixedStep';
 import { Sim, type SimEvent } from '../sim/sim';
 import { pickSwingAnchor } from '../sim/swing';
 import type { PlayerIntent } from '../sim/types';
 import { World } from '../sim/world';
 import { Hud } from '../ui/hud';
+import { WorldLabels } from '../ui/worldLabels';
 
 const LOCAL_ID = 'local';
 const SIM_DT = 1 / 30;
+const HITSTOP_LIGHT = 0.05;
+const HITSTOP_HEAVY = 0.09;
 
-/** Wires sim + input + rendering together for the single-player prototype. */
+/** Wires sim + input + rendering + feedback together for the single-player prototype. */
 export class Game {
   readonly view: GameView;
   readonly sim: Sim;
   readonly input: InputController;
+  readonly sfx = new Sfx();
+  paused = true;
+
   private readonly stepper = new FixedStepper(SIM_DT);
   private readonly playerView: PlayerView;
   private readonly enemyViews = new Map<string, EnemyView>();
+  private readonly enemyAi = new Map<string, AiState>();
   private readonly cam: FollowCamera;
+  private readonly effects: Effects;
+  private readonly labels: WorldLabels;
   private readonly hud = new Hud();
   private readonly hero = getHero('hero.swinger');
+  private readonly overlay = document.getElementById('overlay') as HTMLElement;
   private frameCount = 0;
+  private clock = 0;
+  private hitStop = 0;
   private bannerTimer = 0;
   private bannerText: string | null = null;
+  private hadTether = false;
+  private hadZip = false;
+  private wasLocked = false;
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(private readonly canvas: HTMLCanvasElement) {
     const world = new World(arena);
     this.sim = new Sim(world, this.hero, content.enemies, { waves: true });
     this.sim.addPlayer(LOCAL_ID);
 
     this.view = createGameView(canvas);
     buildLevelView(this.view.scene, world);
+    buildBaseView(this.view.scene, world);
     const m = this.hero.movement;
     this.playerView = new PlayerView(this.view.scene, m.height, m.halfWidth, this.hero.swing.handHeight);
     this.cam = new FollowCamera(this.view.scene);
+    this.effects = new Effects(this.view.scene);
+    this.labels = new WorldLabels(document.getElementById('labels') as HTMLElement, this.view.scene, this.view.engine, canvas);
     this.input = new InputController(canvas);
+    this.bindUi();
+    this.setPaused(true);
+  }
+
+  private bindUi(): void {
+    this.overlay.addEventListener('click', () => {
+      this.setPaused(false);
+      this.canvas.focus();
+      try {
+        const req = this.canvas.requestPointerLock() as Promise<void> | undefined;
+        req?.catch?.(() => {});
+      } catch {
+        // pointer lock is optional; dragging still works
+      }
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
+      if (e.code === 'KeyP' || e.code === 'Escape') this.setPaused(!this.paused);
+      if (e.code === 'KeyM') this.sfx.toggleMute();
+      this.sfx.unlock();
+    });
+    document.addEventListener('pointerlockchange', () => {
+      const locked = document.pointerLockElement === this.canvas;
+      if (this.wasLocked && !locked && !this.paused) this.setPaused(true);
+      this.wasLocked = locked;
+    });
+    window.addEventListener('blur', () => this.setPaused(true));
+  }
+
+  setPaused(paused: boolean): void {
+    this.paused = paused;
+    this.overlay.classList.toggle('hidden', !paused);
+    if (!paused) this.sfx.unlock();
   }
 
   start(): void {
@@ -53,10 +107,13 @@ export class Game {
   /** One display frame: sample input, advance the sim in fixed steps, render. Public so tests can drive it. */
   frame(dt: number): void {
     const { engine, scene } = this.view;
-    this.input.pollLook(dt);
+    this.clock += dt;
+    const simDt = this.paused || this.hitStop > 0 ? 0 : dt;
+    this.hitStop = Math.max(0, this.hitStop - dt);
+    if (!this.paused) this.input.pollLook(dt);
 
     const events: SimEvent[] = [];
-    const alpha = this.stepper.advance(dt, (stepDt) => {
+    const alpha = this.stepper.advance(simDt, (stepDt) => {
       const m = this.input.sample();
       const intent: PlayerIntent = { ...m, yaw: this.input.yaw, pitch: this.input.pitch };
       this.sim.step(stepDt, new Map([[LOCAL_ID, intent]]));
@@ -64,9 +121,11 @@ export class Game {
     });
 
     const me = this.sim.players.get(LOCAL_ID)!;
-    this.syncEnemies(events, alpha, dt);
+    this.handleEvents(events);
+    this.trackMovementSounds();
+    this.syncEnemies(alpha, dt);
     const aimAnchor = this.previewAnchor();
-    this.playerView.update(me, alpha, me.tether || me.zip ? null : aimAnchor);
+    this.playerView.update(me, alpha, me.tether || me.zip ? null : aimAnchor, this.clock);
     const p = me.prevPos;
     const focus = {
       x: p.x + (me.pos.x - p.x) * alpha,
@@ -74,19 +133,23 @@ export class Game {
       z: p.z + (me.pos.z - p.z) * alpha,
     };
     this.cam.update(focus, this.input.yaw, this.input.pitch, this.sim.world, dt);
+    this.effects.update(dt);
     scene.render();
+    this.labels.update(dt);
 
+    this.updateHud(me, dt, aimAnchor !== null);
+    if (++this.frameCount % 15 === 0) {
+      const speed = Math.hypot(me.vel.x, me.vel.y, me.vel.z).toFixed(1);
+      const mode = me.zip ? 'zipping' : me.tether ? 'swinging' : me.grounded ? 'grounded' : 'airborne';
+      this.hud.setStatus(`${engine.getFps().toFixed(0)} fps · speed ${speed} m/s · ${mode}`);
+    }
+  }
+
+  private updateHud(me: ReturnType<Sim['players']['get']> & object, dt: number, aimValid: boolean): void {
     this.hud.setEnergy(me.energy, this.hero.energy.max);
     this.hud.setHealth(me.health.shield, this.hero.health.shield.max, me.health.core, this.hero.health.core.max);
-    this.hud.setAimValid(aimAnchor !== null);
+    this.hud.setAimValid(aimValid);
     this.hud.setSnareReady(me.snareCooldown <= 0 && me.energy >= this.hero.snare.cost);
-    for (const ev of events) {
-      if (ev.type === 'wave') {
-        this.bannerText = `Wave ${ev.wave}`;
-        this.bannerTimer = 2;
-      }
-      if (ev.type === 'damage' && ev.target === LOCAL_ID) this.hud.hurtFlash();
-    }
     this.hud.tick(dt);
     this.bannerTimer = Math.max(0, this.bannerTimer - dt);
     this.hud.setBanner(
@@ -96,33 +159,105 @@ export class Game {
           ? this.bannerText
           : null,
     );
+    const alive = [...this.sim.enemies.values()].filter((e) => e.defeatedTimer === null).length;
+    this.hud.setWave(`Wave ${this.sim.currentWave} · ${alive} thug${alive === 1 ? '' : 's'} left`);
+  }
 
-    if (++this.frameCount % 15 === 0) {
-      const speed = Math.hypot(me.vel.x, me.vel.y, me.vel.z).toFixed(1);
-      const mode = me.zip ? 'zipping' : me.tether ? 'swinging' : me.grounded ? 'grounded' : 'airborne';
-      this.hud.setStatus(`${engine.getFps().toFixed(0)} fps · speed ${speed} m/s · ${mode}`);
+  private handleEvents(events: readonly SimEvent[]): void {
+    const me = this.sim.players.get(LOCAL_ID)!;
+    for (const ev of events) {
+      switch (ev.type) {
+        case 'melee': {
+          if (ev.attacker !== LOCAL_ID) break;
+          this.effects.slash(me.pos, ev.yaw, ev.step, this.hero.melee.range);
+          this.sfx.swing(ev.step);
+          if (ev.hits.length > 0) {
+            const heavy = ev.step >= this.hero.melee.steps.length - 1;
+            this.hitStop = heavy ? HITSTOP_HEAVY : HITSTOP_LIGHT;
+            this.cam.shake(heavy ? 0.14 : 0.06);
+            this.sfx.hit(ev.step);
+          }
+          break;
+        }
+        case 'damage': {
+          const enemy = this.sim.enemies.get(ev.target);
+          if (enemy) {
+            const def = content.enemies[enemy.typeId]!;
+            this.enemyViews.get(ev.target)?.hit();
+            this.labels.damageNumber(
+              { x: enemy.pos.x, y: enemy.pos.y + def.move.height + 0.2, z: enemy.pos.z },
+              String(Math.round(ev.amount)),
+              ev.amount >= 15,
+            );
+          } else if (ev.target === LOCAL_ID) {
+            this.hud.hurtFlash();
+            this.cam.shake(0.16);
+            this.sfx.hurt();
+          }
+          break;
+        }
+        case 'defeated':
+          if (ev.id === LOCAL_ID) this.sfx.down();
+          else this.sfx.powerDown();
+          break;
+        case 'snare':
+          if (ev.source === LOCAL_ID) this.sfx.snare();
+          break;
+        case 'respawn':
+          if (ev.id === LOCAL_ID) this.sfx.respawn();
+          break;
+        case 'wave':
+          this.bannerText = `Wave ${ev.wave}`;
+          this.bannerTimer = 2;
+          this.sfx.wave();
+          break;
+        default:
+          break;
+      }
     }
   }
 
-  private syncEnemies(events: readonly SimEvent[], alpha: number, dt: number): void {
+  private trackMovementSounds(): void {
+    const me = this.sim.players.get(LOCAL_ID)!;
+    if (me.tether && !this.hadTether) this.sfx.attach();
+    if (me.zip && !this.hadZip) this.sfx.zip();
+    this.hadTether = me.tether !== null;
+    this.hadZip = me.zip !== null;
+  }
+
+  private syncEnemies(alpha: number, dt: number): void {
     const { scene } = this.view;
+    const me = this.sim.players.get(LOCAL_ID)!;
     for (const e of this.sim.enemies.values()) {
-      let v = this.enemyViews.get(e.id);
-      if (!v) {
-        v = new EnemyView(scene, e.id, content.enemies[e.typeId]!);
-        this.enemyViews.set(e.id, v);
+      if (!this.enemyViews.has(e.id)) {
+        this.enemyViews.set(e.id, new EnemyView(scene, e.id, content.enemies[e.typeId]!));
       }
-    }
-    for (const ev of events) {
-      if (ev.type === 'damage') this.enemyViews.get(ev.target)?.hit();
     }
     for (const [id, v] of this.enemyViews) {
       const e = this.sim.enemies.get(id);
       if (!e) {
         v.dispose();
         this.enemyViews.delete(id);
+        this.enemyAi.delete(id);
+        this.labels.removeBar(id);
+        continue;
+      }
+      v.update(e, alpha, dt);
+
+      const def = content.enemies[e.typeId]!;
+      const prev = this.enemyAi.get(id);
+      if (e.aiState === 'windup' && prev !== 'windup') {
+        const d = Math.hypot(e.pos.x - me.pos.x, e.pos.z - me.pos.z);
+        this.sfx.windup(Math.max(0, 1 - d / 25));
+      }
+      this.enemyAi.set(id, e.aiState);
+
+      const max = def.health.core.max + def.health.shield.max;
+      const frac = (e.health.core + e.health.shield) / max;
+      if (e.defeatedTimer !== null || (frac >= 1 && e.snaredTimer <= 0)) {
+        this.labels.hideBar(id);
       } else {
-        v.update(e, alpha, dt);
+        this.labels.setBar(id, { x: e.pos.x, y: e.pos.y + def.move.height + 0.5, z: e.pos.z }, frac, e.snaredTimer > 0);
       }
     }
   }

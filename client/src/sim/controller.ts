@@ -46,6 +46,8 @@ export interface PlayerState {
   melee: MeleeState;
   /** Seconds until the snare can be used again. */
   snareCooldown: number;
+  /** While > 0 the player takes no damage (spawn protection). */
+  invulnerable: number;
 }
 
 export function createPlayerState(spawn: Vec3, hero: HeroParams): PlayerState {
@@ -66,6 +68,7 @@ export function createPlayerState(spawn: Vec3, hero: HeroParams): PlayerState {
     defeatedTimer: null,
     melee: createMelee(),
     snareCooldown: 0,
+    invulnerable: hero.respawnInvulnerable,
   };
 }
 

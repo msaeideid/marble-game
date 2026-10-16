@@ -212,7 +212,7 @@ describe('tether snare', () => {
 describe('waves', () => {
   function waveSim() {
     const sim = new Sim(new World(arena), hero, content.enemies, { waves: true });
-    sim.addPlayer('p1');
+    sim.addPlayer('p1').invulnerable = 0;
     return sim;
   }
 
@@ -235,5 +235,49 @@ describe('waves', () => {
     run(sim, 300, () => intent({ moveZ: 0 }));
     // enemies may attack the player but never multiply
     expect(sim.enemies.size).toBe(n);
+  });
+});
+
+describe('base pad', () => {
+  function damagedOnSpot(withBase: boolean, at: { x: number; z: number }) {
+    const sim = makeSim(true, withBase);
+    run(sim, 10, () => intent());
+    const p = sim.players.get('p1')!;
+    p.pos = { x: at.x, y: 0, z: at.z };
+    sim.damagePlayer('p1', hero.health.shield.max + 20, null);
+    p.energy = 0;
+    return { sim, p };
+  }
+
+  it('refills shield, energy and (slowly) core after the damage delay, much faster than normal regen', () => {
+    const onPad = damagedOnSpot(true, { x: 0, z: 0 });
+    const offPad = damagedOnSpot(true, { x: 30, z: 0 });
+    const ticks = Math.ceil((hero.health.shield.regenDelay + 1) / DT);
+    run(onPad.sim, ticks, () => intent());
+    run(offPad.sim, ticks, () => intent());
+    expect(onPad.sim.world.isOnBase(onPad.p.pos)).toBe(true);
+    expect(onPad.p.health.shield).toBeGreaterThan(offPad.p.health.shield + 10);
+    expect(onPad.p.energy).toBeGreaterThan(offPad.p.energy + 20);
+    expect(onPad.p.health.core).toBeGreaterThan(offPad.p.health.core);
+    expect(onPad.sim.world.base!.regenPerSecond * 0.25).toBeLessThan(onPad.sim.world.base!.regenPerSecond);
+  });
+
+  it('does not heal the shield while still in combat (inside the damage delay)', () => {
+    const { sim, p } = damagedOnSpot(true, { x: 0, z: 0 });
+    run(sim, Math.floor((hero.health.shield.regenDelay - 0.5) / DT), () => intent());
+    expect(p.health.shield).toBe(0);
+  });
+
+  it('standing on the pad does not make you immune to a group of thugs', () => {
+    const sim = makeSim(true, true);
+    run(sim, 10, () => intent());
+    const p = sim.players.get('p1')!;
+    for (const z of [3, -3, 4]) sim.spawnEnemy('enemy.thug', { x: z, y: 0.01, z });
+    let down = false;
+    for (let i = 0; i < 30 * 40 && !down; i++) {
+      run(sim, 1, () => intent());
+      down = p.defeatedTimer !== null;
+    }
+    expect(down).toBe(true);
   });
 });

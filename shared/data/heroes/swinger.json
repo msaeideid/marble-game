@@ -36,5 +36,6 @@
     "ability.zip",
     "ability.strike",
     "ability.snare"
-  ]
+  ],
+  "respawnInvulnerable": 2
 }

@@ -18,6 +18,7 @@ export interface HeroData {
   energy: EnergyParams;
   health: HealthParams;
   respawnDelay: number;
+  respawnInvulnerable: number;
   abilities: string[];
 }
 
@@ -100,6 +101,7 @@ export function resolveHero(hero: HeroData, abilities: Record<string, AbilityDat
     energy: hero.energy,
     health: hero.health,
     respawnDelay: hero.respawnDelay,
+    respawnInvulnerable: hero.respawnInvulnerable,
     swing,
     zip,
     melee,
