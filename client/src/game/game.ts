@@ -67,7 +67,7 @@ export class Game {
       const speed = Math.hypot(me.vel.x, me.vel.z).toFixed(1);
       this.hudText.textContent =
         `VANGUARD prototype · ${engine.getFps().toFixed(0)} fps · speed ${speed} m/s · ` +
-        `${me.grounded ? 'grounded' : 'airborne'} · WASD move, Space jump, click to look`;
+        `${me.grounded ? 'grounded' : 'airborne'} · WASD move, Space jump, drag or click to look`;
     }
   }
 }

@@ -27,6 +27,8 @@ export class InputController {
   private jumpLatch = false;
   private padJumpHeld = false;
   private dragging = false;
+  private lastX = 0;
+  private lastY = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     window.addEventListener('keydown', (e) => {
@@ -40,15 +42,36 @@ export class InputController {
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
 
+    // Click focuses the canvas and tries to capture the mouse. Some embedded browsers refuse
+    // pointer lock, so dragging with the mouse button held always works as a fallback.
     canvas.addEventListener('click', () => {
       canvas.focus();
-      if (document.pointerLockElement !== canvas) void canvas.requestPointerLock?.()?.catch?.(() => {});
+      if (document.pointerLockElement !== canvas) {
+        try {
+          const req = canvas.requestPointerLock() as Promise<void> | undefined;
+          req?.catch?.(() => {});
+        } catch {
+          // ignored: drag-to-look still works
+        }
+      }
     });
-    canvas.addEventListener('pointerdown', () => (this.dragging = true));
-    window.addEventListener('pointerup', () => (this.dragging = false));
-    window.addEventListener('mousemove', (e) => {
-      const locked = document.pointerLockElement === canvas;
-      if (locked || this.dragging) this.look(e.movementX * LOOK_SENSITIVITY, e.movementY * LOOK_SENSITIVITY);
+    canvas.addEventListener('pointerdown', (e) => {
+      this.dragging = true;
+      this.lastX = e.clientX;
+      this.lastY = e.clientY;
+      canvas.setPointerCapture?.(e.pointerId);
+    });
+    const endDrag = () => (this.dragging = false);
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+    window.addEventListener('pointermove', (e) => {
+      if (document.pointerLockElement === canvas) {
+        this.look(e.movementX * LOOK_SENSITIVITY, e.movementY * LOOK_SENSITIVITY);
+      } else if (this.dragging) {
+        this.look((e.clientX - this.lastX) * LOOK_SENSITIVITY, (e.clientY - this.lastY) * LOOK_SENSITIVITY);
+      }
+      this.lastX = e.clientX;
+      this.lastY = e.clientY;
     });
   }
 
