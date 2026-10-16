@@ -40,6 +40,8 @@ export interface PlayerIntent {
   zipPressed: boolean;
   /** True only on the tick the attack button went down. */
   attackPressed: boolean;
+  /** True only on the tick the snare button went down. */
+  snarePressed: boolean;
 }
 
 export const NEUTRAL_INTENT: PlayerIntent = {
@@ -52,6 +54,7 @@ export const NEUTRAL_INTENT: PlayerIntent = {
   reelHeld: false,
   zipPressed: false,
   attackPressed: false,
+  snarePressed: false,
 };
 
 export const vec3 = (x = 0, y = 0, z = 0): Vec3 => ({ x, y, z });

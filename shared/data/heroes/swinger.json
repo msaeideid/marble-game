@@ -13,11 +13,28 @@
     "halfWidth": 0.35,
     "height": 1.8
   },
-  "energy": { "max": 100, "regenPerSecond": 14, "regenDelay": 0.6 },
+  "energy": {
+    "max": 100,
+    "regenPerSecond": 14,
+    "regenDelay": 0.6
+  },
   "health": {
-    "shield": { "max": 40, "regenPerSecond": 12, "regenDelay": 3 },
-    "core": { "max": 60, "regenPerSecond": 1, "regenDelay": 8 }
+    "shield": {
+      "max": 40,
+      "regenPerSecond": 12,
+      "regenDelay": 3
+    },
+    "core": {
+      "max": 60,
+      "regenPerSecond": 1,
+      "regenDelay": 8
+    }
   },
   "respawnDelay": 3,
-  "abilities": ["ability.swing", "ability.zip", "ability.strike"]
+  "abilities": [
+    "ability.swing",
+    "ability.zip",
+    "ability.strike",
+    "ability.snare"
+  ]
 }

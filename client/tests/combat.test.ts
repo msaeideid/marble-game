@@ -140,7 +140,7 @@ describe('melee strike', () => {
     expect(e.health.core).toBeLessThan(thugDef.health.core.max);
   });
 
-  it('chains a three-step combo that powers down a thug, finisher hitting hardest', () => {
+  it('chains a three-step combo with the finisher hitting hardest', () => {
     const sim = makeSim();
     settle(sim);
     const e = sim.spawnEnemy('enemy.thug', { x: 0, y: 0.01, z: 1.5 });
@@ -153,10 +153,10 @@ describe('melee strike', () => {
       e.vel = { x: 0, y: 0, z: 0 };
     }
     expect(steps).toEqual([0, 1, 2]);
-    // The three hits together are enough to power down a thug.
+    // All three hits landed; a thug needs more than one combo (45 HP vs 36 damage).
     const total = hero.melee.steps.reduce((a, s) => a + s.damage, 0);
-    expect(total).toBeGreaterThanOrEqual(thugDef.health.core.max);
-    expect(e.defeatedTimer).not.toBeNull();
+    expect(e.health.core).toBe(thugDef.health.core.max - total);
+    expect(e.defeatedTimer).toBeNull();
     expect(hero.melee.steps[2]!.damage).toBeGreaterThan(hero.melee.steps[0]!.damage);
   });
 

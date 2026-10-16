@@ -2,6 +2,7 @@
  "id": "arena",
  "spawn": [0, 0.01, 0],
  "killY": -40,
+ "waveDelay": 5,
  "enemySpawns": [
   {"type":"enemy.thug","pos":[5,0.01,8]},
   {"type":"enemy.thug","pos":[-5,0.01,12]},

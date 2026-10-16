@@ -8,12 +8,16 @@ import type { EnemyParams } from '../sim/params';
 
 const BASE = new Color3(0.9, 0.35, 0.35);
 const FLASH = new Color3(1, 1, 1);
+const WINDUP = new Color3(1, 0.65, 0.15);
+const SNARED = new Color3(0.4, 0.85, 1);
+const DOWN = new Color3(0.6, 0.6, 0.7);
 
 /** Placeholder enemy: a red capsule that flashes white when hit and shrinks away when powered down. */
 export class EnemyView {
   private readonly mesh: Mesh;
   private readonly mat: StandardMaterial;
   private flash = 0;
+  private clock = 0;
 
   constructor(scene: Scene, readonly id: string, private readonly def: EnemyParams) {
     this.mat = new StandardMaterial(`enemy-${id}`, scene);
@@ -32,13 +36,21 @@ export class EnemyView {
     const x = e.prevPos.x + (e.pos.x - e.prevPos.x) * alpha;
     const y = e.prevPos.y + (e.pos.y - e.prevPos.y) * alpha;
     const z = e.prevPos.z + (e.pos.z - e.prevPos.z) * alpha;
-    const scale = e.defeatedTimer === null ? 1 : Math.max(0.01, e.defeatedTimer / this.def.powerDownTime);
+    this.clock += dt;
+    // Windup pulses and grows so the attack is clearly telegraphed.
+    const telegraph = e.aiState === 'windup' ? 1.08 + 0.1 * Math.sin(this.clock * 40) : 1;
+    const scale =
+      e.defeatedTimer === null ? telegraph : Math.max(0.01, e.defeatedTimer / this.def.powerDownTime);
     this.mesh.scaling.setAll(scale);
     this.mesh.position.set(x, y + (this.def.move.height / 2) * scale, z);
     this.mesh.rotation.y = e.facing;
 
     this.flash = Math.max(0, this.flash - dt);
-    const c = this.flash > 0 ? FLASH : e.defeatedTimer === null ? BASE : new Color3(0.6, 0.6, 0.7);
+    let c = BASE;
+    if (e.defeatedTimer !== null) c = DOWN;
+    else if (this.flash > 0) c = FLASH;
+    else if (e.snaredTimer > 0) c = SNARED;
+    else if (e.aiState === 'windup') c = WINDUP;
     this.mat.diffuseColor = c;
     this.mat.emissiveColor = c.scale(0.35);
   }

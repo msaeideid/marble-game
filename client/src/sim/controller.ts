@@ -44,6 +44,8 @@ export interface PlayerState {
   /** Seconds until respawn while defeated, otherwise null. */
   defeatedTimer: number | null;
   melee: MeleeState;
+  /** Seconds until the snare can be used again. */
+  snareCooldown: number;
 }
 
 export function createPlayerState(spawn: Vec3, hero: HeroParams): PlayerState {
@@ -63,6 +65,7 @@ export function createPlayerState(spawn: Vec3, hero: HeroParams): PlayerState {
     health: createHealth(hero.health),
     defeatedTimer: null,
     melee: createMelee(),
+    snareCooldown: 0,
   };
 }
 

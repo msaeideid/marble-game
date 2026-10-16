@@ -2,11 +2,32 @@
   "id": "enemy.thug",
   "displayName": "Thug",
   "health": {
-    "shield": { "max": 0, "regenPerSecond": 0, "regenDelay": 0 },
-    "core": { "max": 30, "regenPerSecond": 0, "regenDelay": 0 }
+    "shield": {
+      "max": 0,
+      "regenPerSecond": 0,
+      "regenDelay": 0
+    },
+    "core": {
+      "max": 45,
+      "regenPerSecond": 0,
+      "regenDelay": 0
+    }
   },
-  "move": { "speed": 4.5, "halfWidth": 0.4, "height": 1.8 },
+  "move": {
+    "speed": 5.5,
+    "halfWidth": 0.4,
+    "height": 1.8
+  },
   "aggroRange": 28,
-  "attack": { "range": 1.8, "damage": 8, "windup": 0.5, "recovery": 0.7, "cooldown": 1.2 },
-  "powerDownTime": 0.8
+  "attack": {
+    "range": 2.2,
+    "damage": 10,
+    "windup": 0.45,
+    "recovery": 0.7,
+    "cooldown": 1.2,
+    "knockback": 6
+  },
+  "powerDownTime": 0.8,
+  "staggerTime": 0.35,
+  "poiseTime": 0.6
 }

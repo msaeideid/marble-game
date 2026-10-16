@@ -23,6 +23,11 @@
       #core-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #3ddc84, #9cf2b8); transition: width .08s linear; }
       #core-fill.low { background: linear-gradient(90deg, #ff5d5d, #ff9a6b); }
       #banner { position: absolute; left: 0; right: 0; top: 35%; text-align: center; font-size: 28px; font-weight: 700; display: none; }
+      #abilities { position: absolute; right: 12px; top: 12px; display: flex; gap: 6px; }
+      #abilities .chip { padding: 4px 10px; border-radius: 6px; background: rgba(0,0,0,.4); font-size: 13px; }
+      #abilities .chip.cooling { opacity: .4; }
+      #hurt { position: absolute; inset: 0; background: radial-gradient(transparent 55%, rgba(255,40,40,.55)); opacity: 0; transition: opacity .35s ease-out; }
+      #hurt.on { opacity: 1; transition: none; }
       #energy-fill.low { background: linear-gradient(90deg, #ff6b6b, #ffb36b); }
     </style>
   </head>
@@ -34,12 +39,14 @@
         <div class="bar"><div id="shield-fill"></div></div>
         <div class="bar"><div id="core-fill"></div></div>
       </div>
+      <div id="hurt"></div>
+      <div id="abilities"><div class="chip" id="snare-chip">Q &middot; Snare</div></div>
       <div id="banner"></div>
       <div id="energy"><div id="energy-fill"></div></div>
       <div class="status" id="build">VANGUARD prototype</div>
       <div class="help">
         WASD move · Space jump · drag/click to look<br />
-        Hold E or right-mouse: swing · Shift: reel in · F: zip-pull · J (or click when mouse is captured): strike
+        Hold E or right-mouse: swing · Shift: reel in · F: zip-pull · J (or click when mouse is captured): strike · Q: snare
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

@@ -5,6 +5,7 @@ import type {
   HeroParams,
   MeleeParams,
   MovementParams,
+  SnareParams,
   SwingParams,
   ZipParams,
 } from '../sim/params';
@@ -22,11 +23,12 @@ export interface HeroData {
 
 export interface AbilityData {
   id: string;
-  kind: 'swing' | 'zip' | 'melee';
+  kind: 'swing' | 'zip' | 'melee' | 'snare';
   displayName: string;
   swing?: SwingParams;
   zip?: ZipParams;
   melee?: MeleeParams;
+  snare?: SnareParams;
 }
 
 export interface UpgradeData {
@@ -87,7 +89,10 @@ export function resolveHero(hero: HeroData, abilities: Record<string, AbilityDat
   const swing = byKind.swing?.swing;
   const zip = byKind.zip?.zip;
   const melee = byKind.melee?.melee;
-  if (!swing || !zip || !melee) throw new Error(`Hero ${hero.id} is missing a swing, zip or melee ability`);
+  const snare = byKind.snare?.snare;
+  if (!swing || !zip || !melee || !snare) {
+    throw new Error(`Hero ${hero.id} is missing a swing, zip, melee or snare ability`);
+  }
   return {
     id: hero.id,
     displayName: hero.displayName,
@@ -98,5 +103,6 @@ export function resolveHero(hero: HeroData, abilities: Record<string, AbilityDat
     swing,
     zip,
     melee,
+    snare,
   };
 }

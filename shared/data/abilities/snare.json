@@ -1,0 +1,12 @@
+{
+  "id": "ability.snare",
+  "kind": "snare",
+  "displayName": "Tether Snare",
+  "snare": {
+    "cost": 12,
+    "cooldown": 3,
+    "range": 30,
+    "radius": 1.3,
+    "duration": 3
+  }
+}

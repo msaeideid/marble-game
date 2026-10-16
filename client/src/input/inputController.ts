@@ -12,6 +12,7 @@ export interface MoveInput {
   reelHeld: boolean;
   zipPressed: boolean;
   attackPressed: boolean;
+  snarePressed: boolean;
 }
 
 function deadzone(v: number): number {
@@ -31,6 +32,8 @@ export class InputController {
   private jumpLatch = false;
   private zipLatch = false;
   private attackLatch = false;
+  private snareLatch = false;
+  private padSnareHeld = false;
   private padAttackHeld = false;
   private swingLatch = false;
   private rmbHeld = false;
@@ -51,6 +54,7 @@ export class InputController {
       if (e.code === 'KeyE') this.swingLatch = true;
       if (e.code === 'KeyF') this.zipLatch = true;
       if (e.code === 'KeyJ') this.attackLatch = true;
+      if (e.code === 'KeyQ') this.snareLatch = true;
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
@@ -125,6 +129,9 @@ export class InputController {
     const attackDown = pad.buttons[2]?.pressed ?? false;
     if (attackDown && !this.padAttackHeld) this.attackLatch = true;
     this.padAttackHeld = attackDown;
+    const snareDown = pad.buttons[1]?.pressed ?? false;
+    if (snareDown && !this.padSnareHeld) this.snareLatch = true;
+    this.padSnareHeld = snareDown;
   }
 
   /** Call once per sim tick. Consumes the jump latch. */
@@ -148,6 +155,8 @@ export class InputController {
     const jumpPressed = this.jumpLatch;
     const zipPressed = this.zipLatch;
     const attackPressed = this.attackLatch;
+    const snarePressed = this.snareLatch;
+    this.snareLatch = false;
     this.attackLatch = false;
     this.jumpLatch = false;
     this.zipLatch = false;
@@ -160,6 +169,7 @@ export class InputController {
       reelHeld,
       zipPressed,
       attackPressed,
+      snarePressed,
     };
   }
 }

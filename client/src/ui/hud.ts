@@ -5,6 +5,9 @@ export class Hud {
   private readonly shieldFill = document.getElementById('shield-fill') as HTMLElement;
   private readonly coreFill = document.getElementById('core-fill') as HTMLElement;
   private readonly banner = document.getElementById('banner') as HTMLElement;
+  private readonly snareChip = document.getElementById('snare-chip') as HTMLElement;
+  private readonly hurt = document.getElementById('hurt') as HTMLElement;
+  private hurtTimer = 0;
   private readonly status = document.getElementById('build') as HTMLElement;
 
   setEnergy(current: number, max: number): void {
@@ -22,6 +25,23 @@ export class Hud {
   setBanner(text: string | null): void {
     this.banner.style.display = text ? 'block' : 'none';
     if (text) this.banner.textContent = text;
+  }
+
+  setSnareReady(ready: boolean): void {
+    this.snareChip.classList.toggle('cooling', !ready);
+  }
+
+  /** Flash the screen edges red. Call `tick` each frame so it fades out. */
+  hurtFlash(): void {
+    this.hurt.classList.add('on');
+    this.hurtTimer = 0.08;
+  }
+
+  tick(dt: number): void {
+    if (this.hurtTimer > 0) {
+      this.hurtTimer -= dt;
+      if (this.hurtTimer <= 0) this.hurt.classList.remove('on');
+    }
   }
 
   setAimValid(valid: boolean): void {

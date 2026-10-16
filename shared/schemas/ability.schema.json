@@ -16,7 +16,8 @@
       "enum": [
         "swing",
         "zip",
-        "melee"
+        "melee",
+        "snare"
       ]
     },
     "displayName": {
@@ -31,6 +32,9 @@
     },
     "melee": {
       "$ref": "#/definitions/melee"
+    },
+    "snare": {
+      "$ref": "#/definitions/snare"
     }
   },
   "allOf": [
@@ -56,6 +60,11 @@
             {
               "required": [
                 "melee"
+              ]
+            },
+            {
+              "required": [
+                "snare"
               ]
             }
           ]
@@ -85,6 +94,11 @@
               "required": [
                 "melee"
               ]
+            },
+            {
+              "required": [
+                "snare"
+              ]
             }
           ]
         }
@@ -112,6 +126,44 @@
             {
               "required": [
                 "zip"
+              ]
+            },
+            {
+              "required": [
+                "snare"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "snare"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "snare"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "swing"
+              ]
+            },
+            {
+              "required": [
+                "zip"
+              ]
+            },
+            {
+              "required": [
+                "melee"
               ]
             }
           ]
@@ -286,6 +338,34 @@
               }
             }
           }
+        }
+      }
+    },
+    "snare": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cost",
+        "cooldown",
+        "range",
+        "radius",
+        "duration"
+      ],
+      "properties": {
+        "cost": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "cooldown": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "range": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "radius": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "duration": {
+          "$ref": "common.schema.json#/$defs/positive"
         }
       }
     }

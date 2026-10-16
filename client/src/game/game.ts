@@ -30,12 +30,13 @@ export class Game {
   private readonly hud = new Hud();
   private readonly hero = getHero('hero.swinger');
   private frameCount = 0;
+  private bannerTimer = 0;
+  private bannerText: string | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     const world = new World(arena);
-    this.sim = new Sim(world, this.hero, content.enemies);
+    this.sim = new Sim(world, this.hero, content.enemies, { waves: true });
     this.sim.addPlayer(LOCAL_ID);
-    for (const s of world.enemySpawns) this.sim.spawnEnemy(s.type, s.pos);
 
     this.view = createGameView(canvas);
     buildLevelView(this.view.scene, world);
@@ -78,8 +79,22 @@ export class Game {
     this.hud.setEnergy(me.energy, this.hero.energy.max);
     this.hud.setHealth(me.health.shield, this.hero.health.shield.max, me.health.core, this.hero.health.core.max);
     this.hud.setAimValid(aimAnchor !== null);
+    this.hud.setSnareReady(me.snareCooldown <= 0 && me.energy >= this.hero.snare.cost);
+    for (const ev of events) {
+      if (ev.type === 'wave') {
+        this.bannerText = `Wave ${ev.wave}`;
+        this.bannerTimer = 2;
+      }
+      if (ev.type === 'damage' && ev.target === LOCAL_ID) this.hud.hurtFlash();
+    }
+    this.hud.tick(dt);
+    this.bannerTimer = Math.max(0, this.bannerTimer - dt);
     this.hud.setBanner(
-      me.defeatedTimer !== null ? `Down! Back at base in ${Math.ceil(me.defeatedTimer)}…` : null,
+      me.defeatedTimer !== null
+        ? `Down! Back at base in ${Math.ceil(me.defeatedTimer)}…`
+        : this.bannerTimer > 0
+          ? this.bannerText
+          : null,
     );
 
     if (++this.frameCount % 15 === 0) {

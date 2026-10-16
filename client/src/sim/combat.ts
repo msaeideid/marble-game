@@ -1,5 +1,6 @@
-import type { MeleeParams } from './params';
+import type { MeleeParams, SnareParams } from './params';
 import type { Vec3 } from './types';
+import type { World } from './world';
 
 export interface MeleeState {
   phase: 'idle' | 'windup' | 'recovery';
@@ -81,4 +82,37 @@ export function meleeTargets<T extends Hittable>(
     out.push(c);
   }
   return out;
+}
+
+export interface Snareable extends Hittable {
+  height: number;
+}
+
+/**
+ * The enemy a snare would catch: the nearest one within `radius` of the aim ray (up to `range`) that has a
+ * clear line of sight. `dir` must be a unit vector.
+ */
+export function pickSnareTarget<T extends Snareable>(
+  world: World,
+  origin: Vec3,
+  dir: Vec3,
+  p: SnareParams,
+  candidates: Iterable<T>,
+): T | null {
+  let best: T | null = null;
+  let bestT = Infinity;
+  for (const c of candidates) {
+    const cx = c.pos.x - origin.x;
+    const cy = c.pos.y + c.height / 2 - origin.y;
+    const cz = c.pos.z - origin.z;
+    const t = cx * dir.x + cy * dir.y + cz * dir.z;
+    if (t < 0 || t > p.range || t >= bestT) continue;
+    const off2 = cx * cx + cy * cy + cz * cz - t * t;
+    if (off2 > p.radius * p.radius) continue;
+    const wall = world.raycast(origin, dir, t);
+    if (wall && wall.distance < t - 0.5) continue;
+    best = c;
+    bestT = t;
+  }
+  return best;
 }

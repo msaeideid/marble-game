@@ -50,13 +50,34 @@ export interface MeleeParams {
   steps: MeleeStep[];
 }
 
+export interface SnareParams {
+  cost: number;
+  cooldown: number;
+  range: number;
+  /** How far off the aim line an enemy can be and still be caught. */
+  radius: number;
+  /** Seconds the enemy is held (cannot move or attack). */
+  duration: number;
+}
+
 export interface EnemyParams {
   id: string;
   displayName: string;
   health: HealthParams;
   move: { speed: number; halfWidth: number; height: number };
   aggroRange: number;
-  attack: { range: number; damage: number; windup: number; recovery: number; cooldown: number };
+  attack: {
+    range: number;
+    damage: number;
+    windup: number;
+    recovery: number;
+    cooldown: number;
+    knockback: number;
+  };
+  /** Seconds an enemy is staggered (cannot act) after being hit. */
+  staggerTime: number;
+  /** After a stagger ends, hits do damage but cannot interrupt for this many seconds (prevents stun-lock). */
+  poiseTime: number;
   powerDownTime: number;
 }
 
@@ -109,4 +130,5 @@ export interface HeroParams {
   swing: SwingParams;
   zip: ZipParams;
   melee: MeleeParams;
+  snare: SnareParams;
 }

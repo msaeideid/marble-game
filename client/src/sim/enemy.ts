@@ -4,6 +4,8 @@ import type { EnemyParams } from './params';
 import type { Vec3 } from './types';
 import type { World } from './world';
 
+export type AiState = 'idle' | 'chase' | 'windup' | 'recovery' | 'stagger';
+
 export interface EnemyState {
   id: string;
   typeId: string;
@@ -15,6 +17,15 @@ export interface EnemyState {
   health: HealthState;
   /** Seconds left of the "power down" animation after defeat, otherwise null. */
   defeatedTimer: number | null;
+  aiState: AiState;
+  /** Seconds left in the current windup / recovery / stagger. */
+  aiTimer: number;
+  /** Seconds until this enemy may start another attack. */
+  attackCooldown: number;
+  /** Seconds left held by a snare (cannot move or attack). */
+  snaredTimer: number;
+  /** While > 0, hits cannot stagger this enemy. */
+  poiseTimer: number;
 }
 
 export function createEnemy(id: string, def: EnemyParams, pos: Vec3): EnemyState {
@@ -28,6 +39,11 @@ export function createEnemy(id: string, def: EnemyParams, pos: Vec3): EnemyState
     grounded: false,
     health: createHealth(def.health),
     defeatedTimer: null,
+    aiState: 'idle',
+    aiTimer: 0,
+    attackCooldown: 0,
+    snaredTimer: 0,
+    poiseTimer: 0,
   };
 }
 

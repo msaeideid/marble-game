@@ -4,6 +4,7 @@ export interface LevelData {
   id: string;
   spawn: number[];
   killY: number;
+  waveDelay?: number;
   enemySpawns?: { type: string; pos: number[] }[];
   colliders: { kind: string; min: number[]; max: number[] }[];
 }
@@ -22,6 +23,7 @@ export class World {
   readonly colliders: Collider[];
   readonly spawn: Vec3;
   readonly killY: number;
+  readonly waveDelay: number;
   readonly enemySpawns: { type: string; pos: Vec3 }[];
 
   constructor(level: LevelData) {
@@ -32,6 +34,7 @@ export class World {
     }));
     this.spawn = { x: level.spawn[0]!, y: level.spawn[1]!, z: level.spawn[2]! };
     this.killY = level.killY;
+    this.waveDelay = level.waveDelay ?? 5;
     this.enemySpawns = (level.enemySpawns ?? []).map((e) => ({
       type: e.type,
       pos: { x: e.pos[0]!, y: e.pos[1]!, z: e.pos[2]! },

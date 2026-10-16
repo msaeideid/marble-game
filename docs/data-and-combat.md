@@ -31,7 +31,7 @@ Views use events for flashes and banners; netcode will broadcast them.
 `ability.strike`: windup -> hit lands -> recovery. Pressing again inside `comboWindow` continues the combo
 (`steps[]`, each with `damage` and `knockback`); a press up to `inputBuffer` seconds early is remembered, so mashing
 works but the rate is capped by `windup + recovery`. The hit lands on everything in the frontal arc
-(`arcDegrees`, `range`, `verticalReach`) toward the camera heading. Three hits power down a thug (30 HP).
+(`arcDegrees`, `range`, `verticalReach`) toward the camera heading. A full 3-hit combo does 36 damage; a thug has 45 HP, so it takes a combo and a bit more.
 
 Controls: `J`, or left-click while the mouse is captured; gamepad X (zip moved to Y).
 
