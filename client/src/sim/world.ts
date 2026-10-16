@@ -4,6 +4,7 @@ export interface LevelData {
   id: string;
   spawn: number[];
   killY: number;
+  enemySpawns?: { type: string; pos: number[] }[];
   colliders: { kind: string; min: number[]; max: number[] }[];
 }
 
@@ -21,6 +22,7 @@ export class World {
   readonly colliders: Collider[];
   readonly spawn: Vec3;
   readonly killY: number;
+  readonly enemySpawns: { type: string; pos: Vec3 }[];
 
   constructor(level: LevelData) {
     this.colliders = level.colliders.map((c) => ({
@@ -30,6 +32,10 @@ export class World {
     }));
     this.spawn = { x: level.spawn[0]!, y: level.spawn[1]!, z: level.spawn[2]! };
     this.killY = level.killY;
+    this.enemySpawns = (level.enemySpawns ?? []).map((e) => ({
+      type: e.type,
+      pos: { x: e.pos[0]!, y: e.pos[1]!, z: e.pos[2]! },
+    }));
   }
 
   /** Nearest hit of a ray (dir need not be normalised) within `maxDistance`, or null. */

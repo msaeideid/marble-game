@@ -2,6 +2,11 @@
  "id": "arena",
  "spawn": [0, 0.01, 0],
  "killY": -40,
+ "enemySpawns": [
+  {"type":"enemy.thug","pos":[5,0.01,8]},
+  {"type":"enemy.thug","pos":[-5,0.01,12]},
+  {"type":"enemy.thug","pos":[0,0.01,18]}
+ ],
  "colliders": [
   {"kind":"ground","min":[-120,-2,-120],"max":[120,0,120]},
   {"kind":"building","min":[-41,0,-41],"max":[-31,8,-31]},

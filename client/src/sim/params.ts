@@ -1,4 +1,10 @@
-export interface MovementParams {
+/** An upright collision box centred on the feet. */
+export interface BoxSize {
+  halfWidth: number;
+  height: number;
+}
+
+export interface MovementParams extends BoxSize {
   runSpeed: number;
   groundAccel: number;
   airAccel: number;
@@ -7,15 +13,51 @@ export interface MovementParams {
   maxFallSpeed: number;
   coyoteTime: number;
   jumpBufferTime: number;
-  halfWidth: number;
-  height: number;
 }
 
-export interface EnergyParams {
+/** A regenerating pool (energy, shield, core health). */
+export interface PoolParams {
   max: number;
   regenPerSecond: number;
-  /** Seconds after spending energy before regeneration resumes. */
+  /** Seconds after spending or taking damage before regeneration resumes. */
   regenDelay: number;
+}
+
+export type EnergyParams = PoolParams;
+
+/** Health is a regenerating shield over a slower core. */
+export interface HealthParams {
+  shield: PoolParams;
+  core: PoolParams;
+}
+
+export interface MeleeStep {
+  damage: number;
+  knockback: number;
+}
+
+export interface MeleeParams {
+  cost: number;
+  range: number;
+  arcDegrees: number;
+  verticalReach: number;
+  windup: number;
+  recovery: number;
+  /** After a hit, how long the next press continues the combo instead of restarting it. */
+  comboWindow: number;
+  /** A press this early before the attack is free is remembered. */
+  inputBuffer: number;
+  steps: MeleeStep[];
+}
+
+export interface EnemyParams {
+  id: string;
+  displayName: string;
+  health: HealthParams;
+  move: { speed: number; halfWidth: number; height: number };
+  aggroRange: number;
+  attack: { range: number; damage: number; windup: number; recovery: number; cooldown: number };
+  powerDownTime: number;
 }
 
 export interface SwingParams {
@@ -58,8 +100,13 @@ export interface ZipParams {
 
 /** Everything the sim needs to know about how one hero moves. Loaded from shared/data/heroes. */
 export interface HeroParams {
+  id: string;
+  displayName: string;
   movement: MovementParams;
   energy: EnergyParams;
+  health: HealthParams;
+  respawnDelay: number;
   swing: SwingParams;
   zip: ZipParams;
+  melee: MeleeParams;
 }

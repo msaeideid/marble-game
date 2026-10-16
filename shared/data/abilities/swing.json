@@ -1,0 +1,21 @@
+{
+  "id": "ability.swing",
+  "kind": "swing",
+  "displayName": "Tether Swing",
+  "swing": {
+    "handHeight": 1.4,
+    "maxRange": 55,
+    "minLength": 3,
+    "attachCost": 5,
+    "drainPerSecond": 4,
+    "reelSpeed": 14,
+    "reelDrainPerSecond": 8,
+    "autoReelSpeed": 24,
+    "arcClearance": 3,
+    "pullGain": 10,
+    "airControl": 9,
+    "releaseBoost": 3,
+    "maxSpeed": 38,
+    "ropeClearTolerance": 0.5
+  }
+}

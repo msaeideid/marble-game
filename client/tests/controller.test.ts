@@ -1,26 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import swinger from '@shared/data/heroes/swinger.json';
+import { DT, hero, intent, makeSim, run } from './helpers';
 import arena from '@shared/levels/arena.json';
-import type { HeroParams } from '../src/sim/params';
-import { Sim } from '../src/sim/sim';
-import { NEUTRAL_INTENT, type PlayerIntent } from '../src/sim/types';
 import { World } from '../src/sim/world';
 
-const DT = 1 / 30;
-const hero = swinger as HeroParams;
 const params = hero.movement;
 
-function makeSim(): Sim {
-  const sim = new Sim(new World(arena), hero);
-  sim.addPlayer('p1');
-  return sim;
-}
-
-const intent = (over: Partial<PlayerIntent> = {}): PlayerIntent => ({ ...NEUTRAL_INTENT, ...over });
-
-function run(sim: Sim, ticks: number, make: (i: number) => PlayerIntent): void {
-  for (let i = 0; i < ticks; i++) sim.step(DT, new Map([['p1', make(i)]]));
-}
 
 describe('player controller', () => {
   it('lands on the ground and reports grounded', () => {

@@ -1,25 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import swinger from '@shared/data/heroes/swinger.json';
+import { DT, hero, intent, makeSim, run } from './helpers';
 import arena from '@shared/levels/arena.json';
 import { handPos } from '../src/sim/controller';
-import type { HeroParams } from '../src/sim/params';
-import { Sim } from '../src/sim/sim';
+import type { Sim } from '../src/sim/sim';
 import { pickSwingAnchor, removeOutwardVelocity, ropeLimitedDelta } from '../src/sim/swing';
-import { NEUTRAL_INTENT, type PlayerIntent, type Vec3 } from '../src/sim/types';
 import { World } from '../src/sim/world';
+import type { Vec3 } from '../src/sim/types';
 
-const DT = 1 / 30;
-const hero = swinger as HeroParams;
-const intent = (over: Partial<PlayerIntent> = {}): PlayerIntent => ({ ...NEUTRAL_INTENT, ...over });
 
-function makeSim(): Sim {
-  const sim = new Sim(new World(arena), hero);
-  sim.addPlayer('p1');
-  return sim;
-}
-function run(sim: Sim, ticks: number, make: (i: number) => PlayerIntent): void {
-  for (let i = 0; i < ticks; i++) sim.step(DT, new Map([['p1', make(i)]]));
-}
 const dist = (a: Vec3, b: Vec3) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 
 describe('rope maths', () => {

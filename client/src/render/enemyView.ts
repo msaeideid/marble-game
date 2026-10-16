@@ -1,0 +1,50 @@
+import { Color3 } from '@babylonjs/core/Maths/math.color';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { CreateCapsule } from '@babylonjs/core/Meshes/Builders/capsuleBuilder';
+import type { Mesh } from '@babylonjs/core/Meshes/mesh';
+import type { Scene } from '@babylonjs/core/scene';
+import type { EnemyState } from '../sim/enemy';
+import type { EnemyParams } from '../sim/params';
+
+const BASE = new Color3(0.9, 0.35, 0.35);
+const FLASH = new Color3(1, 1, 1);
+
+/** Placeholder enemy: a red capsule that flashes white when hit and shrinks away when powered down. */
+export class EnemyView {
+  private readonly mesh: Mesh;
+  private readonly mat: StandardMaterial;
+  private flash = 0;
+
+  constructor(scene: Scene, readonly id: string, private readonly def: EnemyParams) {
+    this.mat = new StandardMaterial(`enemy-${id}`, scene);
+    this.mat.specularColor = Color3.Black();
+    this.mat.diffuseColor = BASE;
+    this.mat.emissiveColor = BASE.scale(0.35);
+    this.mesh = CreateCapsule(`enemy-${id}`, { height: def.move.height, radius: def.move.halfWidth }, scene);
+    this.mesh.material = this.mat;
+  }
+
+  hit(): void {
+    this.flash = 0.12;
+  }
+
+  update(e: EnemyState, alpha: number, dt: number): void {
+    const x = e.prevPos.x + (e.pos.x - e.prevPos.x) * alpha;
+    const y = e.prevPos.y + (e.pos.y - e.prevPos.y) * alpha;
+    const z = e.prevPos.z + (e.pos.z - e.prevPos.z) * alpha;
+    const scale = e.defeatedTimer === null ? 1 : Math.max(0.01, e.defeatedTimer / this.def.powerDownTime);
+    this.mesh.scaling.setAll(scale);
+    this.mesh.position.set(x, y + (this.def.move.height / 2) * scale, z);
+    this.mesh.rotation.y = e.facing;
+
+    this.flash = Math.max(0, this.flash - dt);
+    const c = this.flash > 0 ? FLASH : e.defeatedTimer === null ? BASE : new Color3(0.6, 0.6, 0.7);
+    this.mat.diffuseColor = c;
+    this.mat.emissiveColor = c.scale(0.35);
+  }
+
+  dispose(): void {
+    this.mesh.dispose();
+    this.mat.dispose();
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "upgrade.swinger.quick_recharge",
+  "displayName": "Quick Recharge",
+  "hero": "hero.swinger",
+  "cost": 60,
+  "modifiers": [
+    { "path": "energy.regenPerSecond", "op": "mul", "value": 1.3 },
+    { "path": "energy.regenDelay", "op": "mul", "value": 0.7 }
+  ]
+}

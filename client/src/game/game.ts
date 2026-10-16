@@ -1,6 +1,7 @@
-import swingerData from '@shared/data/heroes/swinger.json';
 import arena from '@shared/levels/arena.json';
+import { content, getHero } from '../data';
 import { InputController } from '../input/inputController';
+import { EnemyView } from '../render/enemyView';
 import { FollowCamera } from '../render/followCamera';
 import { buildLevelView } from '../render/levelView';
 import { PlayerView } from '../render/playerView';
@@ -8,8 +9,7 @@ import { createGameView, type GameView } from '../render/scene';
 import { aimDir } from '../sim/aim';
 import { handPos } from '../sim/controller';
 import { FixedStepper } from '../sim/fixedStep';
-import type { HeroParams } from '../sim/params';
-import { Sim } from '../sim/sim';
+import { Sim, type SimEvent } from '../sim/sim';
 import { pickSwingAnchor } from '../sim/swing';
 import type { PlayerIntent } from '../sim/types';
 import { World } from '../sim/world';
@@ -25,15 +25,17 @@ export class Game {
   readonly input: InputController;
   private readonly stepper = new FixedStepper(SIM_DT);
   private readonly playerView: PlayerView;
+  private readonly enemyViews = new Map<string, EnemyView>();
   private readonly cam: FollowCamera;
   private readonly hud = new Hud();
-  private readonly hero = swingerData as HeroParams;
+  private readonly hero = getHero('hero.swinger');
   private frameCount = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     const world = new World(arena);
-    this.sim = new Sim(world, this.hero);
+    this.sim = new Sim(world, this.hero, content.enemies);
     this.sim.addPlayer(LOCAL_ID);
+    for (const s of world.enemySpawns) this.sim.spawnEnemy(s.type, s.pos);
 
     this.view = createGameView(canvas);
     buildLevelView(this.view.scene, world);
@@ -52,13 +54,16 @@ export class Game {
     const { engine, scene } = this.view;
     this.input.pollLook(dt);
 
+    const events: SimEvent[] = [];
     const alpha = this.stepper.advance(dt, (stepDt) => {
       const m = this.input.sample();
       const intent: PlayerIntent = { ...m, yaw: this.input.yaw, pitch: this.input.pitch };
       this.sim.step(stepDt, new Map([[LOCAL_ID, intent]]));
+      events.push(...this.sim.events);
     });
 
     const me = this.sim.players.get(LOCAL_ID)!;
+    this.syncEnemies(events, alpha, dt);
     const aimAnchor = this.previewAnchor();
     this.playerView.update(me, alpha, me.tether || me.zip ? null : aimAnchor);
     const p = me.prevPos;
@@ -71,12 +76,39 @@ export class Game {
     scene.render();
 
     this.hud.setEnergy(me.energy, this.hero.energy.max);
+    this.hud.setHealth(me.health.shield, this.hero.health.shield.max, me.health.core, this.hero.health.core.max);
     this.hud.setAimValid(aimAnchor !== null);
+    this.hud.setBanner(
+      me.defeatedTimer !== null ? `Down! Back at base in ${Math.ceil(me.defeatedTimer)}…` : null,
+    );
 
     if (++this.frameCount % 15 === 0) {
       const speed = Math.hypot(me.vel.x, me.vel.y, me.vel.z).toFixed(1);
       const mode = me.zip ? 'zipping' : me.tether ? 'swinging' : me.grounded ? 'grounded' : 'airborne';
       this.hud.setStatus(`${engine.getFps().toFixed(0)} fps · speed ${speed} m/s · ${mode}`);
+    }
+  }
+
+  private syncEnemies(events: readonly SimEvent[], alpha: number, dt: number): void {
+    const { scene } = this.view;
+    for (const e of this.sim.enemies.values()) {
+      let v = this.enemyViews.get(e.id);
+      if (!v) {
+        v = new EnemyView(scene, e.id, content.enemies[e.typeId]!);
+        this.enemyViews.set(e.id, v);
+      }
+    }
+    for (const ev of events) {
+      if (ev.type === 'damage') this.enemyViews.get(ev.target)?.hit();
+    }
+    for (const [id, v] of this.enemyViews) {
+      const e = this.sim.enemies.get(id);
+      if (!e) {
+        v.dispose();
+        this.enemyViews.delete(id);
+      } else {
+        v.update(e, alpha, dt);
+      }
     }
   }
 

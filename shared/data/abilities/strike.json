@@ -1,0 +1,20 @@
+{
+  "id": "ability.strike",
+  "kind": "melee",
+  "displayName": "Strike",
+  "melee": {
+    "cost": 0,
+    "range": 2.4,
+    "arcDegrees": 120,
+    "verticalReach": 2.2,
+    "windup": 0.1,
+    "recovery": 0.2,
+    "comboWindow": 0.6,
+    "inputBuffer": 0.2,
+    "steps": [
+      { "damage": 10, "knockback": 4 },
+      { "damage": 10, "knockback": 4 },
+      { "damage": 16, "knockback": 9 }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "ability.zip",
+  "kind": "zip",
+  "displayName": "Zip-Pull",
+  "zip": {
+    "range": 45,
+    "speed": 30,
+    "cost": 15,
+    "arriveDistance": 1.2,
+    "maxDuration": 2,
+    "exitKeep": 0.5,
+    "popSpeed": 6,
+    "ledgeSnap": 2.5
+  }
+}

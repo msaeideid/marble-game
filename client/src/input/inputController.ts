@@ -11,6 +11,7 @@ export interface MoveInput {
   swingHeld: boolean;
   reelHeld: boolean;
   zipPressed: boolean;
+  attackPressed: boolean;
 }
 
 function deadzone(v: number): number {
@@ -29,6 +30,8 @@ export class InputController {
   private readonly keys = new Set<string>();
   private jumpLatch = false;
   private zipLatch = false;
+  private attackLatch = false;
+  private padAttackHeld = false;
   private swingLatch = false;
   private rmbHeld = false;
   private padZipHeld = false;
@@ -47,6 +50,7 @@ export class InputController {
       }
       if (e.code === 'KeyE') this.swingLatch = true;
       if (e.code === 'KeyF') this.zipLatch = true;
+      if (e.code === 'KeyJ') this.attackLatch = true;
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
@@ -71,6 +75,7 @@ export class InputController {
         this.swingLatch = true;
         return;
       }
+      if (document.pointerLockElement === canvas) this.attackLatch = true;
       this.dragging = true;
       this.lastX = e.clientX;
       this.lastY = e.clientY;
@@ -114,9 +119,12 @@ export class InputController {
     const jumpDown = pad.buttons[0]?.pressed ?? false;
     if (jumpDown && !this.padJumpHeld) this.jumpLatch = true;
     this.padJumpHeld = jumpDown;
-    const zipDown = pad.buttons[2]?.pressed ?? false;
+    const zipDown = pad.buttons[3]?.pressed ?? false;
     if (zipDown && !this.padZipHeld) this.zipLatch = true;
     this.padZipHeld = zipDown;
+    const attackDown = pad.buttons[2]?.pressed ?? false;
+    if (attackDown && !this.padAttackHeld) this.attackLatch = true;
+    this.padAttackHeld = attackDown;
   }
 
   /** Call once per sim tick. Consumes the jump latch. */
@@ -139,6 +147,8 @@ export class InputController {
     const reelHeld = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight') || padReel;
     const jumpPressed = this.jumpLatch;
     const zipPressed = this.zipLatch;
+    const attackPressed = this.attackLatch;
+    this.attackLatch = false;
     this.jumpLatch = false;
     this.zipLatch = false;
     this.swingLatch = false;
@@ -149,6 +159,7 @@ export class InputController {
       swingHeld,
       reelHeld,
       zipPressed,
+      attackPressed,
     };
   }
 }

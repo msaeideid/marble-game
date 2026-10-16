@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "enemy.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "displayName", "health", "move", "aggroRange", "attack", "powerDownTime"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "displayName": { "type": "string", "minLength": 1 },
+    "health": { "$ref": "common.schema.json#/$defs/health" },
+    "move": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["speed", "halfWidth", "height"],
+      "properties": {
+        "speed": { "$ref": "common.schema.json#/$defs/positive" },
+        "halfWidth": { "$ref": "common.schema.json#/$defs/positive" },
+        "height": { "$ref": "common.schema.json#/$defs/positive" }
+      }
+    },
+    "aggroRange": { "$ref": "common.schema.json#/$defs/positive" },
+    "attack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["range", "damage", "windup", "recovery", "cooldown"],
+      "properties": {
+        "range": { "$ref": "common.schema.json#/$defs/positive" },
+        "damage": { "$ref": "common.schema.json#/$defs/positive" },
+        "windup": { "$ref": "common.schema.json#/$defs/nonNegative" },
+        "recovery": { "$ref": "common.schema.json#/$defs/nonNegative" },
+        "cooldown": { "$ref": "common.schema.json#/$defs/nonNegative" }
+      }
+    },
+    "powerDownTime": { "$ref": "common.schema.json#/$defs/nonNegative" }
+  }
+}

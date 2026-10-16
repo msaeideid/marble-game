@@ -38,6 +38,8 @@ export interface PlayerIntent {
   reelHeld: boolean;
   /** True only on the tick the zip button went down. */
   zipPressed: boolean;
+  /** True only on the tick the attack button went down. */
+  attackPressed: boolean;
 }
 
 export const NEUTRAL_INTENT: PlayerIntent = {
@@ -49,6 +51,7 @@ export const NEUTRAL_INTENT: PlayerIntent = {
   swingHeld: false,
   reelHeld: false,
   zipPressed: false,
+  attackPressed: false,
 };
 
 export const vec3 = (x = 0, y = 0, z = 0): Vec3 => ({ x, y, z });

@@ -1,0 +1,7 @@
+{
+  "id": "upgrade.swinger.long_tether",
+  "displayName": "Long Tether",
+  "hero": "hero.swinger",
+  "cost": 40,
+  "modifiers": [{ "path": "swing.maxRange", "op": "mul", "value": 1.25 }]
+}

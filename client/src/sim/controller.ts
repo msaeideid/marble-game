@@ -1,6 +1,8 @@
 import { aimDir } from './aim';
 import { drain, regen, trySpend } from './energy';
-import type { HeroParams, MovementParams } from './params';
+import { createHealth, type HealthState } from './health';
+import { createMelee, type MeleeState } from './combat';
+import type { BoxSize, HeroParams } from './params';
 import {
   pickSwingAnchor,
   pickZipAnchor,
@@ -38,6 +40,10 @@ export interface PlayerState {
   tether: Tether | null;
   zip: Zip | null;
   swingHeldPrev: boolean;
+  health: HealthState;
+  /** Seconds until respawn while defeated, otherwise null. */
+  defeatedTimer: number | null;
+  melee: MeleeState;
 }
 
 export function createPlayerState(spawn: Vec3, hero: HeroParams): PlayerState {
@@ -54,6 +60,9 @@ export function createPlayerState(spawn: Vec3, hero: HeroParams): PlayerState {
     tether: null,
     zip: null,
     swingHeldPrev: false,
+    health: createHealth(hero.health),
+    defeatedTimer: null,
+    melee: createMelee(),
   };
 }
 
@@ -75,7 +84,7 @@ export interface MoveResult {
 export function moveAndCollide(
   pos: Vec3,
   delta: Vec3,
-  p: MovementParams,
+  p: BoxSize,
   colliders: readonly Collider[],
 ): MoveResult {
   const res: MoveResult = { hitDown: false, hitUp: false, hitX: false, hitZ: false };
@@ -98,7 +107,7 @@ export function moveAndCollide(
   return res;
 }
 
-function overlaps(pos: Vec3, p: MovementParams, c: Collider): boolean {
+function overlaps(pos: Vec3, p: BoxSize, c: Collider): boolean {
   return (
     pos.x + p.halfWidth > c.min.x + EPS &&
     pos.x - p.halfWidth < c.max.x - EPS &&
@@ -114,7 +123,7 @@ function pushOut(
   axis: 'x' | 'y' | 'z',
   d: number,
   pos: Vec3,
-  p: MovementParams,
+  p: BoxSize,
   colliders: readonly Collider[],
 ): boolean {
   let hit = false;

@@ -1,0 +1,293 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "ability.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "kind",
+    "displayName"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "kind": {
+      "enum": [
+        "swing",
+        "zip",
+        "melee"
+      ]
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "swing": {
+      "$ref": "#/definitions/swing"
+    },
+    "zip": {
+      "$ref": "#/definitions/zip"
+    },
+    "melee": {
+      "$ref": "#/definitions/melee"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "swing"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "swing"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "zip"
+              ]
+            },
+            {
+              "required": [
+                "melee"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "zip"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "zip"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "swing"
+              ]
+            },
+            {
+              "required": [
+                "melee"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "melee"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "melee"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "swing"
+              ]
+            },
+            {
+              "required": [
+                "zip"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "swing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "handHeight",
+        "maxRange",
+        "minLength",
+        "attachCost",
+        "drainPerSecond",
+        "reelSpeed",
+        "reelDrainPerSecond",
+        "autoReelSpeed",
+        "arcClearance",
+        "pullGain",
+        "airControl",
+        "releaseBoost",
+        "maxSpeed",
+        "ropeClearTolerance"
+      ],
+      "properties": {
+        "handHeight": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "maxRange": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "minLength": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "attachCost": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "drainPerSecond": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "reelSpeed": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "reelDrainPerSecond": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "autoReelSpeed": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "arcClearance": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "pullGain": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "airControl": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "releaseBoost": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "maxSpeed": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "ropeClearTolerance": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        }
+      }
+    },
+    "zip": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "range",
+        "speed",
+        "cost",
+        "arriveDistance",
+        "maxDuration",
+        "exitKeep",
+        "popSpeed",
+        "ledgeSnap"
+      ],
+      "properties": {
+        "range": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "speed": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "cost": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "arriveDistance": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "maxDuration": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "exitKeep": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "popSpeed": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "ledgeSnap": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        }
+      }
+    },
+    "melee": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cost",
+        "range",
+        "arcDegrees",
+        "verticalReach",
+        "windup",
+        "recovery",
+        "comboWindow",
+        "inputBuffer",
+        "steps"
+      ],
+      "properties": {
+        "cost": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "range": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "arcDegrees": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 360
+        },
+        "verticalReach": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "windup": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "recovery": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "comboWindow": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "inputBuffer": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "damage",
+              "knockback"
+            ],
+            "properties": {
+              "damage": {
+                "$ref": "common.schema.json#/$defs/positive"
+              },
+              "knockback": {
+                "$ref": "common.schema.json#/$defs/nonNegative"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

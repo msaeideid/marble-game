@@ -13,35 +13,11 @@
     "halfWidth": 0.35,
     "height": 1.8
   },
-  "energy": {
-    "max": 100,
-    "regenPerSecond": 14,
-    "regenDelay": 0.6
+  "energy": { "max": 100, "regenPerSecond": 14, "regenDelay": 0.6 },
+  "health": {
+    "shield": { "max": 40, "regenPerSecond": 12, "regenDelay": 3 },
+    "core": { "max": 60, "regenPerSecond": 1, "regenDelay": 8 }
   },
-  "swing": {
-    "handHeight": 1.4,
-    "maxRange": 55,
-    "minLength": 3,
-    "attachCost": 5,
-    "drainPerSecond": 4,
-    "reelSpeed": 14,
-    "reelDrainPerSecond": 8,
-    "autoReelSpeed": 24,
-    "arcClearance": 3,
-    "pullGain": 10,
-    "airControl": 9,
-    "releaseBoost": 3,
-    "maxSpeed": 38,
-    "ropeClearTolerance": 0.5
-  },
-  "zip": {
-    "range": 45,
-    "speed": 30,
-    "cost": 15,
-    "arriveDistance": 1.2,
-    "maxDuration": 2,
-    "exitKeep": 0.5,
-    "popSpeed": 6,
-    "ledgeSnap": 2.5
-  }
+  "respawnDelay": 3,
+  "abilities": ["ability.swing", "ability.zip", "ability.strike"]
 }

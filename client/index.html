@@ -17,6 +17,12 @@
       #energy { position: absolute; left: 50%; bottom: 28px; width: min(320px, 60vw); height: 12px; margin-left: calc(min(320px, 60vw) / -2);
         background: rgba(0,0,0,.35); border-radius: 6px; overflow: hidden; }
       #energy-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #38c6ff, #7af0ff); transition: width .05s linear; }
+      #vitals { position: absolute; left: 12px; top: 12px; width: min(260px, 50vw); }
+      #vitals .bar { height: 12px; border-radius: 6px; background: rgba(0,0,0,.35); overflow: hidden; margin-bottom: 5px; }
+      #shield-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #5aa8ff, #9fd0ff); transition: width .08s linear; }
+      #core-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #3ddc84, #9cf2b8); transition: width .08s linear; }
+      #core-fill.low { background: linear-gradient(90deg, #ff5d5d, #ff9a6b); }
+      #banner { position: absolute; left: 0; right: 0; top: 35%; text-align: center; font-size: 28px; font-weight: 700; display: none; }
       #energy-fill.low { background: linear-gradient(90deg, #ff6b6b, #ffb36b); }
     </style>
   </head>
@@ -24,11 +30,16 @@
     <canvas id="game" tabindex="0"></canvas>
     <div id="hud">
       <div id="crosshair"></div>
+      <div id="vitals">
+        <div class="bar"><div id="shield-fill"></div></div>
+        <div class="bar"><div id="core-fill"></div></div>
+      </div>
+      <div id="banner"></div>
       <div id="energy"><div id="energy-fill"></div></div>
       <div class="status" id="build">VANGUARD prototype</div>
       <div class="help">
         WASD move · Space jump · drag/click to look<br />
-        Hold E or right-mouse: swing · Shift: reel in · F: zip-pull
+        Hold E or right-mouse: swing · Shift: reel in · F: zip-pull · J (or click when mouse is captured): strike
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
