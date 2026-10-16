@@ -2,12 +2,15 @@
   "name": "vanguard",
   "private": true,
   "version": "0.0.1",
-  "workspaces": ["client"],
+  "workspaces": [
+    "client"
+  ],
   "scripts": {
     "dev": "npm run dev -w client",
     "build": "npm run build -w client",
     "test": "npm run test -w client",
     "typecheck": "npm run typecheck -w client",
-    "lint": "npm run lint -w client"
+    "lint": "npm run lint -w client",
+    "test:e2e": "npm run test:e2e -w client"
   }
 }

@@ -1,6 +1,6 @@
 # VANGUARD (working title) — Project Plan v0.2 (browser edition)
 
-Status: **DRAFT for approval. No code written yet.**
+Status: **Plan approved. Phase 1 slice S0-S6 built (see README); next: Gate 1 playtest (docs/PLAYTEST.md).**
 v0.2 replaces v0.1 (Unity). The platform changed to a browser game: TypeScript + WebGL client, Python/FastAPI server.
 
 ## 0. Decisions so far

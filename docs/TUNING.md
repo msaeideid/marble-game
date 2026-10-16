@@ -1,0 +1,37 @@
+# Tuning guide
+
+Almost everything that decides how the game *feels* is a number in a JSON file under `shared/`. Edit, save, reload
+the page (the dev server reloads by itself). No code changes, no rebuild. `npm test` checks the files against their
+schemas, so a typo is caught immediately.
+
+| I want to change... | File -> field | Notes |
+|---|---|---|
+| Run speed / snappiness | `heroes/swinger.json` -> `movement.runSpeed`, `groundAccel` | |
+| Jump height | `movement.jumpSpeed`, `movement.gravity` | height = `jumpSpeed^2 / (2*gravity)` |
+| Forgiving jumps | `movement.coyoteTime`, `jumpBufferTime` | seconds |
+| Max HP | `health.shield.max`, `health.core.max` | |
+| How fast shield / core come back | `health.shield.regenPerSecond`, `regenDelay`; `health.core.*` | delay restarts on any hit |
+| Energy budget | `energy.max`, `regenPerSecond`, `regenDelay` | the main balance lever |
+| Time down / spawn protection | `respawnDelay`, `respawnInvulnerable` | |
+| Swing range / reach | `abilities/swing.json` -> `swing.maxRange` | |
+| Swing launch strength | `swing.autoReelSpeed`, `pullGain`, `arcClearance` | lower clearance = lower, faster swings |
+| Swing speed cap / release boost | `swing.maxSpeed`, `releaseBoost` | |
+| Swing energy cost | `swing.attachCost`, `drainPerSecond`, `reelDrainPerSecond` | |
+| Zip power | `abilities/zip.json` -> `zip.speed`, `cost`, `ledgeSnap` | `ledgeSnap` = how close to a roof edge counts as "up and over" |
+| Strike damage / combo | `abilities/strike.json` -> `melee.steps[]`, `windup`, `recovery`, `comboWindow` | |
+| Strike reach / arc | `melee.range`, `arcDegrees` | player reach should stay above thug attack range |
+| Snare | `abilities/snare.json` -> `snare.duration`, `cooldown`, `cost`, `radius`, `range` | |
+| Thug toughness | `enemies/thug.json` -> `health.core.max`, `staggerTime`, `poiseTime` | |
+| Thug threat | `attack.damage`, `attack.range`, `attack.windup`, `move.speed`, `attack.knockback` | longer windup = easier to dodge |
+| Wave pacing | `levels/arena.json` -> `waveDelay`, `enemySpawns` | wave n adds one thug, cap 5 |
+| Base pad healing | `levels/arena.json` -> `base.regenPerSecond`, `base.radius` | |
+| Level layout | `levels/arena.json` -> `colliders` | boxes; visuals follow automatically |
+
+Hit-stop, camera shake and slash visuals are constants in `client/src/game/game.ts` and `render/effects.ts`.
+
+## Rules of thumb
+- Change one thing at a time and play for a minute before changing the next.
+- Keep strike reach (`melee.range + 0.4`) above thug `attack.range`, or fights turn into pure tanking.
+- Upgrades must widen options, not inflate power: `validateUpgrade()` in `sim/upgrades.ts` enforces it in tests.
+- Reference point for difficulty: a stationary player who only mashes strike loses roughly 30-50 of 100 HP per wave
+  (waves 1-6) and does not die. Real play (dodging, snaring, swinging) should do better.
