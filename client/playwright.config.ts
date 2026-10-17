@@ -6,10 +6,11 @@ import { defineConfig } from '@playwright/test';
  */
 export default defineConfig({
   testDir: 'e2e',
-  timeout: 90_000,
+  timeout: process.env.CI ? 180_000 : 90_000, // CI runners are slower at software rendering
   fullyParallel: false,
   workers: 1, // software-rendered browsers starve each other when run in parallel
-  reporter: [['list']],
+  // On CI the `github` reporter turns failures into annotations that are readable through the public API.
+  reporter: process.env.CI ? [['list'], ['github']] : [['list']],
   use: {
     baseURL: 'http://localhost:4173/marble-game/',
     channel: process.env.PW_CHANNEL || undefined,

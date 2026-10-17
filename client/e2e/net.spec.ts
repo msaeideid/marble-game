@@ -42,20 +42,22 @@ async function scenario(browser: Browser, extra: string) {
   const b = await join(browser, 'Bo', extra);
   await Promise.all([a, b].map((p) => p.evaluate(() => window.__vanguard.setPaused(false))));
 
-  // Ann runs forward, then swings off a building.
+  // Ann runs up the street until she is level with the building on her right (position, not wall-clock time, so the
+  // scenario is the same on a fast laptop and a slow CI runner), then swings off it.
   await key(a, 'keydown', 'KeyW');
-  await a.waitForTimeout(1500);
+  await a.waitForFunction(() => window.__vanguard.sim.players.get('local')!.pos.z > 11, undefined, { timeout: 20_000 });
   await key(a, 'keyup', 'KeyW');
   await a.evaluate(() => {
     const g = window.__vanguard;
-    // After running ~12 m up the street, face the building on the right and look up at it.
+    // Face the building on the right and look up at it.
     g.input.yaw = Math.PI / 2 - 0.4;
     g.input.pitch = -0.7;
   });
   await a.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE', bubbles: true })));
   let sawTether = false;
   let sawHigh = false;
-  for (let i = 0; i < 30; i++) {
+  // Bo watches (up to 10 s) for Ann's tether and for her to be lifted off the ground.
+  for (let i = 0; i < 100 && !(sawTether && sawHigh); i++) {
     await b.waitForTimeout(100);
     const seen = await b.evaluate(() => {
       const others = Object.values(window.__vanguard.online!.remotePlayers());
@@ -101,12 +103,31 @@ test('prediction still agrees with the server under 100 ms lag and 30 ms jitter'
 });
 
 test('a fifth player is turned away', async ({ browser }) => {
-  const players = [];
-  for (let i = 0; i < 4; i++) players.push(await join(browser, `P${i}`));
-  const ctx = await browser.newContext();
-  contexts.push(ctx);
-  const extra = await ctx.newPage();
-  await extra.goto(`./?server=${encodeURIComponent(SERVER)}&name=late`);
-  await extra.waitForFunction(() => window.__vanguard?.online?.status === 'full', undefined, { timeout: 15_000 });
-  expect(await extra.evaluate(() => window.__vanguard.online!.status)).toBe('full');
+  // Four lightweight raw-socket players fill the room (full game pages are heavy under software rendering)...
+  const sockets: WebSocket[] = [];
+  const opened = async (ws: WebSocket) =>
+    new Promise<string>((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('no welcome')), 15_000);
+      ws.onmessage = (e) => {
+        clearTimeout(t);
+        resolve((JSON.parse(String(e.data)) as { t: string }).t);
+      };
+    });
+  try {
+    for (let i = 0; i < 4; i++) {
+      const ws = new WebSocket(`${SERVER}?name=filler${i}`);
+      sockets.push(ws);
+      expect(await opened(ws)).toBe('welcome');
+    }
+    // ...and a real browser is the fifth.
+    const ctx = await browser.newContext();
+    contexts.push(ctx);
+    const extra = await ctx.newPage();
+    await extra.goto(`./?server=${encodeURIComponent(SERVER)}&name=late`);
+    await extra.waitForFunction(() => window.__vanguard?.online?.status === 'full', undefined, { timeout: 15_000 });
+    expect(await extra.evaluate(() => window.__vanguard.online!.status)).toBe('full');
+    await expect(extra.locator('#banner')).toHaveText('Server is full');
+  } finally {
+    for (const ws of sockets) ws.close();
+  }
 });

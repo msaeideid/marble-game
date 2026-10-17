@@ -52,8 +52,8 @@ abilities of three more heroes, projectiles and destruction are not. The safegua
 data and level files, the shared wire format, and conformance scenarios that fail CI the moment either side drifts
 (`client/tests/conformance.test.ts` regenerates/validates, `server/tests/test_conformance.py` replays).
 
-## Recommendation for D1 (your call)
-Keep the **Python port with conformance tests** (option a). The spike shows it is accurate, fast and testable. The cost
+## Decision on D1: confirmed (2026-10-17)
+The project keeps the **Python port with conformance tests** (option a). The spike shows it is accurate, fast and testable. The cost
 is real but linear and bounded: roughly one extra port + one conformance scenario per new mechanic. Switching to a
 Node room server (option b) would remove that duplication, but would change your locked backend and the spike gives no
 reason to. Revisit only if porting the combat/AI layer proves much slower than the movement layer did.

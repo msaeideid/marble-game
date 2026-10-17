@@ -190,4 +190,4 @@ On approval I start S0: `git init`, workspace scaffold, CI, an empty Babylon sce
 | 2026-10-17 | Storm-caller weapon: **conductor gauntlets** (not a hammer) | avoids the Thor read |
 | 2026-10-17 | Netcode spike done before the other heroes (D4) | docs/netcode.md |
 | 2026-10-17 | Phase 2 order: hero framework + RAMPART first | |
-| **open** | **D1: authoritative sim.** Spike says the Python port + conformance tests works (see docs/netcode.md); recommendation: keep it. | needs your confirmation |
+| 2026-10-17 | **D1 confirmed: Python port + conformance tests** for the authoritative sim (option a) | evidence in docs/netcode.md; every new authoritative mechanic gets a Python port and a conformance scenario |
