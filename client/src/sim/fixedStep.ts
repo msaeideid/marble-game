@@ -1,3 +1,6 @@
+/** The simulation tick: 30 Hz on the client and on the server. */
+export const SIM_DT = 1 / 30;
+
 /**
  * Fixed-timestep accumulator. The sim advances in constant steps so that results
  * do not depend on frame rate (and can be reproduced on a server later).

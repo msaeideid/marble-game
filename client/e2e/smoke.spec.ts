@@ -1,28 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
 
-/** The subset of the debug hook (`window.__vanguard`) these tests use. */
-interface Hook {
-  paused: boolean;
-  setPaused(p: boolean): void;
-  frame(dt: number): void;
-  input: { yaw: number; pitch: number };
-  sim: {
-    tick: number;
-    currentWave: number;
-    players: Map<string, { pos: { x: number; y: number; z: number }; grounded: boolean; tether: unknown; health: { shield: number; core: number } }>;
-    enemies: Map<string, { pos: { x: number; z: number }; defeatedTimer: number | null }>;
-  };
-  view: {
-    engine: { getRenderingCanvas(): HTMLCanvasElement };
-    scene: { meshes: unknown[]; getActiveMeshes(): { length: number }; render(): void };
-  };
-}
-declare global {
-  interface Window {
-    __vanguard: Hook;
-  }
-}
-
 function watchErrors(page: Page): string[] {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));

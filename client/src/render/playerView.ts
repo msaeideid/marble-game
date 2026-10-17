@@ -33,9 +33,10 @@ export class PlayerView {
     private readonly height: number,
     halfWidth: number,
     private readonly handHeight: number,
+    color: Color3 = new Color3(0.2, 0.75, 0.9),
   ) {
     this.body = CreateCapsule('hero-body', { height, radius: halfWidth }, scene);
-    this.body.material = flat(scene, 'hero', new Color3(0.2, 0.75, 0.9));
+    this.body.material = flat(scene, 'hero', color);
 
     const nose = CreateBox('hero-nose', { width: 0.2, height: 0.2, depth: 0.35 }, scene);
     nose.material = flat(scene, 'hero-nose', new Color3(1, 0.9, 0.3));
@@ -54,11 +55,11 @@ export class PlayerView {
     this.marker.isVisible = false;
   }
 
-  update(state: PlayerState, alpha: number, aimAnchor: Vec3 | null, clock = 0): void {
+  update(state: PlayerState, alpha: number, aimAnchor: Vec3 | null, clock = 0, offset?: Vec3): void {
     const { pos, prevPos } = state;
-    const x = prevPos.x + (pos.x - prevPos.x) * alpha;
-    const y = prevPos.y + (pos.y - prevPos.y) * alpha;
-    const z = prevPos.z + (pos.z - prevPos.z) * alpha;
+    const x = prevPos.x + (pos.x - prevPos.x) * alpha + (offset?.x ?? 0);
+    const y = prevPos.y + (pos.y - prevPos.y) * alpha + (offset?.y ?? 0);
+    const z = prevPos.z + (pos.z - prevPos.z) * alpha + (offset?.z ?? 0);
     this.body.position.set(x, y + this.height / 2, z);
     this.body.rotation.y = state.facing;
     // Blink while spawn-protected; hide while down.
@@ -78,6 +79,12 @@ export class PlayerView {
       this.marker.position.set(shown.x, shown.y, shown.z);
       this.marker.material = attached || aimAnchor ? this.markerOk : this.markerNo;
     }
+  }
+
+  dispose(): void {
+    this.body.dispose();
+    this.rope.dispose();
+    this.marker.dispose();
   }
 
   private drawRope(hx: number, hy: number, hz: number, anchor: Vec3): void {

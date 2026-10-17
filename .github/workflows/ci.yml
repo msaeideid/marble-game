@@ -17,10 +17,16 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - uses: astral-sh/setup-uv@v5
+      - name: Install server dependencies (the multiplayer e2e tests start the Python server)
+        run: uv sync
+        working-directory: server
       - name: Install browser for end-to-end tests
         run: npx playwright install --with-deps chromium
-      - name: End-to-end smoke tests (production build in headless Chromium)
+      - name: End-to-end tests (production build + Python server in headless Chromium)
         run: npm run test:e2e
+        env:
+          NET_E2E: '1'
 
   server:
     runs-on: ubuntu-latest

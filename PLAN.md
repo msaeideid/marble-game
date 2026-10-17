@@ -178,3 +178,16 @@ I recommend a **2-player netcode spike at the end of Phase 1** (two capsules, sh
 - **N3. "Mini-open-world" size:** is my reading in §0 right?
 
 On approval I start S0: `git init`, workspace scaffold, CI, an empty Babylon scene, and the first deploy.
+
+## 10. Decision log (updated 2026-10-17)
+
+| Date | Decision | Notes |
+|---|---|---|
+| 2026-10-16 | Browser stack: TypeScript + Babylon.js client, Python/FastAPI server | locked in the v0.2 brief |
+| 2026-10-16 | Guest-only accounts; GitHub repo + Pages; D1 deferred to Gate 2 | answered during planning |
+| 2026-10-17 | **Gate 1 passed** (swinging scored 4+ in playtest) | docs/PLAYTEST.md |
+| 2026-10-17 | Hero names: **ZIPLASH** (wall-slinger), **RAMPART** (powerhouse), **METALHEAD** (flyer), **VOLTAGE** (storm-caller) | internal ids stay `hero.swinger` etc. |
+| 2026-10-17 | Storm-caller weapon: **conductor gauntlets** (not a hammer) | avoids the Thor read |
+| 2026-10-17 | Netcode spike done before the other heroes (D4) | docs/netcode.md |
+| 2026-10-17 | Phase 2 order: hero framework + RAMPART first | |
+| **open** | **D1: authoritative sim.** Spike says the Python port + conformance tests works (see docs/netcode.md); recommendation: keep it. | needs your confirmation |

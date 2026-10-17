@@ -2,25 +2,27 @@ import arena from '@shared/levels/arena.json';
 import { Sfx } from '../audio/sfx';
 import { content, getHero } from '../data';
 import { InputController } from '../input/inputController';
+import { OnlineClient, onlineOptionsFromUrl } from '../net/online';
 import { Effects } from '../render/effects';
 import { EnemyView } from '../render/enemyView';
 import { FollowCamera } from '../render/followCamera';
 import { buildBaseView, buildLevelView } from '../render/levelView';
+import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { PlayerView } from '../render/playerView';
 import { createGameView, type GameView } from '../render/scene';
 import { aimDir } from '../sim/aim';
-import { handPos } from '../sim/controller';
+import { createPlayerState, handPos } from '../sim/controller';
 import type { AiState } from '../sim/enemy';
-import { FixedStepper } from '../sim/fixedStep';
+import { FixedStepper, SIM_DT } from '../sim/fixedStep';
 import { Sim, type SimEvent } from '../sim/sim';
 import { pickSwingAnchor } from '../sim/swing';
 import type { PlayerIntent } from '../sim/types';
+import { applyWire } from '../sim/wire';
 import { World } from '../sim/world';
 import { Hud } from '../ui/hud';
 import { WorldLabels } from '../ui/worldLabels';
 
 const LOCAL_ID = 'local';
-const SIM_DT = 1 / 30;
 const HITSTOP_LIGHT = 0.05;
 const HITSTOP_HEAVY = 0.09;
 
@@ -30,12 +32,15 @@ export class Game {
   readonly sim: Sim;
   readonly input: InputController;
   readonly sfx = new Sfx();
+  /** Set when the page URL has ?server=...; null for solo play. */
+  readonly online: OnlineClient | null;
   paused = true;
 
   private readonly stepper = new FixedStepper(SIM_DT);
   private readonly playerView: PlayerView;
   private readonly enemyViews = new Map<string, EnemyView>();
   private readonly enemyAi = new Map<string, AiState>();
+  private readonly remoteViews = new Map<string, PlayerView>();
   private readonly cam: FollowCamera;
   private readonly effects: Effects;
   private readonly labels: WorldLabels;
@@ -53,8 +58,11 @@ export class Game {
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     const world = new World(arena);
-    this.sim = new Sim(world, this.hero, content.enemies, { waves: true });
+    const onlineOpts = onlineOptionsFromUrl(window.location.search);
+    // Online play is movement-only for now: no enemies or waves, just players swinging around together.
+    this.sim = new Sim(world, this.hero, content.enemies, { waves: !onlineOpts });
     this.sim.addPlayer(LOCAL_ID);
+    this.online = onlineOpts ? new OnlineClient(this.sim, LOCAL_ID, onlineOpts) : null;
 
     this.view = createGameView(canvas);
     buildLevelView(this.view.scene, world);
@@ -108,7 +116,8 @@ export class Game {
   frame(dt: number): void {
     const { engine, scene } = this.view;
     this.clock += dt;
-    const simDt = this.paused || this.hitStop > 0 ? 0 : dt;
+    const waitingForServer = this.online !== null && !this.online.ready;
+    const simDt = this.paused || this.hitStop > 0 || waitingForServer ? 0 : dt;
     this.hitStop = Math.max(0, this.hitStop - dt);
     if (!this.paused) this.input.pollLook(dt);
 
@@ -116,7 +125,12 @@ export class Game {
     const alpha = this.stepper.advance(simDt, (stepDt) => {
       const m = this.input.sample();
       const intent: PlayerIntent = { ...m, yaw: this.input.yaw, pitch: this.input.pitch };
+      if (this.online) {
+        intent.attackPressed = false; // combat is not networked yet
+        intent.snarePressed = false;
+      }
       this.sim.step(stepDt, new Map([[LOCAL_ID, intent]]));
+      this.online?.onLocalStep(intent);
       events.push(...this.sim.events);
     });
 
@@ -125,13 +139,16 @@ export class Game {
     this.trackMovementSounds();
     this.syncEnemies(alpha, dt);
     const aimAnchor = this.previewAnchor();
-    this.playerView.update(me, alpha, me.tether || me.zip ? null : aimAnchor, this.clock);
+    this.playerView.update(me, alpha, me.tether || me.zip ? null : aimAnchor, this.clock, this.online?.session.renderOffset);
     const p = me.prevPos;
+    this.online?.session.update(dt);
+    const off = this.online?.session.renderOffset ?? { x: 0, y: 0, z: 0 };
     const focus = {
-      x: p.x + (me.pos.x - p.x) * alpha,
-      y: p.y + (me.pos.y - p.y) * alpha,
-      z: p.z + (me.pos.z - p.z) * alpha,
+      x: p.x + (me.pos.x - p.x) * alpha + off.x,
+      y: p.y + (me.pos.y - p.y) * alpha + off.y,
+      z: p.z + (me.pos.z - p.z) * alpha + off.z,
     };
+    this.syncRemotePlayers();
     this.cam.update(focus, this.input.yaw, this.input.pitch, this.sim.world, dt);
     this.effects.update(dt);
     scene.render();
@@ -141,7 +158,34 @@ export class Game {
     if (++this.frameCount % 15 === 0) {
       const speed = Math.hypot(me.vel.x, me.vel.y, me.vel.z).toFixed(1);
       const mode = me.zip ? 'zipping' : me.tether ? 'swinging' : me.grounded ? 'grounded' : 'airborne';
-      this.hud.setStatus(`${engine.getFps().toFixed(0)} fps · speed ${speed} m/s · ${mode}`);
+      const net = this.online ? ` · ${this.online.describe()}` : '';
+      this.hud.setStatus(`${engine.getFps().toFixed(0)} fps · speed ${speed} m/s · ${mode}${net}`);
+    }
+  }
+
+  /** Other players: interpolated snapshots drawn with the same hero model in a different colour. */
+  private syncRemotePlayers(): void {
+    if (!this.online) return;
+    const samples = this.online.remotePlayers();
+    const m = this.hero.movement;
+    for (const [id, sample] of Object.entries(samples)) {
+      let view = this.remoteViews.get(id);
+      if (!view) {
+        const hue = this.remoteViews.size % 3;
+        const colors = [new Color3(1, 0.55, 0.25), new Color3(0.75, 0.45, 1), new Color3(1, 0.85, 0.3)];
+        view = new PlayerView(this.view.scene, m.height, m.halfWidth, this.hero.swing.handHeight, colors[hue]);
+        this.remoteViews.set(id, view);
+      }
+      const ghost = createPlayerState(this.sim.world.spawn, this.hero);
+      applyWire(ghost, sample.state);
+      ghost.invulnerable = 0;
+      view.update(ghost, 1, null, this.clock);
+    }
+    for (const [id, view] of this.remoteViews) {
+      if (!(id in samples)) {
+        view.dispose();
+        this.remoteViews.delete(id);
+      }
     }
   }
 
@@ -152,8 +196,15 @@ export class Game {
     this.hud.setSnareReady(me.snareCooldown <= 0 && me.energy >= this.hero.snare.cost);
     this.hud.tick(dt);
     this.bannerTimer = Math.max(0, this.bannerTimer - dt);
+    const net = this.online;
     this.hud.setBanner(
-      me.defeatedTimer !== null
+      net && net.status !== 'online'
+        ? net.status === 'connecting'
+          ? 'Connecting to server…'
+          : net.status === 'full'
+            ? 'Server is full'
+            : 'Disconnected from server'
+        : me.defeatedTimer !== null
         ? `Down! Back at base in ${Math.ceil(me.defeatedTimer)}…`
         : this.bannerTimer > 0
           ? this.bannerText
