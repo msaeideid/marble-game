@@ -153,9 +153,9 @@ test('performance budget: bounded mesh count, and frame cost is logged', async (
   if (stats.drawCalls >= 0) expect(stats.drawCalls).toBeLessThan(300);
 });
 
-test('hero select lists both heroes and RAMPART shows only its own controls', async ({ page }) => {
+test('hero select lists every hero and RAMPART shows only its own controls', async ({ page }) => {
   await page.goto('./?hero=hero.bruiser');
-  await expect(page.locator('#hero-select a')).toHaveText(['RAMPART', 'ZIPLASH']);
+  await expect(page.locator('#hero-select a')).toHaveText(['RAMPART', 'METALHEAD', 'ZIPLASH']);
   await expect(page.locator('#hero-select a.selected')).toHaveText('RAMPART');
   await expect(page.locator('#overlay tr[data-kit="charge"]')).toBeVisible();
   await expect(page.locator('#overlay tr[data-kit="swing"]').first()).toBeHidden();
@@ -230,5 +230,92 @@ test('RAMPART lifts a car, throws it at the reinforced wall and breaks it', asyn
   expect(out.broken).toContain(36); // the reinforced wall that a charge cannot break
   expect(out.carryingAfter).toBeNull();
   expect(['resting', 'destroyed']).toContain(out.carMode);
+  expect(errors, errors.join('\n')).toEqual([]);
+});
+
+test('METALHEAD shows only its own controls', async ({ page }) => {
+  await page.goto('./?hero=hero.flyer');
+  await expect(page.locator('#hero-select a.selected')).toHaveText('METALHEAD');
+  for (const kit of ['flight', 'laser', 'rockets']) await expect(page.locator(`#overlay tr[data-kit="${kit}"]`)).toBeVisible();
+  for (const kit of ['swing', 'zip', 'snare', 'charge', 'lift']) {
+    await expect(page.locator(`#overlay tr[data-kit="${kit}"]`).first()).toBeHidden();
+  }
+  // The ability chips follow the kit too: METALHEAD's are shown, the other heroes' are not.
+  await expect(page.locator('#flight-chip')).toBeVisible();
+  await expect(page.locator('#rocket-chip')).toBeVisible();
+  await expect(page.locator('#snare-chip')).toBeHidden();
+  await expect(page.locator('#charge-chip')).toBeHidden();
+});
+
+test('METALHEAD takes off, climbs, shoots a laser and a homing rocket defeats the thug', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('./?hero=hero.flyer');
+  await page.locator('#overlay').click();
+  await page.waitForFunction(() => (window.__vanguard?.sim.tick ?? 0) > 3);
+  const out = await page.evaluate(() => {
+    const g = window.__vanguard;
+    g.setPaused(false);
+    const key = (type: string, code: string) => window.dispatchEvent(new KeyboardEvent(type, { code, bubbles: true }));
+    const frames = (n: number) => {
+      for (let i = 0; i < n; i++) g.frame(1 / 60);
+    };
+    frames(20);
+    const me = g.sim.players.get('local')!;
+    me.invulnerable = 999;
+    for (const e of g.sim.enemies.values()) e.snaredTimer = 999; // the wave stands still for this test
+    g.input.yaw = 0;
+    g.input.pitch = 0;
+
+    key('keydown', 'Space'); // a normal jump...
+    frames(2);
+    key('keyup', 'Space');
+    frames(10);
+    const airborne = !me.grounded;
+    key('keydown', 'Space'); // ...then hold Space in the air: jets on, climbing
+    frames(60);
+    const flying = me.flying;
+    const altitude = me.pos.y;
+    const flightChipLit = document.getElementById('flight-chip')!.classList.contains('on');
+    key('keyup', 'Space');
+    frames(10);
+
+    // A thug 12 m ahead and well below; aim down at it.
+    const thug = g.sim.spawnEnemy('enemy.thug', { x: 0, y: 0.01, z: 12 });
+    thug.snaredTimer = 999;
+    g.input.pitch = Math.atan2(me.pos.y + 1.5 - 0.9, 12 - me.pos.z);
+    const hp0 = thug.health.core;
+    key('keydown', 'KeyK'); // hold fire
+    frames(40);
+    key('keyup', 'KeyK');
+    const afterLaser = thug.health.core;
+
+    key('keydown', 'KeyR'); // a homing rocket
+    key('keyup', 'KeyR');
+    frames(8);
+    const rocketsInFlight = g.sim.rocketSystem!.rockets.length;
+    const rocketMesh = (g.view.scene.meshes as { name: string }[]).some((m) => m.name.startsWith('rocket-'));
+    frames(90);
+    return {
+      airborne,
+      flying,
+      altitude,
+      flightChipLit,
+      hp0,
+      afterLaser,
+      rocketsInFlight,
+      rocketMesh,
+      defeated: thug.defeatedTimer !== null,
+      rocketsLeft: g.sim.rocketSystem!.rockets.length,
+    };
+  });
+  expect(out.airborne).toBe(true);
+  expect(out.flying).toBe(true);
+  expect(out.altitude).toBeGreaterThan(4);
+  expect(out.flightChipLit).toBe(true);
+  expect(out.afterLaser).toBeLessThan(out.hp0);
+  expect(out.rocketsInFlight).toBe(1);
+  expect(out.rocketMesh).toBe(true);
+  expect(out.defeated).toBe(true);
+  expect(out.rocketsLeft).toBe(0);
   expect(errors, errors.join('\n')).toEqual([]);
 });

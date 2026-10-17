@@ -299,6 +299,15 @@ describe('breakable walls over the network', () => {
     const { wireIntent } = await import('../src/net/session');
     expect(wireIntent(intent({ chargePressed: true })).chargePressed).toBe(true);
   });
+
+  it('sends the flight buttons (climb and descend) but not the weapons, which are not networked yet', async () => {
+    const { wireIntent } = await import('../src/net/session');
+    const sent = wireIntent(intent({ jumpHeld: true, descendHeld: true, fireHeld: true, rocketPressed: true }));
+    expect(sent.jumpHeld).toBe(true);
+    expect(sent.descendHeld).toBe(true);
+    expect(Object.keys(sent)).not.toContain('fireHeld');
+    expect(Object.keys(sent)).not.toContain('rocketPressed');
+  });
 });
 
 

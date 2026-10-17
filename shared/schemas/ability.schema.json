@@ -19,7 +19,10 @@
         "melee",
         "snare",
         "charge",
-        "lift"
+        "lift",
+        "flight",
+        "laser",
+        "rockets"
       ]
     },
     "displayName": {
@@ -43,6 +46,15 @@
     },
     "lift": {
       "$ref": "#/definitions/lift"
+    },
+    "flight": {
+      "$ref": "#/definitions/flight"
+    },
+    "laser": {
+      "$ref": "#/definitions/laser"
+    },
+    "rockets": {
+      "$ref": "#/definitions/rockets"
     }
   },
   "allOf": [
@@ -83,6 +95,21 @@
             {
               "required": [
                 "lift"
+              ]
+            },
+            {
+              "required": [
+                "flight"
+              ]
+            },
+            {
+              "required": [
+                "laser"
+              ]
+            },
+            {
+              "required": [
+                "rockets"
               ]
             }
           ]
@@ -127,6 +154,21 @@
               "required": [
                 "lift"
               ]
+            },
+            {
+              "required": [
+                "flight"
+              ]
+            },
+            {
+              "required": [
+                "laser"
+              ]
+            },
+            {
+              "required": [
+                "rockets"
+              ]
             }
           ]
         }
@@ -169,6 +211,21 @@
             {
               "required": [
                 "lift"
+              ]
+            },
+            {
+              "required": [
+                "flight"
+              ]
+            },
+            {
+              "required": [
+                "laser"
+              ]
+            },
+            {
+              "required": [
+                "rockets"
               ]
             }
           ]
@@ -213,6 +270,21 @@
               "required": [
                 "lift"
               ]
+            },
+            {
+              "required": [
+                "flight"
+              ]
+            },
+            {
+              "required": [
+                "laser"
+              ]
+            },
+            {
+              "required": [
+                "rockets"
+              ]
             }
           ]
         }
@@ -256,6 +328,21 @@
               "required": [
                 "lift"
               ]
+            },
+            {
+              "required": [
+                "flight"
+              ]
+            },
+            {
+              "required": [
+                "laser"
+              ]
+            },
+            {
+              "required": [
+                "rockets"
+              ]
             }
           ]
         }
@@ -298,6 +385,195 @@
             {
               "required": [
                 "charge"
+              ]
+            },
+            {
+              "required": [
+                "flight"
+              ]
+            },
+            {
+              "required": [
+                "laser"
+              ]
+            },
+            {
+              "required": [
+                "rockets"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "flight"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "flight"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "swing"
+              ]
+            },
+            {
+              "required": [
+                "zip"
+              ]
+            },
+            {
+              "required": [
+                "melee"
+              ]
+            },
+            {
+              "required": [
+                "snare"
+              ]
+            },
+            {
+              "required": [
+                "charge"
+              ]
+            },
+            {
+              "required": [
+                "lift"
+              ]
+            },
+            {
+              "required": [
+                "laser"
+              ]
+            },
+            {
+              "required": [
+                "rockets"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "laser"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "laser"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "swing"
+              ]
+            },
+            {
+              "required": [
+                "zip"
+              ]
+            },
+            {
+              "required": [
+                "melee"
+              ]
+            },
+            {
+              "required": [
+                "snare"
+              ]
+            },
+            {
+              "required": [
+                "charge"
+              ]
+            },
+            {
+              "required": [
+                "lift"
+              ]
+            },
+            {
+              "required": [
+                "flight"
+              ]
+            },
+            {
+              "required": [
+                "rockets"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "rockets"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "rockets"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "swing"
+              ]
+            },
+            {
+              "required": [
+                "zip"
+              ]
+            },
+            {
+              "required": [
+                "melee"
+              ]
+            },
+            {
+              "required": [
+                "snare"
+              ]
+            },
+            {
+              "required": [
+                "charge"
+              ]
+            },
+            {
+              "required": [
+                "lift"
+              ]
+            },
+            {
+              "required": [
+                "flight"
+              ]
+            },
+            {
+              "required": [
+                "laser"
               ]
             }
           ]
@@ -557,6 +833,128 @@
         },
         "strength": {
           "$ref": "common.schema.json#/$defs/positive"
+        }
+      }
+    },
+    "flight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "startCost",
+        "hoverDrainPerSecond",
+        "climbDrainPerSecond",
+        "speed",
+        "accel",
+        "climbSpeed",
+        "descendSpeed"
+      ],
+      "properties": {
+        "startCost": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "hoverDrainPerSecond": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "climbDrainPerSecond": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "speed": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "accel": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "climbSpeed": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "descendSpeed": {
+          "$ref": "common.schema.json#/$defs/positive"
+        }
+      }
+    },
+    "laser": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "range",
+        "fireInterval",
+        "shotCost",
+        "damage",
+        "aimAssist"
+      ],
+      "properties": {
+        "range": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "fireInterval": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "shotCost": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "damage": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "aimAssist": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        }
+      }
+    },
+    "rockets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cost",
+        "cooldown",
+        "speed",
+        "turnRate",
+        "lifetime",
+        "radius",
+        "lockRange",
+        "lockAngleDegrees",
+        "splashRadius",
+        "damage",
+        "edgeFalloff",
+        "knockback"
+      ],
+      "properties": {
+        "cost": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "cooldown": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "speed": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "turnRate": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "lifetime": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "radius": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "lockRange": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "lockAngleDegrees": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "splashRadius": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "damage": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "edgeFalloff": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "knockback": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
         }
       }
     }

@@ -27,14 +27,19 @@ export class PlayerView {
   private readonly markerNo: StandardMaterial;
   private readonly tmpDir = new Vector3();
   private readonly tmpQuat = new Quaternion();
+  /** Jet flames (METALHEAD), shown while flying. */
+  private readonly flames: Mesh[] = [];
 
   constructor(
     scene: Scene,
     private readonly height: number,
     halfWidth: number,
     private readonly handHeight: number,
-    color: Color3 = new Color3(0.2, 0.75, 0.9),
+    color?: Color3,
+    style = 'default',
   ) {
+    const flyer = style === 'hero.flyer';
+    color ??= flyer ? new Color3(0.62, 0.7, 0.82) : new Color3(0.2, 0.75, 0.9);
     this.body = CreateCapsule('hero-body', { height, radius: halfWidth }, scene);
     this.body.material = flat(scene, 'hero', color);
 
@@ -42,6 +47,27 @@ export class PlayerView {
     nose.material = flat(scene, 'hero-nose', new Color3(1, 0.9, 0.3));
     nose.parent = this.body;
     nose.position.set(0, this.height * 0.2, halfWidth + 0.1);
+
+    if (flyer) {
+      const visor = CreateBox('hero-visor', { width: 0.52, height: 0.14, depth: 0.12 }, scene);
+      visor.material = flat(scene, 'hero-visor', new Color3(0.08, 0.12, 0.25));
+      visor.parent = this.body;
+      visor.position.set(0, this.height * 0.28, halfWidth - 0.02);
+      const pack = CreateBox('hero-pack', { width: 0.55, height: 0.7, depth: 0.28 }, scene);
+      pack.material = flat(scene, 'hero-pack', new Color3(0.35, 0.38, 0.46));
+      pack.parent = this.body;
+      pack.position.set(0, this.height * 0.08, -halfWidth - 0.12);
+      const flameMat = flat(scene, 'hero-flame', new Color3(1, 0.55, 0.15));
+      flameMat.emissiveColor = new Color3(1, 0.6, 0.2);
+      for (const dx of [-0.16, 0.16]) {
+        const flame = CreateCylinder('hero-flame', { height: 0.7, diameterTop: 0.22, diameterBottom: 0, tessellation: 6 }, scene);
+        flame.material = flameMat;
+        flame.parent = this.body;
+        flame.position.set(dx, this.height * 0.08 - 0.7, -halfWidth - 0.12);
+        flame.isVisible = false;
+        this.flames.push(flame);
+      }
+    }
 
     this.rope = CreateCylinder('rope', { height: 1, diameter: 0.07, tessellation: 6 }, scene);
     this.rope.material = flat(scene, 'rope', new Color3(1, 1, 1));
@@ -62,6 +88,15 @@ export class PlayerView {
     const z = prevPos.z + (pos.z - prevPos.z) * alpha + (offset?.z ?? 0);
     this.body.position.set(x, y + this.height / 2, z);
     this.body.rotation.y = state.facing;
+    if (this.flames.length > 0) {
+      // Lean into the flight direction and flicker the jets.
+      const lean = state.flying ? Math.min(1, Math.hypot(state.vel.x, state.vel.z) / 11) * 0.45 : 0;
+      this.body.rotation.x += (lean - this.body.rotation.x) * 0.25;
+      for (const [i, f] of this.flames.entries()) {
+        f.isVisible = state.flying;
+        f.scaling.y = 0.8 + 0.4 * Math.abs(Math.sin(clock * 38 + i * 1.7));
+      }
+    }
     // Blink while spawn-protected; hide while down.
     this.body.setEnabled(state.defeatedTimer === null && (state.invulnerable <= 0 || Math.floor(clock * 12) % 2 === 0));
 

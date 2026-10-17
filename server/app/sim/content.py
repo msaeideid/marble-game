@@ -67,7 +67,7 @@ def hero_ids() -> list[str]:
 def load_hero(hero_id: str = "hero.swinger") -> SimpleNamespace:
     """Flatten a hero and its abilities into one params object (mirrors resolveHero in content.ts).
 
-    Ability kits a hero does not have (swing, zip, snare, charge, lift) are simply absent attributes; use getattr.
+    Ability kits a hero does not have (swing, zip, snare, charge, lift, flight, laser, rockets) are simply absent attributes; use getattr.
     """
     heroes = _load_heroes()
     if hero_id not in heroes:
@@ -92,7 +92,7 @@ def load_hero(hero_id: str = "hero.swinger") -> SimpleNamespace:
         "respawnInvulnerable": h["respawnInvulnerable"],
         "melee": by_kind["melee"]["melee"],
     }
-    for kind in ("swing", "zip", "snare", "charge", "lift"):
+    for kind in ("swing", "zip", "snare", "charge", "lift", "flight", "laser", "rockets"):
         if kind in by_kind:
             out[kind] = by_kind[kind][kind]
     if "zip" in out and "swing" not in out:

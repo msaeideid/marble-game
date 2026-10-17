@@ -25,6 +25,10 @@ schemas, so a typo is caught immediately.
 | Thug threat | `attack.damage`, `attack.range`, `attack.windup`, `move.speed`, `attack.knockback` | longer windup = easier to dodge |
 | RAMPART charge | `abilities/charge.json` -> `charge.speed`, `duration`, `cooldown`, `cost`, `damage`, `breakPower` | `breakPower` 2 breaks the reinforced wall |
 | RAMPART toughness / melee | `heroes/bruiser.json`, `abilities/smash.json` | see docs/heroes.md |
+| METALHEAD flight | `abilities/flight.json` -> `speed`, `climbSpeed`, `hoverDrainPerSecond`, `climbDrainPerSecond`, `startCost` | one energy bar also pays for weapons |
+| METALHEAD laser | `abilities/laser.json` -> `damage`, `fireInterval`, `shotCost`, `aimAssist` | dps = damage / fireInterval; never staggers |
+| METALHEAD rockets | `abilities/rockets.json` -> `damage`, `splashRadius`, `turnRate`, `lockAngleDegrees`, `cost`, `cooldown` | wider lock cone = more forgiving |
+| METALHEAD fragility | `heroes/flyer.json` -> `health`, `energy` | the design rule: fragile, weak melee, shared energy |
 | Prop weight / throw | `props/<type>.json` -> `carrySlow`, `throwSpeed`, `throwDamage`, `throwKnockback`, `breakPower`, `hp`, `respawnTime` | `carrySlow` 1 = no slowdown |
 | Lift reach / cooldown | `abilities/lift.json` -> `liftRange`, `cooldown`, `strength` | `strength` scales every throw speed |
 | Where props are | `levels/arena.json` -> `props` | type + position; they respawn there |

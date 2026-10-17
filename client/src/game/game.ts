@@ -4,6 +4,7 @@ import { content, getHero } from '../data';
 import { InputController } from '../input/inputController';
 import { OnlineClient, onlineOptionsFromUrl } from '../net/online';
 import { PropViews } from '../render/propView';
+import { RocketViews } from '../render/rocketView';
 import type { PropWire } from '../sim/props';
 import { Effects } from '../render/effects';
 import { EnemyView } from '../render/enemyView';
@@ -19,6 +20,7 @@ import { FixedStepper, SIM_DT } from '../sim/fixedStep';
 import type { HeroParams } from '../sim/params';
 import { Sim, type SimEvent } from '../sim/sim';
 import { pickSwingAnchor } from '../sim/swing';
+import { pickRocketTarget } from '../sim/weapons';
 import type { PlayerIntent } from '../sim/types';
 import { applyWire } from '../sim/wire';
 import { World } from '../sim/world';
@@ -52,6 +54,7 @@ export class Game {
   private readonly hero: HeroParams;
   private readonly levelView: LevelView;
   private readonly propViews: PropViews;
+  private readonly rocketViews: RocketViews;
   private readonly overlay = document.getElementById('overlay') as HTMLElement;
   private frameCount = 0;
   private clock = 0;
@@ -61,6 +64,7 @@ export class Game {
   private hadTether = false;
   private hadZip = false;
   private hadCharge = false;
+  private hadFlying = false;
   private wasLocked = false;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
@@ -82,10 +86,11 @@ export class Game {
     this.levelView = buildLevelView(this.view.scene, world);
     buildBaseView(this.view.scene, world);
     const m = this.hero.movement;
-    this.playerView = new PlayerView(this.view.scene, m.height, m.halfWidth, this.hero.movement.handHeight);
+    this.playerView = new PlayerView(this.view.scene, m.height, m.halfWidth, m.handHeight, undefined, this.hero.id);
     this.cam = new FollowCamera(this.view.scene);
     this.effects = new Effects(this.view.scene);
     this.propViews = new PropViews(this.view.scene, content.props);
+    this.rocketViews = new RocketViews(this.view.scene, this.effects);
     this.labels = new WorldLabels(document.getElementById('labels') as HTMLElement, this.view.scene, this.view.engine, canvas);
     this.input = new InputController(canvas);
     this.bindUi();
@@ -113,6 +118,9 @@ export class Game {
     if (this.hero.snare) kits.add('snare');
     if (this.hero.charge) kits.add('charge');
     if (this.hero.lift) kits.add('lift');
+    if (this.hero.flight) kits.add('flight');
+    if (this.hero.laser) kits.add('laser');
+    if (this.hero.rockets) kits.add('rockets');
     document.querySelectorAll<HTMLElement>('#overlay tr[data-kit]').forEach((row) => {
       row.style.display = kits.has(row.dataset.kit ?? '') ? '' : 'none';
     });
@@ -169,6 +177,8 @@ export class Game {
       if (this.online) {
         intent.attackPressed = false; // combat is not networked yet
         intent.snarePressed = false;
+        intent.fireHeld = false;
+        intent.rocketPressed = false;
       }
       this.sim.step(stepDt, new Map([[LOCAL_ID, intent]]));
       this.online?.onLocalStep(intent);
@@ -191,6 +201,7 @@ export class Game {
     };
     this.syncRemotePlayers();
     this.syncProps(dt, focus);
+    this.rocketViews.update(this.sim.rocketSystem?.rockets ?? [], alpha, dt);
     this.levelView.sync(this.sim.world);
     this.cam.update(focus, this.input.yaw, this.input.pitch, this.sim.world, dt);
     this.effects.update(dt);
@@ -200,7 +211,7 @@ export class Game {
     this.updateHud(me, dt, aimAnchor !== null);
     if (++this.frameCount % 15 === 0) {
       const speed = Math.hypot(me.vel.x, me.vel.y, me.vel.z).toFixed(1);
-      const mode = me.zip ? 'zipping' : me.tether ? 'swinging' : me.grounded ? 'grounded' : 'airborne';
+      const mode = me.zip ? 'zipping' : me.tether ? 'swinging' : me.flying ? 'flying' : me.grounded ? 'grounded' : 'airborne';
       const net = this.online ? ` · ${this.online.describe()}` : '';
       this.hud.setStatus(`${engine.getFps().toFixed(0)} fps · speed ${speed} m/s · ${mode}${net}`);
     }
@@ -255,7 +266,7 @@ export class Game {
       if (!view) {
         const hue = this.remoteViews.size % 3;
         const colors = [new Color3(1, 0.55, 0.25), new Color3(0.75, 0.45, 1), new Color3(1, 0.85, 0.3)];
-        view = new PlayerView(this.view.scene, m.height, m.halfWidth, m.handHeight, colors[hue]);
+        view = new PlayerView(this.view.scene, m.height, m.halfWidth, m.handHeight, colors[hue], theirs.id);
         this.remoteViews.set(id, view);
       }
       const ghost = createPlayerState(this.sim.world.spawn, theirs);
@@ -282,6 +293,12 @@ export class Game {
       !!this.hero.charge,
       !me.charge && me.chargeCooldown <= 0 && me.energy >= (this.hero.charge?.cost ?? 0),
     );
+    this.hud.setFlyer(
+      { flight: !!this.hero.flight, laser: !!this.hero.laser, rockets: !!this.hero.rockets },
+      me.flying,
+      me.rocketCooldown <= 0 && me.energy >= (this.hero.rockets?.cost ?? 0),
+    );
+    this.labels.setLock(this.paused ? null : this.rocketLock(me));
     this.hud.tick(dt);
     this.bannerTimer = Math.max(0, this.bannerTimer - dt);
     const net = this.online;
@@ -323,7 +340,7 @@ export class Game {
           if (enemy) {
             const def = content.enemies[enemy.typeId]!;
             this.enemyViews.get(ev.target)?.hit();
-            this.labels.damageNumber(
+            if (ev.amount >= 6) this.labels.damageNumber(
               { x: enemy.pos.x, y: enemy.pos.y + def.move.height + 0.2, z: enemy.pos.z },
               String(Math.round(ev.amount)),
               ev.amount >= 15,
@@ -351,6 +368,23 @@ export class Game {
           this.hitStop = HITSTOP_HEAVY;
           this.sfx.hit(2);
           break;
+        case 'laser':
+          if (ev.owner !== LOCAL_ID) break;
+          this.effects.laser(ev.from, ev.to);
+          if (ev.hit) this.effects.spark(ev.to);
+          this.sfx.laser();
+          break;
+        case 'rocketLaunch':
+          if (ev.owner === LOCAL_ID) this.sfx.rocket();
+          break;
+        case 'explosion': {
+          this.effects.explosion(ev.pos, ev.radius);
+          const d = Math.hypot(ev.pos.x - me.pos.x, ev.pos.z - me.pos.z);
+          this.sfx.explosion(Math.max(0.2, 1 - d / 40));
+          this.cam.shake(Math.max(0.05, 0.22 - d * 0.01));
+          if (ev.hits.length > 0) this.hitStop = HITSTOP_LIGHT;
+          break;
+        }
         case 'snare':
           if (ev.source === LOCAL_ID) this.sfx.snare();
           break;
@@ -373,6 +407,8 @@ export class Game {
     if (me.tether && !this.hadTether) this.sfx.attach();
     if (me.zip && !this.hadZip) this.sfx.zip();
     if (me.charge && !this.hadCharge) this.sfx.charge();
+    if (me.flying && !this.hadFlying) this.sfx.jets();
+    this.hadFlying = me.flying;
     this.hadCharge = me.charge !== null;
     this.hadTether = me.tether !== null;
     this.hadZip = me.zip !== null;
@@ -413,6 +449,20 @@ export class Game {
         this.labels.setBar(id, { x: e.pos.x, y: e.pos.y + def.move.height + 0.5, z: e.pos.z }, frac, e.snaredTimer > 0);
       }
     }
+  }
+
+  /** The point to draw the rocket lock ring at: the enemy a rocket fired right now would chase, or null. */
+  private rocketLock(me: ReturnType<Sim['players']['get']> & object): { x: number; y: number; z: number } | null {
+    const p = this.hero.rockets;
+    if (!p || me.defeatedTimer !== null) return null;
+    const t = pickRocketTarget(
+      this.sim.world,
+      handPos(me, this.hero),
+      aimDir(this.input.yaw, this.input.pitch),
+      p,
+      this.sim.liveTargets(),
+    );
+    return t ? { x: t.pos.x, y: t.pos.y + t.height / 2, z: t.pos.z } : null;
   }
 
   /** Where a swing would attach right now, for the aim marker and crosshair colour. */

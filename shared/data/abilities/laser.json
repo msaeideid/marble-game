@@ -1,0 +1,12 @@
+{
+  "id": "ability.laser",
+  "kind": "laser",
+  "displayName": "Pulse laser",
+  "laser": {
+    "range": 45,
+    "fireInterval": 0.2,
+    "shotCost": 1.5,
+    "damage": 5,
+    "aimAssist": 0.45
+  }
+}

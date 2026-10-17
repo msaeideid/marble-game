@@ -50,6 +50,14 @@ export interface PlayerIntent {
   chargePressed: boolean;
   /** True only on the tick the grab button went down: lift a prop, or throw the one you carry. */
   grabPressed: boolean;
+  /** Jump button is held: climbs while flying. */
+  jumpHeld: boolean;
+  /** Descend button is held: drops while flying. */
+  descendHeld: boolean;
+  /** Fire button is held: the laser. */
+  fireHeld: boolean;
+  /** True only on the tick the rocket button went down. */
+  rocketPressed: boolean;
 }
 
 export const NEUTRAL_INTENT: PlayerIntent = {
@@ -65,6 +73,10 @@ export const NEUTRAL_INTENT: PlayerIntent = {
   snarePressed: false,
   chargePressed: false,
   grabPressed: false,
+  jumpHeld: false,
+  descendHeld: false,
+  fireHeld: false,
+  rocketPressed: false,
 };
 
 export const vec3 = (x = 0, y = 0, z = 0): Vec3 => ({ x, y, z });

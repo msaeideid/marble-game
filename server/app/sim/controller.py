@@ -58,6 +58,8 @@ class Intent:
     zipPressed: bool = False
     chargePressed: bool = False
     grabPressed: bool = False
+    jumpHeld: bool = False
+    descendHeld: bool = False
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> Intent:
@@ -72,6 +74,8 @@ class Intent:
             zipPressed=bool(d.get("zipPressed", False)),
             chargePressed=bool(d.get("chargePressed", False)),
             grabPressed=bool(d.get("grabPressed", False)),
+            jumpHeld=bool(d.get("jumpHeld", False)),
+            descendHeld=bool(d.get("descendHeld", False)),
         )
 
 
@@ -93,6 +97,7 @@ class PlayerState:
     charge_cooldown: float = 0.0
     carrying: tuple[int, str] | None = None  # (prop id, prop type) of the prop held overhead
     grab_cooldown: float = 0.0
+    flying: bool = False  # jet flight is on: no gravity, climb/descend with the buttons, drains energy
 
 
 def create_player_state(spawn: Vec3, hero: SimpleNamespace) -> PlayerState:
@@ -201,6 +206,7 @@ def step_player(
     swing = getattr(hero, "swing", None)
     zip_p = getattr(hero, "zip", None)
     charge_p = getattr(hero, "charge", None)
+    flight_p = getattr(hero, "flight", None)
     broken: list[Collider] = []
     s.prev_pos = s.pos.copy()
     aim = aim_dir(intent.yaw, intent.pitch)
@@ -287,6 +293,15 @@ def step_player(
     elif swing is not None and s.tether is not None:
         s.vel.x += wish_x * swing.airControl * dt
         s.vel.z += wish_z * swing.airControl * dt
+    elif s.flying and flight_p is not None:
+        # Jet flight steers like running but eases toward flight speed in the air too.
+        dx = wish_x * flight_p.speed - s.vel.x
+        dz = wish_z * flight_p.speed - s.vel.z
+        dist = math.hypot(dx, dz)
+        if dist > 0:
+            k = min(1.0, (flight_p.accel * dt) / dist)
+            s.vel.x += dx * k
+            s.vel.z += dz * k
     elif s.grounded:
         tx = wish_x * run_speed
         tz = wish_z * run_speed
@@ -311,12 +326,27 @@ def step_player(
 
     # ---- jump ----
     s.coyote = float(p.coyoteTime) if s.grounded else max(0.0, s.coyote - dt)
-    s.jump_buffer = float(p.jumpBufferTime) if intent.jumpPressed else max(0.0, s.jump_buffer - dt)
-    if s.zip is None and s.charge is None and s.jump_buffer > 0 and s.coyote > 0:
+    s.jump_buffer = float(p.jumpBufferTime) if intent.jumpPressed and not s.flying else max(0.0, s.jump_buffer - dt)
+    if s.zip is None and s.charge is None and not s.flying and s.jump_buffer > 0 and s.coyote > 0:
         s.vel.y = jump_speed
         s.jump_buffer = 0.0
         s.coyote = 0.0
         s.grounded = False
+    elif (
+        flight_p is not None
+        and intent.jumpPressed
+        and not s.flying
+        and not s.grounded
+        and s.coyote <= 0
+        and s.zip is None
+        and s.charge is None
+        and s.tether is None
+        and s.carrying is None
+        and try_spend(s, flight_p.startCost, hero.energy)
+    ):
+        # Pressing jump again in the air lights the jets.
+        s.flying = True
+        s.jump_buffer = 0.0
 
     # ---- gravity / zip pull ----
     if s.zip is not None and zip_p is not None:
@@ -328,6 +358,15 @@ def step_player(
         s.vel.x = (dx / d) * zip_p.speed
         s.vel.y = (dy / d) * zip_p.speed
         s.vel.z = (dz / d) * zip_p.speed
+    elif s.flying and flight_p is not None:
+        # No gravity: ease the climb rate toward what the buttons ask for (hover when neither is held).
+        want = (flight_p.climbSpeed if intent.jumpHeld else 0.0) - (flight_p.descendSpeed if intent.descendHeld else 0.0)
+        dvy = want - s.vel.y
+        if dvy != 0:
+            s.vel.y += dvy * min(1.0, (flight_p.accel * dt) / abs(dvy))
+        cost = flight_p.hoverDrainPerSecond + (flight_p.climbDrainPerSecond if intent.jumpHeld else 0.0)
+        if not drain(s, cost * dt, hero.energy):
+            s.flying = False  # out of fuel: fall
     else:
         s.vel.y = max(s.vel.y - p.gravity * dt, -p.maxFallSpeed)
 
@@ -351,6 +390,7 @@ def step_player(
     if r.hit_down:
         s.vel.y = 0.0
         s.grounded = True
+        s.flying = False  # touching down ends the flight
     else:
         s.grounded = False
         if r.hit_up and s.vel.y > 0:
@@ -414,6 +454,7 @@ def to_wire(s: PlayerState) -> dict[str, Any]:
         "chargeCooldown": s.charge_cooldown,
         "carrying": {"id": s.carrying[0], "def": s.carrying[1]} if s.carrying else None,
         "grabCooldown": s.grab_cooldown,
+        "flying": s.flying,
         "tether": (
             {"anchor": s.tether.anchor.to_list(), "length": s.tether.length, "targetLength": s.tether.target_length}
             if s.tether

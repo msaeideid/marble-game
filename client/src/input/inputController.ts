@@ -15,6 +15,10 @@ export interface MoveInput {
   snarePressed: boolean;
   chargePressed: boolean;
   grabPressed: boolean;
+  jumpHeld: boolean;
+  descendHeld: boolean;
+  fireHeld: boolean;
+  rocketPressed: boolean;
 }
 
 function deadzone(v: number): number {
@@ -37,6 +41,8 @@ export class InputController {
   private snareLatch = false;
   private chargeLatch = false;
   private grabLatch = false;
+  private rocketLatch = false;
+  private lmbHeld = false;
   private padChargeHeld = false;
   private padSnareHeld = false;
   private padAttackHeld = false;
@@ -61,6 +67,7 @@ export class InputController {
         this.grabLatch = true;
       }
       if (e.code === 'KeyG') this.grabLatch = true;
+      if (e.code === 'KeyR') this.rocketLatch = true;
       if (e.code === 'KeyF') this.zipLatch = true;
       if (e.code === 'KeyJ') this.attackLatch = true;
       if (e.code === 'KeyQ') this.snareLatch = true;
@@ -88,9 +95,13 @@ export class InputController {
         this.rmbHeld = true;
         this.swingLatch = true;
         this.grabLatch = true;
+        this.rocketLatch = true; // right-mouse: swing / lift / rockets, depending on the hero
         return;
       }
-      if (document.pointerLockElement === canvas) this.attackLatch = true;
+      if (document.pointerLockElement === canvas) {
+        this.attackLatch = true;
+        this.lmbHeld = true; // left-mouse: strike, and hold to fire the laser
+      }
       this.dragging = true;
       this.lastX = e.clientX;
       this.lastY = e.clientY;
@@ -98,7 +109,10 @@ export class InputController {
     });
     const endDrag = (e: PointerEvent) => {
       if (e.button === 2) this.rmbHeld = false;
-      else this.dragging = false;
+      else {
+        this.dragging = false;
+        this.lmbHeld = false;
+      }
     };
     window.addEventListener('pointerup', endDrag);
     window.addEventListener('pointercancel', endDrag);
@@ -135,7 +149,10 @@ export class InputController {
     if (jumpDown && !this.padJumpHeld) this.jumpLatch = true;
     this.padJumpHeld = jumpDown;
     const zipDown = pad.buttons[3]?.pressed ?? false;
-    if (zipDown && !this.padZipHeld) this.zipLatch = true;
+    if (zipDown && !this.padZipHeld) {
+      this.zipLatch = true;
+      this.rocketLatch = true; // Y: zip for ZIPLASH, rockets for METALHEAD
+    }
     this.padZipHeld = zipDown;
     const attackDown = pad.buttons[2]?.pressed ?? false;
     if (attackDown && !this.padAttackHeld) this.attackLatch = true;
@@ -167,6 +184,10 @@ export class InputController {
     // A quick tap between sim ticks still counts as held for one tick.
     const swingHeld = this.keys.has('KeyE') || this.rmbHeld || padSwing || this.swingLatch;
     const reelHeld = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight') || padReel;
+    const jumpHeld = this.keys.has('Space') || (pad?.buttons[0]?.pressed ?? false);
+    const descendHeld = reelHeld || this.keys.has('KeyC') || this.keys.has('ControlLeft');
+    // Hold fire: K, left-mouse (while the mouse is captured), or the gamepad's right trigger.
+    const fireHeld = this.keys.has('KeyK') || this.lmbHeld || (pad?.buttons[7]?.pressed ?? false);
     const jumpPressed = this.jumpLatch;
     const zipPressed = this.zipLatch;
     const attackPressed = this.attackLatch;
@@ -175,6 +196,8 @@ export class InputController {
     this.chargeLatch = false;
     const grabPressed = this.grabLatch;
     this.grabLatch = false;
+    const rocketPressed = this.rocketLatch;
+    this.rocketLatch = false;
     this.snareLatch = false;
     this.attackLatch = false;
     this.jumpLatch = false;
@@ -191,6 +214,10 @@ export class InputController {
       snarePressed,
       chargePressed,
       grabPressed,
+      jumpHeld,
+      descendHeld,
+      fireHeld,
+      rocketPressed,
     };
   }
 }

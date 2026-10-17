@@ -7,6 +7,9 @@ export class Hud {
   private readonly banner = document.getElementById('banner') as HTMLElement;
   private readonly snareChip = document.getElementById('snare-chip') as HTMLElement;
   private readonly chargeChip = document.getElementById('charge-chip') as HTMLElement;
+  private readonly flightChip = document.getElementById('flight-chip') as HTMLElement;
+  private readonly laserChip = document.getElementById('laser-chip') as HTMLElement;
+  private readonly rocketChip = document.getElementById('rocket-chip') as HTMLElement;
   private readonly carryChip = document.getElementById('carry-chip') as HTMLElement;
   private readonly hurt = document.getElementById('hurt') as HTMLElement;
   private hurtTimer = 0;
@@ -39,6 +42,15 @@ export class Hud {
   setCharge(has: boolean, ready: boolean): void {
     this.chargeChip.style.display = has ? '' : 'none';
     this.chargeChip.classList.toggle('cooling', !ready);
+  }
+
+  /** METALHEAD's chips: flight (lit while the jets are on), laser, and rockets (dim until ready). */
+  setFlyer(has: { flight: boolean; laser: boolean; rockets: boolean }, flying: boolean, rocketReady: boolean): void {
+    this.flightChip.style.display = has.flight ? '' : 'none';
+    this.flightChip.classList.toggle('on', flying);
+    this.laserChip.style.display = has.laser ? '' : 'none';
+    this.rocketChip.style.display = has.rockets ? '' : 'none';
+    this.rocketChip.classList.toggle('cooling', !rocketReady);
   }
 
   /** "Carrying: Car (E to throw)" while holding a prop; hidden otherwise. */

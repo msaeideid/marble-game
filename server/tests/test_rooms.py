@@ -361,6 +361,75 @@ class TestProps:
         assert i is not None and i.grabPressed is True
 
 
+class TestFlight:
+    """METALHEAD's jet flight runs on the server like any other movement."""
+
+    def _fly(self, room: Room):
+        peer = room.add_peer("m", load_hero("hero.flyer"))
+        seq = 0
+
+        def send(intent: Intent, ticks: int = 1) -> None:
+            nonlocal seq
+            for i in range(ticks):
+                seq += 1
+                edge = i == 0
+                room.enqueue_input(
+                    peer,
+                    seq,
+                    Intent(
+                        jumpPressed=intent.jumpPressed and edge,
+                        jumpHeld=intent.jumpHeld,
+                        descendHeld=intent.descendHeld,
+                        moveZ=intent.moveZ,
+                    ),
+                )
+                room.step()
+
+        send(Intent(), 6)  # land
+        send(Intent(jumpPressed=True, jumpHeld=True))
+        send(Intent(), 8)
+        send(Intent(jumpPressed=True, jumpHeld=True))
+        return peer, send
+
+    def test_a_second_jump_press_in_the_air_lights_the_jets_and_everyone_sees_it(self, room: Room) -> None:
+        peer, _ = self._fly(room)
+        assert peer.state.flying is True
+        snap = room.snapshot()
+        assert snap["players"][peer.id]["hero"] == "hero.flyer"
+        assert snap["players"][peer.id]["state"]["flying"] is True
+
+    def test_climbing_hovering_and_landing(self, room: Room) -> None:
+        peer, send = self._fly(room)
+        y0 = peer.state.pos.y
+        send(Intent(jumpHeld=True), 30)
+        assert peer.state.pos.y - y0 > 5
+        send(Intent(), 15)
+        y1 = peer.state.pos.y
+        send(Intent(), 30)
+        assert abs(peer.state.pos.y - y1) < 0.05  # hovering
+        send(Intent(descendHeld=True), 200)
+        assert peer.state.flying is False and peer.state.grounded is True
+
+    def test_flight_drains_energy_until_the_jets_cut_out(self, room: Room) -> None:
+        peer, send = self._fly(room)
+        send(Intent(jumpHeld=True), 300)  # a long climb burns the whole tank
+        assert peer.state.flying is False
+        assert peer.state.energy < 15
+
+    def test_other_heroes_cannot_fly(self, room: Room) -> None:
+        peer = room.add_peer("z", load_hero("hero.swinger"))
+        for seq, edge in enumerate([True] + [False] * 8 + [True], start=1):
+            room.enqueue_input(peer, seq, Intent(jumpPressed=edge))
+            room.step()
+        assert peer.state.flying is False
+
+    def test_sanitize_keeps_the_climb_and_descend_buttons(self) -> None:
+        i = sanitize_intent({"jumpHeld": True, "descendHeld": True})
+        assert i is not None and i.jumpHeld is True and i.descendHeld is True
+        j = sanitize_intent({})
+        assert j is not None and j.jumpHeld is False and j.descendHeld is False
+
+
 def test_the_world_resets_when_the_last_player_leaves(room: Room) -> None:
     a = room.add_peer("a", load_hero("hero.bruiser"))
     b = room.add_peer("b", load_hero("hero.swinger"))

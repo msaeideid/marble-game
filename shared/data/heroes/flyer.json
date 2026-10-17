@@ -1,0 +1,29 @@
+{
+  "id": "hero.flyer",
+  "displayName": "METALHEAD",
+  "movement": {
+    "runSpeed": 7.5,
+    "groundAccel": 50,
+    "airAccel": 16,
+    "gravity": 28,
+    "jumpSpeed": 9.5,
+    "maxFallSpeed": 50,
+    "coyoteTime": 0.1,
+    "jumpBufferTime": 0.1,
+    "halfWidth": 0.4,
+    "height": 1.9,
+    "handHeight": 1.5
+  },
+  "energy": {
+    "max": 100,
+    "regenPerSecond": 12,
+    "regenDelay": 1.0
+  },
+  "health": {
+    "shield": { "max": 30, "regenPerSecond": 12, "regenDelay": 3 },
+    "core": { "max": 50, "regenPerSecond": 1, "regenDelay": 8 }
+  },
+  "respawnDelay": 3,
+  "respawnInvulnerable": 2,
+  "abilities": ["ability.jab", "ability.flight", "ability.laser", "ability.rockets"]
+}

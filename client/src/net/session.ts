@@ -28,6 +28,8 @@ export function wireIntent(i: PlayerIntent) {
     zipPressed: i.zipPressed,
     chargePressed: i.chargePressed,
     grabPressed: i.grabPressed,
+    jumpHeld: i.jumpHeld,
+    descendHeld: i.descendHeld,
   };
 }
 

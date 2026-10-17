@@ -1,4 +1,4 @@
-# Heroes, ability kits, RAMPART, charge and breakable walls
+# Heroes, ability kits, RAMPART, METALHEAD, charge, flight and breakable walls
 
 ## Hero framework
 A hero is data, not code: `shared/data/heroes/<hero>.json` lists movement, energy, health and **which abilities it has**
@@ -11,6 +11,9 @@ A hero is data, not code: `shared/data/heroes/<hero>.json` lists movement, energ
 | `snare` | hold one enemy | ZIPLASH |
 | `charge` | straight-line rush that bowls over enemies and smashes weak walls | RAMPART |
 | `lift` | lift a car, crate or dumpster overhead and throw it | RAMPART |
+| `flight` | jet flight: no gravity, climb and descend with buttons, drains energy | METALHEAD |
+| `laser` | hold to fire hitscan bolts, each costing a little energy | METALHEAD |
+| `rockets` | homing rocket that locks the enemy nearest the crosshair and bursts | METALHEAD |
 
 `resolveHero()` (TS) and `load_hero()` (Python) flatten a hero plus its abilities into one params object. Kits a hero
 does not have are simply absent, and the sim skips them: pressing swing as RAMPART does nothing and costs nothing, and
@@ -20,7 +23,7 @@ ZIPLASH ignores the charge button. Adding a hero is mostly a new JSON file plus 
 the rows that hero has. Online, the page's hero is sent to the server (`&hero=` on the WebSocket URL) and each player is
 drawn with their own hero.
 
-Display names (ZIPLASH, RAMPART) live in the hero files; internal ids (`hero.swinger`, `hero.bruiser`) never change.
+Display names (ZIPLASH, RAMPART, METALHEAD) live in the hero files; internal ids (`hero.swinger`, `hero.bruiser`) never change.
 
 ## RAMPART (`hero.bruiser`) - the powerhouse
 Standout strength: toughness and force. Weakness: slow, short jump, no flight or swing, so ranged enemies and tall
@@ -73,6 +76,45 @@ physics: **resting**, **held**, **thrown**, **destroyed**.
 
 Props are not solid for characters yet (you can walk through a resting car); only walls collide.
 
+## METALHEAD (`hero.flyer`) - the flyer
+Standout strength: the sky and ranged firepower. Weakness: the most fragile hero, the weakest melee, and **one energy
+bar pays for everything** (jets, laser and rockets), so you cannot hover and spray forever.
+
+| | ZIPLASH | RAMPART | METALHEAD |
+|---|---|---|---|
+| Run speed | 9 | 7 | 7.5 (flight 11) |
+| Shield + core | 40 + 60 | 60 + 110 | 30 + 50 |
+| Energy regen | 14 / s | 9 / s | 12 / s (only once the jets are off) |
+| Melee combo | 36 | 60 | 30 (jab) |
+| Special | swing, zip, snare | charge, lift/throw | **flight, laser, homing rockets** |
+
+### Jet flight (`ability.flight`, `Space` in the air)
+Jump, then **press Space again in the air** to light the jets (6 energy). While flying there is no gravity:
+- the stick steers at 11 m/s (camera-relative, eased), **hold Space** to climb (7 m/s), **hold Shift / C** to descend
+  (10 m/s), release both to hover;
+- hovering costs 7 energy/s, climbing 6 more; energy does not regenerate while the jets are on;
+- the jets cut out when the energy is gone (you fall and cannot relight with under 6 energy), when you touch the ground,
+  or when you are defeated.
+
+A full tank is about 7 seconds of climbing or 14 of hovering. Buildings stop you like they stop anyone (you can fly up
+their walls and over the roof).
+
+### Pulse laser (`ability.laser`, hold `K` or left-click with the mouse captured, gamepad RT)
+Hitscan from the hands along the aim direction, one bolt every 0.2 s for 1.5 energy and 5 damage (25 damage/s, 7.5
+energy/s). It stops at the first wall and hits the nearest enemy within 0.45 m of the line (aim assist), but **never
+staggers**: a steady beam wears enemies down while they keep coming, so a flyer has to keep moving. A thug (45) takes
+under two seconds of fire.
+
+### Homing rockets (`ability.rockets`, `R` or right-mouse, gamepad Y)
+Fires a rocket (18 energy, 0.8 s cooldown) at the enemy closest to the crosshair, within 18 degrees and 45 m with a clear
+line of sight. **A red ring shows the current lock.** The rocket flies at 20 m/s and turns up to 3.2 rad/s toward its
+target; with no lock it flies straight. It bursts on an enemy, a wall, the ground or after 3 s: 35 damage at the centre
+falling to 40% at the 3.2 m edge, a shove away from the blast, and survivors are always staggered. There is no friendly
+fire. Rockets do not break walls (that stays RAMPART's job).
+
+Weapons are in `client/src/sim/weapons.ts` (`traceLaser`, `pickRocketTarget`, `RocketSystem`) and the Sim wires them up
+next to melee and snare.
+
 ## Networking
 Charging changes movement and the world, so it follows the project rule (decision D1): **any mechanic that changes the
 authoritative state is ported to Python with conformance scenarios**.
@@ -88,10 +130,15 @@ authoritative state is ported to Python with conformance scenarios**.
   carrier's drawn head). The carrier's own `carrying` state is *not* predicted, so a lift or a throw costs one small
   reconciliation correction when the server confirms it. When the last player leaves, the world (broken walls, props)
   resets.
-- Combat (melee, snare, enemy hits, a charge's or a thrown prop's damage to enemies) is still solo-only. When it is networked, those get
+- **Flight is movement, so it is ported:** `flying` is part of the synced player state, the climb/descend buttons
+  (`jumpHeld`, `descendHeld`) are part of the networked intent, and 9 METALHEAD scenarios (take-off, hover, cruise, landing,
+  running out of fuel, flying into a tower, 4 random runs) agree between TypeScript and Python. Other players see the
+  jet flames from the `flying` flag. The laser and rockets are weapons, so like all combat they are **offline-only until
+  combat is networked** (`fireHeld` and `rocketPressed` are not sent).
+- Combat (melee, snare, laser, rockets, enemy hits, a charge's or a thrown prop's damage to enemies) is still solo-only. When it is networked, those get
   their Python ports too.
 
-## Tuning (`shared/data/abilities/charge.json`, `heroes/bruiser.json`, `abilities/smash.json`)
+## Tuning (`abilities/charge.json`, `heroes/bruiser.json`, `abilities/smash.json`, and for METALHEAD `heroes/flyer.json`, `abilities/flight.json`, `laser.json`, `rockets.json`)
 | Want | Change |
 |---|---|
 | Longer / faster rush | `charge.duration`, `charge.speed` |
@@ -100,3 +147,8 @@ authoritative state is ported to Python with conformance scenarios**.
 | Wider bowling | `charge.hitRadius` |
 | Break tougher walls | `charge.breakPower` (2 breaks the reinforced wall) |
 | New breakable wall | add a collider with `"breakable": 1` or `2` and `"kind": "wall"` to the level |
+| Fly faster / climb faster | `flight.speed`, `flight.climbSpeed`, `flight.descendSpeed` |
+| Longer flights | lower `flight.hoverDrainPerSecond` / `climbDrainPerSecond`, or raise `heroes/flyer.json` `energy.max` (the same bar also pays for weapons) |
+| Laser dps / energy | `laser.damage`, `fireInterval`, `shotCost`, `aimAssist` (dps = damage / fireInterval) |
+| Rocket power | `rockets.damage`, `splashRadius`, `edgeFalloff`, `knockback`, `cost`, `cooldown` |
+| Rocket homing | `rockets.turnRate`, `lockAngleDegrees` (a bigger cone is more forgiving), `lockRange`, `speed` |

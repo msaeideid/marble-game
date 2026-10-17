@@ -55,7 +55,9 @@ function simulate(def: Omit<Scenario, 'expected'>): Scenario['expected'] {
     for (let i = 0; i < seg.ticks; i++) {
       // Button presses are edge events: only the first tick of a segment carries them.
       const tickIntent =
-        i === 0 ? intent : { ...intent, jumpPressed: false, zipPressed: false, chargePressed: false, grabPressed: false };
+        i === 0
+          ? intent
+          : { ...intent, jumpPressed: false, zipPressed: false, chargePressed: false, grabPressed: false, rocketPressed: false };
       sim.step(def.dt, new Map([['p1', tickIntent]]));
       tick++;
       if (tick % def.checkpointEvery === 0) record(tick);
@@ -100,6 +102,36 @@ function chaos(seed: number, ticks: number): Segment[] {
         zipPressed: rnd() < 0.06,
         chargePressed: rnd() < 0.05,
         grabPressed: rnd() < 0.07,
+      },
+    });
+    used += n;
+  }
+  return segments;
+}
+
+/** Chaos for a flyer: the same idea, plus held climb/descend buttons so flight is exercised hard. */
+function flyerChaos(seed: number, ticks: number): Segment[] {
+  const rnd = mulberry32(seed);
+  const segments: Segment[] = [];
+  let yaw = rnd() * Math.PI * 2;
+  let used = 0;
+  while (used < ticks) {
+    const n = 3 + Math.floor(rnd() * 25);
+    yaw += (rnd() - 0.5) * 1.2;
+    const climb = rnd() < 0.4;
+    segments.push({
+      ticks: n,
+      intent: {
+        moveX: Math.round((rnd() * 2 - 1) * 100) / 100,
+        moveZ: Math.round((rnd() * 2 - 1) * 100) / 100,
+        yaw: Math.round(yaw * 1000) / 1000,
+        pitch: Math.round((rnd() * 1.6 - 0.8) * 1000) / 1000,
+        jumpPressed: rnd() < 0.3,
+        jumpHeld: climb,
+        descendHeld: !climb && rnd() < 0.3,
+        swingHeld: rnd() < 0.1,
+        chargePressed: rnd() < 0.05,
+        grabPressed: rnd() < 0.05,
       },
     });
     used += n;
@@ -309,6 +341,91 @@ function definitions(): Omit<Scenario, 'expected'>[] {
       start: at(3, 0.01, -3.6),
       segments: [settle, { ticks: 1, intent: { grabPressed: true } }, { ticks: 30, intent: { moveZ: 1 } }],
     },
+    // ---- METALHEAD (hero.flyer): jet flight shares the energy pool; no gravity while the jets are on ----
+    {
+      ...base,
+      hero: 'hero.flyer',
+      name: 'metalhead_run_and_jump',
+      start: at(0, 0.01, 0),
+      segments: [
+        settle,
+        { ticks: 30, intent: { moveZ: 1 } },
+        { ticks: 1, intent: { moveZ: 1, jumpPressed: true, jumpHeld: true } },
+        { ticks: 30, intent: { moveZ: 1 } },
+        { ticks: 20, intent: {} },
+      ],
+    },
+    {
+      ...base,
+      hero: 'hero.flyer',
+      name: 'metalhead_takeoff_climb_hover_cruise_and_land',
+      start: at(0, 0.01, 0),
+      segments: [
+        settle,
+        { ticks: 1, intent: { jumpPressed: true, jumpHeld: true } },
+        { ticks: 6, intent: {} },
+        { ticks: 1, intent: { jumpPressed: true, jumpHeld: true } }, // second press in the air lights the jets
+        { ticks: 40, intent: { jumpHeld: true } },
+        { ticks: 30, intent: {} }, // hover
+        { ticks: 60, intent: { moveZ: 1, yaw: 0.6 } },
+        { ticks: 60, intent: { moveX: -1, moveZ: 0.5, yaw: 0.6, jumpHeld: true } },
+        { ticks: 115, intent: { descendHeld: true } }, // back down; touching ground ends the flight
+        { ticks: 40, intent: { moveZ: 1 } },
+      ],
+    },
+    {
+      ...base,
+      hero: 'hero.flyer',
+      name: 'metalhead_flight_runs_out_of_energy_then_recovers',
+      start: at(0, 0.01, 0),
+      segments: [
+        settle,
+        { ticks: 1, intent: { jumpPressed: true, jumpHeld: true } },
+        { ticks: 4, intent: {} },
+        { ticks: 1, intent: { jumpPressed: true, jumpHeld: true } },
+        { ticks: 150, intent: { jumpHeld: true } },
+        { ticks: 150, intent: { moveZ: 1, yaw: 1 } }, // fuel runs out mid-flight and the hero falls
+        { ticks: 120, intent: {} },
+        { ticks: 1, intent: { jumpPressed: true } }, // too little energy to relight the jets
+        { ticks: 200, intent: {} },
+      ],
+    },
+    {
+      ...base,
+      hero: 'hero.flyer',
+      name: 'metalhead_fly_into_building_and_up_its_wall',
+      start: at(0, 0.01, 12),
+      segments: [
+        settle,
+        { ticks: 1, intent: { jumpPressed: true, jumpHeld: true } },
+        { ticks: 4, intent: { jumpHeld: true } },
+        { ticks: 1, intent: { jumpPressed: true, jumpHeld: true } },
+        { ticks: 60, intent: { moveZ: 1, yaw: Math.PI / 2 } }, // into the tower's side
+        { ticks: 60, intent: { moveZ: 1, yaw: Math.PI / 2, jumpHeld: true } }, // up along it
+        { ticks: 50, intent: { moveZ: 1, yaw: Math.PI / 2 } }, // over the roof
+      ],
+    },
+    {
+      ...base,
+      hero: 'hero.flyer',
+      name: 'metalhead_ignores_swing_charge_and_lift',
+      start: at(3, 0.01, -3.6),
+      segments: [
+        settle,
+        { ticks: 20, intent: { swingHeld: true, yaw: 0.5, pitch: -0.7 } },
+        { ticks: 1, intent: { chargePressed: true, yaw: 1 } },
+        { ticks: 20, intent: { yaw: 1 } },
+        { ticks: 1, intent: { grabPressed: true } },
+        { ticks: 20, intent: { moveZ: 1 } },
+      ],
+    },
+    ...[1212, 1313, 1414, 1515].map((seed, i) => ({
+      ...base,
+      hero: 'hero.flyer',
+      name: `metalhead_chaos_seed_${seed}`,
+      start: at([0, -6, 8, 2][i]!, 0.01, [-4, 6, -9, 10][i]!),
+      segments: [settle, ...flyerChaos(seed, 900)],
+    })),
     ...[707, 808, 909, 1010, 1111].map((seed, i) => ({
       ...base,
       hero: 'hero.bruiser',

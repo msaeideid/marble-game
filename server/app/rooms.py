@@ -59,6 +59,8 @@ def sanitize_intent(raw: Any) -> Intent | None:
         zipPressed=bool(raw.get("zipPressed", False)),
         chargePressed=bool(raw.get("chargePressed", False)),
         grabPressed=bool(raw.get("grabPressed", False)),
+        jumpHeld=bool(raw.get("jumpHeld", False)),
+        descendHeld=bool(raw.get("descendHeld", False)),
     )
 
 

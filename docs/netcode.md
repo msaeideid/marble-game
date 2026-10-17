@@ -69,6 +69,11 @@ base energy regeneration, void respawn, then the props once per tick. Conformanc
 thing (28 scenarios, props included). Each lift and throw causes one small correction on the thrower's client because
 `carrying` is decided by the server. The room resets its world when the last player leaves.
 
+## Update: METALHEAD's flight
+Jet flight is movement, so it follows the rule: `flying` is in `PlayerWire`, the climb/descend buttons (`jumpHeld`,
+`descendHeld`) are in the networked intent and the server's input sanitiser, and 9 METALHEAD scenarios (37 in total)
+agree between TypeScript and Python. The laser and rockets are weapons and stay solo-only until combat is networked.
+
 ## Known limits / next steps
 - Movement only. Combat, enemies, health and waves are solo-only for now.
 - One global room, guest names only, no accounts, no reconnect, JSON messages (switch to MessagePack when stable).

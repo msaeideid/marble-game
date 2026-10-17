@@ -109,6 +109,24 @@ export class Sfx {
     this.tone(140, 420, 0.3, 'sawtooth', 0.18);
     this.noise(0.3, 0.2, 700, 0.8);
   }
+  /** One laser bolt: a quick bright zap. */
+  laser(): void {
+    this.tone(1500, 500, 0.09, 'square', 0.07);
+  }
+  rocket(): void {
+    this.noise(0.4, 0.3, 1200, 0.7);
+    this.tone(220, 520, 0.35, 'sawtooth', 0.12);
+  }
+  explosion(volume = 1): void {
+    this.noise(0.5, 0.55 * volume, 220, 0.5);
+    this.tone(110, 30, 0.5, 'sawtooth', 0.35 * volume);
+    this.noise(0.25, 0.3 * volume, 1500, 1, 0.04);
+  }
+  /** Jets lighting: a rising whoosh. */
+  jets(): void {
+    this.noise(0.45, 0.25, 900, 0.5);
+    this.tone(120, 320, 0.4, 'triangle', 0.1);
+  }
   wave(): void {
     this.tone(330, 330, 0.15, 'square', 0.12);
     this.tone(440, 440, 0.15, 'square', 0.12, 0.17);

@@ -2,12 +2,15 @@ import type {
   ChargeParams,
   EnemyParams,
   EnergyParams,
+  FlightParams,
   HealthParams,
   HeroParams,
+  LaserParams,
   LiftParams,
   MeleeParams,
   MovementParams,
   PropParams,
+  RocketParams,
   SnareParams,
   SwingParams,
   ZipParams,
@@ -27,7 +30,7 @@ export interface HeroData {
 
 export interface AbilityData {
   id: string;
-  kind: 'swing' | 'zip' | 'melee' | 'snare' | 'charge' | 'lift';
+  kind: 'swing' | 'zip' | 'melee' | 'snare' | 'charge' | 'lift' | 'flight' | 'laser' | 'rockets';
   displayName: string;
   swing?: SwingParams;
   zip?: ZipParams;
@@ -35,6 +38,9 @@ export interface AbilityData {
   snare?: SnareParams;
   charge?: ChargeParams;
   lift?: LiftParams;
+  flight?: FlightParams;
+  laser?: LaserParams;
+  rockets?: RocketParams;
 }
 
 export interface UpgradeData {
@@ -114,6 +120,9 @@ export function resolveHero(hero: HeroData, abilities: Record<string, AbilityDat
   if (byKind.snare?.snare) out.snare = byKind.snare.snare;
   if (byKind.charge?.charge) out.charge = byKind.charge.charge;
   if (byKind.lift?.lift) out.lift = byKind.lift.lift;
+  if (byKind.flight?.flight) out.flight = byKind.flight.flight;
+  if (byKind.laser?.laser) out.laser = byKind.laser.laser;
+  if (byKind.rockets?.rockets) out.rockets = byKind.rockets.rockets;
   if (out.zip && !out.swing) throw new Error(`Hero ${hero.id} has a zip but no swing`);
   return out;
 }

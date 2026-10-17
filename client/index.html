@@ -25,8 +25,12 @@
       #core-fill.low { background: linear-gradient(90deg, #ff5d5d, #ff9a6b); }
       #banner { position: absolute; left: 0; right: 0; top: 35%; text-align: center; font-size: 28px; font-weight: 700; display: none; }
       #abilities { position: absolute; right: 12px; top: 12px; display: flex; gap: 6px; }
-      #abilities .chip { padding: 4px 10px; border-radius: 6px; background: rgba(0,0,0,.4); font-size: 13px; }
+      #abilities .chip { padding: 4px 10px; border-radius: 6px; background: rgba(0,0,0,.4); font-size: 13px; white-space: nowrap; }
       #abilities .chip.cooling { opacity: .4; }
+      #abilities .chip.on { background: rgba(255,170,60,.65); }
+      .lock-ring { position: absolute; left: 0; top: 0; width: 46px; height: 46px; border: 3px solid #ff5d5d; border-radius: 50%;
+        box-sizing: border-box; box-shadow: 0 0 8px rgba(255,93,93,.8), inset 0 0 6px rgba(255,93,93,.5); display: none; }
+      .lock-ring::after { content: ''; position: absolute; inset: 15px; background: #ff5d5d; border-radius: 50%; }
       #hurt { position: absolute; inset: 0; background: radial-gradient(transparent 55%, rgba(255,40,40,.55)); opacity: 0; transition: opacity .35s ease-out; }
       #hurt.on { opacity: 1; transition: none; }
       #wave { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); font-size: 15px; font-weight: 600;
@@ -79,6 +83,9 @@
         <div class="chip" id="snare-chip">Q &middot; Snare</div>
         <div class="chip" id="charge-chip">Shift &middot; Charge</div>
         <div class="chip" id="carry-chip" style="display:none"></div>
+        <div class="chip" id="flight-chip" style="display:none">Space&times;2 &middot; Fly</div>
+        <div class="chip" id="laser-chip" style="display:none">K &middot; Laser</div>
+        <div class="chip" id="rocket-chip" style="display:none">R &middot; Rockets</div>
       </div>
       <div id="banner"></div>
       <div id="energy"><div id="energy-fill"></div></div>
@@ -103,6 +110,9 @@
           <tr><td>J / left-click</td><td>Strike (tap in rhythm for a 3-hit combo)</td></tr>
           <tr data-kit="snare"><td>Q</td><td>Snare a thug in your sights</td></tr>
           <tr data-kit="lift"><td>E / G</td><td>Lift the nearest car, crate or dumpster; press again to throw it where you aim (heavy ones break walls)</td></tr>
+          <tr data-kit="flight"><td>Space, Space</td><td>Jump, then press Space again in the air to light the jets. Hold Space to climb, Shift / C to descend; touch down to land</td></tr>
+          <tr data-kit="laser"><td>K / hold left-click</td><td>Fire the pulse laser (hold). Every shot costs a little energy, like flying does</td></tr>
+          <tr data-kit="rockets"><td>R / right-mouse</td><td>Launch a homing rocket at the enemy nearest your crosshair (red ring = locked)</td></tr>
           <tr data-kit="charge"><td>Shift / C</td><td>Charge: bulldoze enemies and smash weak walls (orange)</td></tr>
           <tr><td>M / P</td><td>Mute / pause</td></tr>
         </table>

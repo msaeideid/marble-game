@@ -14,6 +14,7 @@ export class WorldLabels {
   private readonly bars = new Map<string, { el: HTMLElement; fill: HTMLElement }>();
   private numbers: FloatingNumber[] = [];
   private readonly tmp = new Vector3();
+  private lock: HTMLElement | null = null;
 
   constructor(
     private readonly root: HTMLElement,
@@ -60,6 +61,22 @@ export class WorldLabels {
     bar.el.style.transform = `translate(${p.x - 20}px, ${p.y}px)`;
     bar.fill.style.width = `${Math.max(0, Math.min(1, fraction)) * 100}%`;
     bar.el.classList.toggle('held', held);
+  }
+
+  /** A rocket lock-on ring pinned to a world point, or hidden when null. */
+  setLock(at: Vec3 | null): void {
+    if (!this.lock) {
+      this.lock = document.createElement('div');
+      this.lock.className = 'lock-ring';
+      this.root.appendChild(this.lock);
+    }
+    const p = at ? this.project(at) : null;
+    if (!p) {
+      this.lock.style.display = 'none';
+      return;
+    }
+    this.lock.style.display = 'block';
+    this.lock.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -50%)`;
   }
 
   hideBar(id: string): void {

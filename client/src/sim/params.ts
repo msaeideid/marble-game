@@ -84,6 +84,53 @@ export interface LiftParams {
   strength: number;
 }
 
+/** Jet flight: press jump in the air to take off, hold jump to climb, hold descend to drop; drains the shared energy. */
+export interface FlightParams {
+  /** Energy to take off. */
+  startCost: number;
+  hoverDrainPerSecond: number;
+  /** Extra drain while climbing. */
+  climbDrainPerSecond: number;
+  /** Horizontal speed while flying. */
+  speed: number;
+  /** How fast velocity eases toward the wanted velocity (m/s^2). */
+  accel: number;
+  climbSpeed: number;
+  descendSpeed: number;
+}
+
+/** A held-to-fire hitscan weapon: one bolt every `fireInterval` seconds while the button is down. */
+export interface LaserParams {
+  range: number;
+  fireInterval: number;
+  /** Energy per bolt. */
+  shotCost: number;
+  damage: number;
+  /** How far (m) off the aim line an enemy's body can be and still be hit. */
+  aimAssist: number;
+}
+
+/** A homing rocket that locks the enemy nearest the crosshair and bursts for area damage. */
+export interface RocketParams {
+  cost: number;
+  cooldown: number;
+  speed: number;
+  /** Turn rate toward the locked target (radians per second). */
+  turnRate: number;
+  lifetime: number;
+  /** Rocket size for hit tests. */
+  radius: number;
+  lockRange: number;
+  /** An enemy this close to the crosshair direction (degrees) can be locked. */
+  lockAngleDegrees: number;
+  splashRadius: number;
+  /** Damage at the centre of the blast. */
+  damage: number;
+  /** Fraction of `damage` still dealt at the very edge of the blast (0..1). */
+  edgeFalloff: number;
+  knockback: number;
+}
+
 /** A liftable, throwable world object (car, crate, dumpster). Loaded from shared/data/props. */
 export interface PropParams {
   id: string;
@@ -178,4 +225,7 @@ export interface HeroParams {
   snare?: SnareParams;
   charge?: ChargeParams;
   lift?: LiftParams;
+  flight?: FlightParams;
+  laser?: LaserParams;
+  rockets?: RocketParams;
 }

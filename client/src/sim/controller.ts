@@ -57,6 +57,12 @@ export interface PlayerState {
   carrying: { id: number; def: string } | null;
   /** Seconds until the next lift or throw. */
   grabCooldown: number;
+  /** Jet flight is on: no gravity, steering and climbing with the buttons, drains energy. */
+  flying: boolean;
+  /** Seconds until the laser can fire its next bolt. */
+  laserCooldown: number;
+  /** Seconds until the next rocket. */
+  rocketCooldown: number;
   health: HealthState;
   /** Seconds until respawn while defeated, otherwise null. */
   defeatedTimer: number | null;
@@ -86,6 +92,9 @@ export function createPlayerState(spawn: Vec3, hero: HeroParams): PlayerState {
     chargeHits: [],
     carrying: null,
     grabCooldown: 0,
+    flying: false,
+    laserCooldown: 0,
+    rocketCooldown: 0,
     health: createHealth(hero.health),
     defeatedTimer: null,
     melee: createMelee(),
@@ -209,6 +218,7 @@ export function stepPlayer(
   const swing = hero.swing;
   const zipP = hero.zip;
   const chargeP = hero.charge;
+  const flightP = hero.flight;
   const broken: Collider[] = [];
   s.prevPos = { ...s.pos };
   const aim = aimDir(intent.yaw, intent.pitch);
@@ -299,6 +309,16 @@ export function stepPlayer(
   } else if (swing && s.tether) {
     s.vel.x += wishX * swing.airControl * dt;
     s.vel.z += wishZ * swing.airControl * dt;
+  } else if (s.flying && flightP) {
+    // Jet flight steers like running (same camera-relative stick) but eases toward flight speed in the air too.
+    const dx = wishX * flightP.speed - s.vel.x;
+    const dz = wishZ * flightP.speed - s.vel.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist > 0) {
+      const k = Math.min(1, (flightP.accel * dt) / dist);
+      s.vel.x += dx * k;
+      s.vel.z += dz * k;
+    }
   } else if (s.grounded) {
     const tx = wishX * runSpeed;
     const tz = wishZ * runSpeed;
@@ -328,12 +348,27 @@ export function stepPlayer(
 
   // ---- jump ----
   s.coyote = s.grounded ? p.coyoteTime : Math.max(0, s.coyote - dt);
-  s.jumpBuffer = intent.jumpPressed ? p.jumpBufferTime : Math.max(0, s.jumpBuffer - dt);
-  if (!s.zip && !s.charge && s.jumpBuffer > 0 && s.coyote > 0) {
+  s.jumpBuffer = intent.jumpPressed && !s.flying ? p.jumpBufferTime : Math.max(0, s.jumpBuffer - dt);
+  if (!s.zip && !s.charge && !s.flying && s.jumpBuffer > 0 && s.coyote > 0) {
     s.vel.y = jumpSpeed;
     s.jumpBuffer = 0;
     s.coyote = 0;
     s.grounded = false;
+  } else if (
+    flightP &&
+    intent.jumpPressed &&
+    !s.flying &&
+    !s.grounded &&
+    s.coyote <= 0 &&
+    !s.zip &&
+    !s.charge &&
+    !s.tether &&
+    !s.carrying &&
+    trySpend(s, flightP.startCost, hero.energy)
+  ) {
+    // Pressing jump again in the air lights the jets.
+    s.flying = true;
+    s.jumpBuffer = 0;
   }
 
   // ---- gravity / zip pull ----
@@ -346,6 +381,13 @@ export function stepPlayer(
     s.vel.x = (dx / d) * zipP.speed;
     s.vel.y = (dy / d) * zipP.speed;
     s.vel.z = (dz / d) * zipP.speed;
+  } else if (s.flying && flightP) {
+    // No gravity: ease the climb rate toward what the buttons ask for (hover when neither is held).
+    const want = (intent.jumpHeld ? flightP.climbSpeed : 0) - (intent.descendHeld ? flightP.descendSpeed : 0);
+    const dvy = want - s.vel.y;
+    if (dvy !== 0) s.vel.y += dvy * Math.min(1, (flightP.accel * dt) / Math.abs(dvy));
+    const cost = flightP.hoverDrainPerSecond + (intent.jumpHeld ? flightP.climbDrainPerSecond : 0);
+    if (!drain(s, cost * dt, hero.energy)) s.flying = false; // out of fuel: fall
   } else {
     s.vel.y = Math.max(s.vel.y - p.gravity * dt, -p.maxFallSpeed);
   }
@@ -368,6 +410,7 @@ export function stepPlayer(
   if (r.hitDown) {
     s.vel.y = 0;
     s.grounded = true;
+    s.flying = false; // touching down ends the flight
   } else {
     s.grounded = false;
     if (r.hitUp && s.vel.y > 0) s.vel.y = 0;

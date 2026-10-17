@@ -1,0 +1,14 @@
+{
+  "id": "ability.flight",
+  "kind": "flight",
+  "displayName": "Jet flight",
+  "flight": {
+    "startCost": 6,
+    "hoverDrainPerSecond": 7,
+    "climbDrainPerSecond": 6,
+    "speed": 11,
+    "accel": 16,
+    "climbSpeed": 7,
+    "descendSpeed": 10
+  }
+}

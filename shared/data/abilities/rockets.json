@@ -1,0 +1,19 @@
+{
+  "id": "ability.rockets",
+  "kind": "rockets",
+  "displayName": "Homing rockets",
+  "rockets": {
+    "cost": 18,
+    "cooldown": 0.8,
+    "speed": 20,
+    "turnRate": 3.2,
+    "lifetime": 3,
+    "radius": 0.3,
+    "lockRange": 45,
+    "lockAngleDegrees": 18,
+    "splashRadius": 3.2,
+    "damage": 35,
+    "edgeFalloff": 0.4,
+    "knockback": 9
+  }
+}

@@ -28,10 +28,18 @@ interface VanguardHook {
         tether: unknown;
         energy: number;
         carrying: { id: number; def: string } | null;
+        flying: boolean;
+        invulnerable: number;
+        vel: { x: number; y: number; z: number };
         health: { shield: number; core: number };
       }
     >;
-    enemies: Map<string, { pos: { x: number; z: number }; defeatedTimer: number | null }>;
+    enemies: Map<
+      string,
+      { id: string; pos: { x: number; z: number }; defeatedTimer: number | null; snaredTimer: number; health: { core: number; shield: number } }
+    >;
+    spawnEnemy(type: string, pos: { x: number; y: number; z: number }): { id: string; snaredTimer: number; health: { core: number; shield: number }; defeatedTimer: number | null };
+    rocketSystem: { rockets: { id: number }[] } | null;
   };
   view: {
     engine: { getRenderingCanvas(): HTMLCanvasElement };

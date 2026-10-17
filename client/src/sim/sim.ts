@@ -8,6 +8,7 @@ import { carryScales, PropSystem, type PropEvent, type PropWire } from './props'
 import { applyDamage, regenHealth } from './health';
 import type { EnemyParams, HeroParams, PropParams } from './params';
 import { NEUTRAL_INTENT, type PlayerIntent, type Vec3 } from './types';
+import { pickRocketTarget, RocketSystem, traceLaser, type RocketEvent, type Target } from './weapons';
 import type { World } from './world';
 
 /** Things that happened this tick. Views use them for effects; netcode will broadcast them. */
@@ -21,6 +22,8 @@ export type SimEvent =
   | { type: 'wave'; wave: number }
   | { type: 'break'; id: number; by: string }
   | { type: 'charge'; id: string; hits: string[] }
+  | { type: 'laser'; owner: string; from: Vec3; to: Vec3; hit: string | null }
+  | RocketEvent
   | PropEvent;
 
 /** The authoritative-style game simulation. No rendering, DOM or engine imports. */
@@ -36,6 +39,8 @@ export class Sim {
   /** Lift-and-throw props; null when the level has none or props are turned off (online clients draw the server's). */
   readonly propSystem: PropSystem | null;
   private readonly propDefs: Record<string, PropParams>;
+  /** Homing rockets in flight; null for heroes without the rocket kit. */
+  readonly rocketSystem: RocketSystem | null;
 
   /** With `waves` on, the level's enemy spawns are (re)populated whenever the arena is cleared. */
   constructor(
@@ -45,6 +50,7 @@ export class Sim {
     private readonly opts: { waves?: boolean; props?: boolean; propDefs?: Record<string, PropParams> } = {},
   ) {
     this.propDefs = opts.propDefs ?? {};
+    this.rocketSystem = hero.rockets ? new RocketSystem(world, hero.rockets) : null;
     this.propSystem =
       opts.props !== false && world.propSpawns.length > 0 && opts.propDefs ? new PropSystem(world, this.propDefs) : null;
   }
@@ -85,6 +91,8 @@ export class Sim {
       // Hands are full: no striking while carrying.
       this.stepPlayerMelee(id, player, player.carrying ? { ...intent, attackPressed: false } : intent, dt);
       this.stepPlayerSnare(id, player, intent, dt);
+      this.stepPlayerLaser(id, player, intent, dt);
+      this.stepPlayerRockets(id, player, intent, dt);
       regenHealth(player.health, this.hero.health, dt);
       player.invulnerable = Math.max(0, player.invulnerable - dt);
       this.applyBaseRegen(player, dt);
@@ -110,6 +118,7 @@ export class Sim {
     }
     this.stepWaves(dt);
     this.stepProps(dt);
+    this.stepRockets(dt);
     this.tick++;
   }
 
@@ -215,6 +224,67 @@ export class Sim {
     if (struck.length > 0) this.events.push({ type: 'charge', id, hits: struck });
   }
 
+  /** Holding fire shoots a bolt every `fireInterval`, each costing a little energy from the shared pool. */
+  private stepPlayerLaser(id: string, player: PlayerState, intent: PlayerIntent, dt: number): void {
+    player.laserCooldown = Math.max(0, player.laserCooldown - dt);
+    const p = this.hero.laser;
+    if (!p || !intent.fireHeld || player.laserCooldown > 0 || player.carrying) return;
+    if (!trySpend(player, p.shotCost, this.hero.energy)) return;
+    player.laserCooldown = p.fireInterval;
+    const origin = handPos(player, this.hero);
+    const shot = traceLaser(this.world, origin, aimDir(intent.yaw, intent.pitch), p, this.liveTargets());
+    if (shot.hit) {
+      const e = this.enemies.get(shot.hit.id);
+      // A steady beam wears enemies down without stunning them, so they keep coming and you have to keep moving.
+      if (e) this.damageEnemy(e, p.damage, id, { stagger: false });
+    }
+    this.events.push({ type: 'laser', owner: id, from: origin, to: shot.end, hit: shot.hit?.id ?? null });
+  }
+
+  private stepPlayerRockets(id: string, player: PlayerState, intent: PlayerIntent, dt: number): void {
+    player.rocketCooldown = Math.max(0, player.rocketCooldown - dt);
+    const p = this.hero.rockets;
+    if (!p || !this.rocketSystem || !intent.rocketPressed || player.rocketCooldown > 0 || player.carrying) return;
+    if (!trySpend(player, p.cost, this.hero.energy)) return;
+    player.rocketCooldown = p.cooldown;
+    const hand = handPos(player, this.hero);
+    const dir = aimDir(intent.yaw, intent.pitch);
+    const lock = pickRocketTarget(this.world, hand, dir, p, this.liveTargets());
+    const muzzle = { x: hand.x + dir.x * 0.8, y: hand.y + dir.y * 0.8, z: hand.z + dir.z * 0.8 };
+    this.events.push(this.rocketSystem.launch(id, muzzle, dir, lock?.id ?? null));
+  }
+
+  private stepRockets(dt: number): void {
+    if (!this.rocketSystem) return;
+    this.events.push(
+      ...this.rocketSystem.step(dt, {
+        targets: () => this.liveTargets(),
+        blast: (eid, amount, dirX, dirZ, knockback) => {
+          const e = this.enemies.get(eid);
+          if (!e) return;
+          e.vel.x += dirX * knockback;
+          e.vel.z += dirZ * knockback;
+          this.damageEnemy(e, amount, 'rocket');
+          if (e.defeatedTimer === null) {
+            e.aiState = 'stagger'; // a rocket always knocks them off balance
+            e.aiTimer = this.enemyDefs[e.typeId]!.staggerTime;
+          }
+        },
+      }),
+    );
+  }
+
+  /** Enemies a weapon can hit right now. */
+  liveTargets(): Target[] {
+    const out: Target[] = [];
+    for (const e of this.enemies.values()) {
+      if (e.defeatedTimer !== null) continue;
+      const m = this.enemyDefs[e.typeId]!.move;
+      out.push({ id: e.id, pos: e.pos, halfWidth: m.halfWidth, height: m.height });
+    }
+    return out;
+  }
+
   private stepPlayerSnare(id: string, player: PlayerState, intent: PlayerIntent, dt: number): void {
     player.snareCooldown = Math.max(0, player.snareCooldown - dt);
     const p = this.hero.snare;
@@ -265,7 +335,7 @@ export class Sim {
     this.events.push({ type: 'wave', wave: this.wave });
   }
 
-  damageEnemy(enemy: EnemyState, amount: number, sourceId: string | null): void {
+  damageEnemy(enemy: EnemyState, amount: number, sourceId: string | null, opts: { stagger?: boolean } = {}): void {
     if (enemy.defeatedTimer !== null) return;
     const def = this.enemyDefs[enemy.typeId]!;
     const r = applyDamage(enemy.health, amount, def.health);
@@ -273,7 +343,7 @@ export class Sim {
     if (r.defeated) {
       enemy.defeatedTimer = def.powerDownTime;
       this.events.push({ type: 'defeated', id: enemy.id });
-    } else if (amount > 0 && enemy.aiState !== 'stagger' && enemy.poiseTimer <= 0) {
+    } else if (amount > 0 && opts.stagger !== false && enemy.aiState !== 'stagger' && enemy.poiseTimer <= 0) {
       enemy.aiState = 'stagger';
       enemy.aiTimer = def.staggerTime;
     }
@@ -288,6 +358,7 @@ export class Sim {
       player.defeatedTimer = this.hero.respawnDelay;
       player.tether = null;
       player.zip = null;
+      player.flying = false;
       this.propSystem?.dropHeldBy(id, player.pos);
       player.carrying = null;
       this.events.push({ type: 'defeated', id });
