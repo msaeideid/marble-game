@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "prop.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "displayName",
+    "size",
+    "carrySlow",
+    "throwSpeed",
+    "throwDamage",
+    "throwKnockback",
+    "breakPower",
+    "hp",
+    "respawnTime",
+    "look",
+    "color"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "size": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "halfWidth",
+        "height"
+      ],
+      "properties": {
+        "halfWidth": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "height": {
+          "$ref": "common.schema.json#/$defs/positive"
+        }
+      }
+    },
+    "carrySlow": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 1
+    },
+    "throwSpeed": {
+      "$ref": "common.schema.json#/$defs/positive"
+    },
+    "throwDamage": {
+      "$ref": "common.schema.json#/$defs/nonNegative"
+    },
+    "throwKnockback": {
+      "$ref": "common.schema.json#/$defs/nonNegative"
+    },
+    "breakPower": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "hp": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "respawnTime": {
+      "$ref": "common.schema.json#/$defs/positive"
+    },
+    "look": {
+      "enum": [
+        "car",
+        "crate",
+        "dumpster"
+      ]
+    },
+    "color": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      }
+    }
+  }
+}

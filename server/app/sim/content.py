@@ -48,6 +48,16 @@ def _load_heroes() -> dict[str, dict[str, Any]]:
     return out
 
 
+@cache
+def load_props() -> dict[str, SimpleNamespace]:
+    """Lift-and-throw prop definitions by id (shared/data/props)."""
+    out: dict[str, SimpleNamespace] = {}
+    for f in sorted((shared_dir() / "data" / "props").glob("*.json")):
+        d = json.loads(f.read_text(encoding="utf8"))
+        out[d["id"]] = _ns(d)
+    return out
+
+
 def hero_ids() -> list[str]:
     """Ids of every hero a player may pick."""
     return list(_load_heroes())
@@ -57,7 +67,7 @@ def hero_ids() -> list[str]:
 def load_hero(hero_id: str = "hero.swinger") -> SimpleNamespace:
     """Flatten a hero and its abilities into one params object (mirrors resolveHero in content.ts).
 
-    Ability kits a hero does not have (swing, zip, snare, charge) are simply absent attributes; use getattr.
+    Ability kits a hero does not have (swing, zip, snare, charge, lift) are simply absent attributes; use getattr.
     """
     heroes = _load_heroes()
     if hero_id not in heroes:
@@ -82,7 +92,7 @@ def load_hero(hero_id: str = "hero.swinger") -> SimpleNamespace:
         "respawnInvulnerable": h["respawnInvulnerable"],
         "melee": by_kind["melee"]["melee"],
     }
-    for kind in ("swing", "zip", "snare", "charge"):
+    for kind in ("swing", "zip", "snare", "charge", "lift"):
         if kind in by_kind:
             out[kind] = by_kind[kind][kind]
     if "zip" in out and "swing" not in out:

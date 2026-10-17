@@ -10,11 +10,12 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import arena from '@shared/levels/arena.json';
 import { describe, expect, it } from 'vitest';
-import { createPlayerState, stepPlayer } from '../src/sim/controller';
+import { Sim } from '../src/sim/sim';
 import { NEUTRAL_INTENT, type PlayerIntent } from '../src/sim/types';
+import type { PropWire } from '../src/sim/props';
 import { toWire, wireDistance, type PlayerWire } from '../src/sim/wire';
 import { World } from '../src/sim/world';
-import { getHero } from '../src/data';
+import { content, getHero } from '../src/data';
 
 const DT = 1 / 30;
 const dir = fileURLToPath(new URL('../../shared/conformance/movement/', import.meta.url));
@@ -31,28 +32,36 @@ interface Scenario {
   start: { pos: [number, number, number] };
   checkpointEvery: number;
   segments: Segment[];
-  expected: { tick: number; state: PlayerWire; broken: number[] }[];
+  expected: { tick: number; state: PlayerWire; broken: number[]; props: PropWire[] }[];
 }
 
+/**
+ * Runs a scenario through the full authoritative sim (movement, base regen, void respawn, walls, props), exactly
+ * what the server does for one player, and records the state at each checkpoint.
+ */
 function simulate(def: Omit<Scenario, 'expected'>): Scenario['expected'] {
   const world = new World(arena);
   const hero = getHero(def.hero);
-  const s = createPlayerState(world.spawn, hero);
+  const sim = new Sim(world, hero, {}, { waves: false, props: true, propDefs: content.props });
+  const s = sim.addPlayer('p1');
   s.pos = { x: def.start.pos[0], y: def.start.pos[1], z: def.start.pos[2] };
   s.prevPos = { ...s.pos };
   const out: Scenario['expected'] = [];
+  const record = (tick: number) =>
+    out.push({ tick, state: toWire(s), broken: [...world.broken].sort((a, b) => a - b), props: sim.propWires });
   let tick = 0;
   for (const seg of def.segments) {
     const intent: PlayerIntent = { ...NEUTRAL_INTENT, ...seg.intent };
     for (let i = 0; i < seg.ticks; i++) {
-      // jumpPressed / zipPressed are edge events: only the first tick of a segment carries them.
-      const tickIntent = i === 0 ? intent : { ...intent, jumpPressed: false, zipPressed: false, chargePressed: false };
-      stepPlayer(s, tickIntent, hero, world, def.dt);
+      // Button presses are edge events: only the first tick of a segment carries them.
+      const tickIntent =
+        i === 0 ? intent : { ...intent, jumpPressed: false, zipPressed: false, chargePressed: false, grabPressed: false };
+      sim.step(def.dt, new Map([['p1', tickIntent]]));
       tick++;
-      if (tick % def.checkpointEvery === 0) out.push({ tick, state: toWire(s), broken: [...world.broken].sort((a, b) => a - b) });
+      if (tick % def.checkpointEvery === 0) record(tick);
     }
   }
-  if (tick % def.checkpointEvery !== 0) out.push({ tick, state: toWire(s), broken: [...world.broken].sort((a, b) => a - b) });
+  if (tick % def.checkpointEvery !== 0) record(tick);
   return out;
 }
 
@@ -90,6 +99,7 @@ function chaos(seed: number, ticks: number): Segment[] {
         reelHeld: rnd() < 0.2,
         zipPressed: rnd() < 0.06,
         chargePressed: rnd() < 0.05,
+        grabPressed: rnd() < 0.07,
       },
     });
     used += n;
@@ -234,11 +244,76 @@ function definitions(): Omit<Scenario, 'expected'>[] {
         { ticks: 30, intent: { yaw: -Math.PI / 2 } },
       ],
     },
-    ...[707, 808, 909].map((seed, i) => ({
+    // ---- props: lift, carry, throw, wall breaking, respawn ----
+    {
+      ...base,
+      hero: 'hero.bruiser',
+      name: 'rampart_lift_carry_and_throw_a_car',
+      // Car at (3, 0, -6). Lift it, walk and try to jump while carrying (slow, low jump), throw it east.
+      start: at(3, 0.01, -3.6),
+      segments: [
+        settle,
+        { ticks: 1, intent: { grabPressed: true, yaw: Math.PI } },
+        { ticks: 25, intent: { moveZ: 1, yaw: 0.4 } },
+        { ticks: 20, intent: { moveZ: 1, yaw: 0.4, jumpPressed: true } },
+        { ticks: 20, intent: {} },
+        { ticks: 1, intent: { grabPressed: true, yaw: Math.PI / 2, pitch: -0.1 } },
+        { ticks: 90, intent: { yaw: Math.PI / 2 } },
+      ],
+    },
+    {
+      ...base,
+      hero: 'hero.bruiser',
+      name: 'rampart_throw_car_breaks_reinforced_wall',
+      // Between the two south walls, the car at (0, 0, -16.5) is lifted and thrown at the tier-2 wall (z -20..-18.5).
+      start: at(0, 0.01, -14.7),
+      segments: [
+        settle,
+        { ticks: 1, intent: { grabPressed: true, yaw: Math.PI } },
+        { ticks: 15, intent: { yaw: Math.PI } },
+        { ticks: 1, intent: { grabPressed: true, yaw: Math.PI, pitch: -0.05 } },
+        { ticks: 90, intent: { yaw: Math.PI } },
+      ],
+    },
+    {
+      ...base,
+      hero: 'hero.bruiser',
+      name: 'rampart_throw_crate_breaks_weak_wall_then_respawns',
+      // Crate at (-3, 0, -4) thrown at the tier-1 wall; it shatters, and 12 s later the crate is back.
+      start: at(-3, 0.01, -2),
+      segments: [
+        settle,
+        { ticks: 1, intent: { grabPressed: true, yaw: Math.PI } },
+        { ticks: 20, intent: { yaw: Math.PI } },
+        { ticks: 1, intent: { grabPressed: true, yaw: Math.PI, pitch: -0.05 } },
+        { ticks: 420, intent: { yaw: Math.PI } },
+      ],
+    },
+    {
+      ...base,
+      hero: 'hero.bruiser',
+      name: 'rampart_grab_with_nothing_in_reach_and_cooldown',
+      start: at(25, 0.01, 0),
+      segments: [
+        settle,
+        { ticks: 1, intent: { grabPressed: true } },
+        { ticks: 20, intent: { moveZ: 1 } },
+        { ticks: 1, intent: { grabPressed: true } },
+        { ticks: 20, intent: {} },
+      ],
+    },
+    {
+      ...base,
+      hero: 'hero.swinger',
+      name: 'ziplash_cannot_lift_props',
+      start: at(3, 0.01, -3.6),
+      segments: [settle, { ticks: 1, intent: { grabPressed: true } }, { ticks: 30, intent: { moveZ: 1 } }],
+    },
+    ...[707, 808, 909, 1010, 1111].map((seed, i) => ({
       ...base,
       hero: 'hero.bruiser',
       name: `rampart_chaos_seed_${seed}`,
-      start: at([0, -4, 3][i]!, 0.01, [-6, 2, -10][i]!),
+      start: at([0, -4, 3, -2, 4][i]!, 0.01, [-6, 2, -10, -5, 3][i]!),
       segments: [settle, ...chaos(seed, 900)],
     })),
     ...[101, 202, 303, 404, 505, 606].map((seed, i) => ({
@@ -273,6 +348,7 @@ if (UPDATE) {
         for (let i = 0; i < got.length; i++) {
           worst = Math.max(worst, wireDistance(got[i]!.state, sc.expected[i]!.state));
           expect(got[i]!.broken, `${f} tick ${got[i]!.tick}`).toEqual(sc.expected[i]!.broken);
+          expect(got[i]!.props, `${f} props tick ${got[i]!.tick}`).toEqual(sc.expected[i]!.props);
         }
         expect(worst).toBeLessThan(1e-9);
       });

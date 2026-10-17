@@ -1,3 +1,4 @@
+import type { PropWire } from '../sim/props';
 import type { PlayerWire } from '../sim/wire';
 import type { ServerSnapshot } from './session';
 
@@ -5,6 +6,7 @@ interface Stamped {
   /** Local clock time (ms) when the snapshot arrived. */
   at: number;
   players: ServerSnapshot['players'];
+  props: PropWire[];
 }
 
 export interface RemoteSample {
@@ -46,7 +48,7 @@ export class SnapshotBuffer {
   constructor(readonly delayMs = 100) {}
 
   push(at: number, snap: ServerSnapshot): void {
-    this.snaps.push({ at, players: snap.players });
+    this.snaps.push({ at, players: snap.players, props: snap.props ?? [] });
     while (this.snaps.length > 2 && this.snaps[1]!.at < at - 2000) this.snaps.shift();
   }
 
@@ -66,6 +68,26 @@ export class SnapshotBuffer {
       out[id] = { name: pb.name, hero: pb.hero ?? 'hero.swinger', state: pa ? lerpWire(pa.state, pb.state, t) : pb.state };
     }
     return out;
+  }
+
+  /** Props at (now - delay): positions blend between the two snapshots, everything else comes from the later one. */
+  sampleProps(now: number): PropWire[] {
+    if (this.snaps.length === 0) return [];
+    const renderAt = now - this.delayMs;
+    let i = this.snaps.length - 1;
+    while (i > 0 && this.snaps[i]!.at > renderAt) i--;
+    const a = this.snaps[i]!;
+    const b = this.snaps[Math.min(i + 1, this.snaps.length - 1)]!;
+    const span = b.at - a.at;
+    const t = span > 0 ? Math.min(1, Math.max(0, (renderAt - a.at) / span)) : 1;
+    return b.props.map((pb) => {
+      const pa = a.props.find((p) => p.id === pb.id);
+      if (!pa || pa.mode === 'destroyed' || pb.mode === 'destroyed') return pb;
+      return {
+        ...pb,
+        pos: [lerp(pa.pos[0], pb.pos[0], t), lerp(pa.pos[1], pb.pos[1], t), lerp(pa.pos[2], pb.pos[2], t)],
+      };
+    });
   }
 
   get size(): number {

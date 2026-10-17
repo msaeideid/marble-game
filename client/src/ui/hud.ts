@@ -7,6 +7,7 @@ export class Hud {
   private readonly banner = document.getElementById('banner') as HTMLElement;
   private readonly snareChip = document.getElementById('snare-chip') as HTMLElement;
   private readonly chargeChip = document.getElementById('charge-chip') as HTMLElement;
+  private readonly carryChip = document.getElementById('carry-chip') as HTMLElement;
   private readonly hurt = document.getElementById('hurt') as HTMLElement;
   private hurtTimer = 0;
   private readonly waveText = document.getElementById('wave') as HTMLElement;
@@ -38,6 +39,12 @@ export class Hud {
   setCharge(has: boolean, ready: boolean): void {
     this.chargeChip.style.display = has ? '' : 'none';
     this.chargeChip.classList.toggle('cooling', !ready);
+  }
+
+  /** "Carrying: Car (E to throw)" while holding a prop; hidden otherwise. */
+  setCarrying(name: string | null): void {
+    this.carryChip.style.display = name ? '' : 'none';
+    if (name) this.carryChip.textContent = `${name} \u2014 E to throw`;
   }
 
   /** Flash the screen edges red. Call `tick` each frame so it fades out. */

@@ -4,8 +4,10 @@ import type {
   EnergyParams,
   HealthParams,
   HeroParams,
+  LiftParams,
   MeleeParams,
   MovementParams,
+  PropParams,
   SnareParams,
   SwingParams,
   ZipParams,
@@ -25,13 +27,14 @@ export interface HeroData {
 
 export interface AbilityData {
   id: string;
-  kind: 'swing' | 'zip' | 'melee' | 'snare' | 'charge';
+  kind: 'swing' | 'zip' | 'melee' | 'snare' | 'charge' | 'lift';
   displayName: string;
   swing?: SwingParams;
   zip?: ZipParams;
   melee?: MeleeParams;
   snare?: SnareParams;
   charge?: ChargeParams;
+  lift?: LiftParams;
 }
 
 export interface UpgradeData {
@@ -48,6 +51,7 @@ export interface Content {
   abilities: Record<string, AbilityData>;
   enemies: Record<string, EnemyParams>;
   upgrades: Record<string, UpgradeData>;
+  props: Record<string, PropParams>;
 }
 
 function indexById<T extends { id: string }>(modules: Record<string, T>, what: string): Record<string, T> {
@@ -72,6 +76,10 @@ export function loadContent(): Content {
     enemies: indexById(
       import.meta.glob<EnemyParams>('@shared/data/enemies/*.json', { eager: true, import: 'default' }),
       'enemy',
+    ),
+    props: indexById(
+      import.meta.glob<PropParams>('@shared/data/props/*.json', { eager: true, import: 'default' }),
+      'prop',
     ),
     upgrades: indexById(
       import.meta.glob<UpgradeData>('@shared/data/upgrades/*.json', { eager: true, import: 'default' }),
@@ -105,6 +113,7 @@ export function resolveHero(hero: HeroData, abilities: Record<string, AbilityDat
   if (byKind.zip?.zip) out.zip = byKind.zip.zip;
   if (byKind.snare?.snare) out.snare = byKind.snare.snare;
   if (byKind.charge?.charge) out.charge = byKind.charge.charge;
+  if (byKind.lift?.lift) out.lift = byKind.lift.lift;
   if (out.zip && !out.swing) throw new Error(`Hero ${hero.id} has a zip but no swing`);
   return out;
 }

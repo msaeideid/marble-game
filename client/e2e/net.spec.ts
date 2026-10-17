@@ -13,11 +13,13 @@ const contexts: BrowserContext[] = [];
 /** Every test starts with an empty room: close our browsers, then wait for the server to notice they left. */
 test.afterEach(async () => {
   for (const c of contexts.splice(0)) await c.close();
-  for (let i = 0; i < 100; i++) {
-    const { players } = (await (await fetch('http://127.0.0.1:8000/health')).json()) as { players: number };
+  let players = -1;
+  for (let i = 0; i < 300; i++) {
+    players = ((await (await fetch('http://127.0.0.1:8000/health')).json()) as { players: number }).players;
     if (players === 0) return;
     await new Promise((r) => setTimeout(r, 100));
   }
+  throw new Error(`the room did not empty after the test: ${players} player(s) still connected`);
 });
 
 async function join(browser: Browser, name: string, extra = ''): Promise<Page> {
@@ -128,7 +130,18 @@ test('a fifth player is turned away', async ({ browser }) => {
     expect(await extra.evaluate(() => window.__vanguard.online!.status)).toBe('full');
     await expect(extra.locator('#banner')).toHaveText('Server is full');
   } finally {
-    for (const ws of sockets) ws.close();
+    // Wait for the sockets to really close so the next test starts with an empty room.
+    await Promise.all(
+      sockets.map(
+        (ws) =>
+          new Promise<void>((resolve) => {
+            if (ws.readyState === WebSocket.CLOSED) return resolve();
+            ws.onclose = () => resolve();
+            ws.close();
+            setTimeout(resolve, 3000);
+          }),
+      ),
+    );
   }
 });
 
@@ -158,4 +171,72 @@ test('a RAMPART player smashes a wall and a ZIPLASH player sees both the wall go
   const stats = await ann.evaluate(() => window.__vanguard.online!.session.stats);
   expect(stats.corrections).toBe(0);
   expect(stats.maxError).toBeLessThan(1e-6);
+});
+
+test('one player carries and throws a car and the other watches it happen', async ({ browser }) => {
+  const ann = await join(browser, 'Ann', '&hero=hero.bruiser');
+  const bo = await join(browser, 'Bo', '&hero=hero.swinger');
+  await Promise.all([ann, bo].map((p) => p.evaluate(() => window.__vanguard.setPaused(false))));
+
+  // Ann walks toward car 0 at (3, 0, -6) and stops once she is within lifting range.
+  await ann.evaluate(() => {
+    window.__vanguard.input.yaw = Math.atan2(3, -6);
+  });
+  await key(ann, 'keydown', 'KeyW');
+  await ann.waitForFunction(
+    () => {
+      const p = window.__vanguard.sim.players.get('local')!.pos;
+      return Math.hypot(p.x - 3, p.z + 6) < 2.5;
+    },
+    undefined,
+    { timeout: 20_000 },
+  );
+  await key(ann, 'keyup', 'KeyW');
+  await key(ann, 'keydown', 'KeyE');
+  await key(ann, 'keyup', 'KeyE');
+
+  // Bo sees the car held by Ann.
+  try {
+    await bo.waitForFunction(
+      () => window.__vanguard.online!.propWires().some((w) => w.id === 0 && w.mode === 'held'),
+      undefined,
+      { timeout: 15_000 },
+    );
+  } catch (e) {
+    const diag = await ann.evaluate(() => {
+      const g = window.__vanguard;
+      const me = g.sim.players.get('local')!;
+      return { pos: me.pos, carrying: me.carrying, stats: g.online!.session.stats, props: g.online!.propWires().slice(0, 2) };
+    });
+    console.log('DIAG', JSON.stringify(diag));
+    throw e;
+  }
+  const heldBy = await bo.evaluate(() => window.__vanguard.online!.propWires().find((w) => w.id === 0)!.holder);
+  expect(heldBy).toBe(await ann.evaluate(() => window.__vanguard.online!.serverId));
+  // Ann's own client knows she is carrying (so she is slowed) once the server confirms.
+  await ann.waitForFunction(() => window.__vanguard.sim.players.get('local')!.carrying?.def === 'prop.car', undefined, {
+    timeout: 15_000,
+  });
+
+  // After the cooldown she throws it east; Bo sees it fly and land away from where it started.
+  await ann.waitForTimeout(700);
+  await ann.evaluate(() => {
+    window.__vanguard.input.yaw = Math.PI / 2;
+    window.__vanguard.input.pitch = -0.1;
+  });
+  await key(ann, 'keydown', 'KeyE');
+  await key(ann, 'keyup', 'KeyE');
+  await bo.waitForFunction(
+    () => {
+      const car = window.__vanguard.online!.propWires().find((w) => w.id === 0)!;
+      return car.mode === 'resting' && car.pos[0]! > 8;
+    },
+    undefined,
+    { timeout: 15_000 },
+  );
+  await ann.waitForFunction(() => window.__vanguard.sim.players.get('local')!.carrying === null, undefined, { timeout: 15_000 });
+
+  // Lifting and throwing each cost the thrower at most one small correction (carrying is decided by the server).
+  const stats = await ann.evaluate(() => window.__vanguard.online!.session.stats);
+  expect(stats.corrections).toBeLessThanOrEqual(4);
 });

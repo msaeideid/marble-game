@@ -10,6 +10,7 @@ A hero is data, not code: `shared/data/heroes/<hero>.json` lists movement, energ
 | `swing` + `zip` | tether swing and zip-pull (a zip needs a swing) | ZIPLASH |
 | `snare` | hold one enemy | ZIPLASH |
 | `charge` | straight-line rush that bowls over enemies and smashes weak walls | RAMPART |
+| `lift` | lift a car, crate or dumpster overhead and throw it | RAMPART |
 
 `resolveHero()` (TS) and `load_hero()` (Python) flatten a hero plus its abilities into one params object. Kits a hero
 does not have are simply absent, and the sim skips them: pressing swing as RAMPART does nothing and costs nothing, and
@@ -53,6 +54,25 @@ wall, not physics, so it is cheap and easy to network. The arena has three:
 
 Breaking is shown with a burst of tumbling debris, a camera shake and a crunch sound.
 
+## Props: lift and throw (`ability.lift`, `E` or `G`, gamepad B)
+Level props (`shared/data/props/*.json`, placed in the level's `props` list) are designed objects with four states, not
+physics: **resting**, **held**, **thrown**, **destroyed**.
+- **Lift:** press near a resting prop (within `liftRange` plus the prop's size). It rides on top of your head. While
+  carrying you are slower (`carrySlow`: car 0.4, dumpster 0.55, crate 0.75; the jump suffers less than the run), cannot
+  charge and cannot strike.
+- **Throw:** press again (after a 0.5 s cooldown) to throw it along your aim, arced up a little. It flies, then lands and
+  rests where it fell.
+- **Impacts:** a hard stop (6+ m/s) or an enemy hit costs the prop a hit point; at zero it shatters and **respawns at its
+  home after `respawnTime`** (car 20 s, crate 12 s). Cars and dumpsters survive two.
+- **Enemies:** a thrown prop damages and staggers each enemy it hits once (car 40, dumpster 30, crate 20).
+- **Walls:** thrown at 8+ m/s it smashes breakable walls up to its `breakPower`: crates and dumpsters break tier-1
+  walls, **a car breaks the reinforced tier-2 wall that a charge cannot**. In the arena there is a car trapped between the two
+  south walls for exactly this.
+- A carrier who is defeated, respawns or disconnects drops the prop where they stood.
+- Heroes without the `lift` kit (ZIPLASH) cannot lift anything.
+
+Props are not solid for characters yet (you can walk through a resting car); only walls collide.
+
 ## Networking
 Charging changes movement and the world, so it follows the project rule (decision D1): **any mechanic that changes the
 authoritative state is ported to Python with conformance scenarios**.
@@ -63,7 +83,12 @@ authoritative state is ported to Python with conformance scenarios**.
 - Snapshots carry `broken` (all smashed wall ids) and each player's `hero`; the welcome message does too, so late
   joiners see the right world. Clients only ever *add* to their broken set from snapshots; if the server disagrees with a
   prediction the client adopts the server's world, replays its inputs and re-breaks what it should.
-- Combat (melee, snare, enemy hits, a charge's damage to enemies) is still solo-only. When it is networked, those get
+- Props are **server-authoritative**: the server runs lifting, carrying, throwing, landing and respawning (ported to
+  Python, in the conformance suite), and snapshots carry every prop's state; clients just draw them (held props ride on the
+  carrier's drawn head). The carrier's own `carrying` state is *not* predicted, so a lift or a throw costs one small
+  reconciliation correction when the server confirms it. When the last player leaves, the world (broken walls, props)
+  resets.
+- Combat (melee, snare, enemy hits, a charge's or a thrown prop's damage to enemies) is still solo-only. When it is networked, those get
   their Python ports too.
 
 ## Tuning (`shared/data/abilities/charge.json`, `heroes/bruiser.json`, `abilities/smash.json`)

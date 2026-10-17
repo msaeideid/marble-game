@@ -1,0 +1,21 @@
+{
+  "id": "prop.dumpster",
+  "displayName": "Dumpster",
+  "size": {
+    "halfWidth": 0.9,
+    "height": 1.3
+  },
+  "carrySlow": 0.55,
+  "throwSpeed": 20,
+  "throwDamage": 30,
+  "throwKnockback": 11,
+  "breakPower": 1,
+  "hp": 2,
+  "respawnTime": 15,
+  "look": "dumpster",
+  "color": [
+    0.25,
+    0.55,
+    0.4
+  ]
+}

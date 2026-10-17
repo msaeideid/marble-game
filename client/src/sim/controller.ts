@@ -9,6 +9,7 @@ import {
   removeOutwardVelocity,
   ropeLimitedDelta,
 } from './swing';
+import type { CarryScales } from './props';
 import type { Collider, PlayerIntent, Vec3 } from './types';
 import type { World } from './world';
 
@@ -52,6 +53,10 @@ export interface PlayerState {
   chargeCooldown: number;
   /** Enemies already struck by the current charge (so one rush hits each enemy once). Not synced. */
   chargeHits: string[];
+  /** The prop being carried overhead, if any (slows movement). */
+  carrying: { id: number; def: string } | null;
+  /** Seconds until the next lift or throw. */
+  grabCooldown: number;
   health: HealthState;
   /** Seconds until respawn while defeated, otherwise null. */
   defeatedTimer: number | null;
@@ -79,6 +84,8 @@ export function createPlayerState(spawn: Vec3, hero: HeroParams): PlayerState {
     charge: null,
     chargeCooldown: 0,
     chargeHits: [],
+    carrying: null,
+    grabCooldown: 0,
     health: createHealth(hero.health),
     defeatedTimer: null,
     melee: createMelee(),
@@ -193,8 +200,12 @@ export function stepPlayer(
   hero: HeroParams,
   world: World,
   dt: number,
+  carry?: CarryScales,
 ): Collider[] {
   const p = hero.movement;
+  // Carrying a prop makes you slower and lowers your jump.
+  const runSpeed = p.runSpeed * (carry?.speedScale ?? 1);
+  const jumpSpeed = p.jumpSpeed * (carry?.jumpScale ?? 1);
   const swing = hero.swing;
   const zipP = hero.zip;
   const chargeP = hero.charge;
@@ -257,7 +268,8 @@ export function stepPlayer(
 
   // ---- charge (heroes with a charge kit) ----
   s.chargeCooldown = Math.max(0, s.chargeCooldown - dt);
-  if (chargeP && intent.chargePressed && !s.charge && s.chargeCooldown <= 0 && !s.tether && !s.zip) {
+  s.grabCooldown = Math.max(0, s.grabCooldown - dt);
+  if (chargeP && intent.chargePressed && !s.charge && s.chargeCooldown <= 0 && !s.tether && !s.zip && !s.carrying) {
     if (trySpend(s, chargeP.cost, hero.energy)) {
       // Rush in the direction the camera faces (horizontal only).
       s.charge = { timeLeft: chargeP.duration, dirX: Math.sin(intent.yaw), dirZ: Math.cos(intent.yaw) };
@@ -288,8 +300,8 @@ export function stepPlayer(
     s.vel.x += wishX * swing.airControl * dt;
     s.vel.z += wishZ * swing.airControl * dt;
   } else if (s.grounded) {
-    const tx = wishX * p.runSpeed;
-    const tz = wishZ * p.runSpeed;
+    const tx = wishX * runSpeed;
+    const tz = wishZ * runSpeed;
     const dx = tx - s.vel.x;
     const dz = tz - s.vel.z;
     const dist = Math.hypot(dx, dz);
@@ -304,7 +316,7 @@ export function stepPlayer(
     if (wishMag > 0) {
       const ux = wishX / wishMag;
       const uz = wishZ / wishMag;
-      const wishSpeed = wishMag * p.runSpeed;
+      const wishSpeed = wishMag * runSpeed;
       const add = wishSpeed - (s.vel.x * ux + s.vel.z * uz);
       if (add > 0) {
         const a = Math.min(add, p.airAccel * dt);
@@ -318,7 +330,7 @@ export function stepPlayer(
   s.coyote = s.grounded ? p.coyoteTime : Math.max(0, s.coyote - dt);
   s.jumpBuffer = intent.jumpPressed ? p.jumpBufferTime : Math.max(0, s.jumpBuffer - dt);
   if (!s.zip && !s.charge && s.jumpBuffer > 0 && s.coyote > 0) {
-    s.vel.y = p.jumpSpeed;
+    s.vel.y = jumpSpeed;
     s.jumpBuffer = 0;
     s.coyote = 0;
     s.grounded = false;

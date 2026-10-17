@@ -18,7 +18,8 @@
         "zip",
         "melee",
         "snare",
-        "charge"
+        "charge",
+        "lift"
       ]
     },
     "displayName": {
@@ -39,6 +40,9 @@
     },
     "charge": {
       "$ref": "#/definitions/charge"
+    },
+    "lift": {
+      "$ref": "#/definitions/lift"
     }
   },
   "allOf": [
@@ -74,6 +78,11 @@
             {
               "required": [
                 "charge"
+              ]
+            },
+            {
+              "required": [
+                "lift"
               ]
             }
           ]
@@ -113,6 +122,11 @@
               "required": [
                 "charge"
               ]
+            },
+            {
+              "required": [
+                "lift"
+              ]
             }
           ]
         }
@@ -150,6 +164,11 @@
             {
               "required": [
                 "charge"
+              ]
+            },
+            {
+              "required": [
+                "lift"
               ]
             }
           ]
@@ -189,6 +208,11 @@
               "required": [
                 "charge"
               ]
+            },
+            {
+              "required": [
+                "lift"
+              ]
             }
           ]
         }
@@ -226,6 +250,54 @@
             {
               "required": [
                 "snare"
+              ]
+            },
+            {
+              "required": [
+                "lift"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "lift"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "lift"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "swing"
+              ]
+            },
+            {
+              "required": [
+                "zip"
+              ]
+            },
+            {
+              "required": [
+                "melee"
+              ]
+            },
+            {
+              "required": [
+                "snare"
+              ]
+            },
+            {
+              "required": [
+                "charge"
               ]
             }
           ]
@@ -464,6 +536,26 @@
           "$ref": "common.schema.json#/$defs/nonNegative"
         },
         "hitRadius": {
+          "$ref": "common.schema.json#/$defs/positive"
+        }
+      }
+    },
+    "lift": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "liftRange",
+        "cooldown",
+        "strength"
+      ],
+      "properties": {
+        "liftRange": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "cooldown": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "strength": {
           "$ref": "common.schema.json#/$defs/positive"
         }
       }

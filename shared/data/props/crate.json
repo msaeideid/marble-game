@@ -1,0 +1,21 @@
+{
+  "id": "prop.crate",
+  "displayName": "Crate",
+  "size": {
+    "halfWidth": 0.5,
+    "height": 1.0
+  },
+  "carrySlow": 0.75,
+  "throwSpeed": 24,
+  "throwDamage": 20,
+  "throwKnockback": 8,
+  "breakPower": 1,
+  "hp": 1,
+  "respawnTime": 12,
+  "look": "crate",
+  "color": [
+    0.8,
+    0.6,
+    0.25
+  ]
+}

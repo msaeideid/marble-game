@@ -1,6 +1,7 @@
 import { SIM_DT } from '../sim/fixedStep';
 import type { Sim } from '../sim/sim';
 import type { PlayerIntent, Vec3 } from '../sim/types';
+import type { PropWire } from '../sim/props';
 import { applyWire, toWire, wireDistance, type PlayerWire } from '../sim/wire';
 
 /** One message from the server (15 Hz). `ack` is the last input of ours the server has simulated. */
@@ -9,6 +10,8 @@ export interface ServerSnapshot {
   tick: number;
   /** Ids of every wall smashed so far (the world's authoritative breakage). */
   broken?: number[];
+  /** Every lift-and-throw prop's state (server-authoritative; clients just draw them). */
+  props?: PropWire[];
   players: Record<string, { name: string; hero?: string; ack: number; state: PlayerWire }>;
 }
 
@@ -24,6 +27,7 @@ export function wireIntent(i: PlayerIntent) {
     reelHeld: i.reelHeld,
     zipPressed: i.zipPressed,
     chargePressed: i.chargePressed,
+    grabPressed: i.grabPressed,
   };
 }
 

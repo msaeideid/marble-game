@@ -300,3 +300,42 @@ describe('breakable walls over the network', () => {
     expect(wireIntent(intent({ chargePressed: true })).chargePressed).toBe(true);
   });
 });
+
+
+describe('prop interpolation', () => {
+  const prop = (x: number, mode: 'resting' | 'thrown' | 'destroyed' = 'thrown') => ({
+    id: 0,
+    def: 'prop.car',
+    pos: [x, 0, 0] as [number, number, number],
+    vel: [0, 0, 0] as [number, number, number],
+    mode,
+    holder: null,
+    hp: 2,
+    respawn: 0,
+  });
+  const snapWith = (props: ReturnType<typeof prop>[]): ServerSnapshot => ({ t: 'snap', tick: 0, players: {}, props });
+
+  it('blends a flying prop between snapshots and passes the other fields through', () => {
+    const buf = new SnapshotBuffer(100);
+    buf.push(1000, snapWith([prop(0)]));
+    buf.push(1066, snapWith([prop(10, 'resting')]));
+    const mid = buf.sampleProps(1033 + 100)[0]!;
+    expect(mid.pos[0]).toBeGreaterThan(4);
+    expect(mid.pos[0]).toBeLessThan(6);
+    expect(mid.mode).toBe('resting'); // discrete state comes from the later snapshot
+  });
+
+  it('does not blend a prop that just respawned across the map', () => {
+    const buf = new SnapshotBuffer(100);
+    buf.push(1000, snapWith([prop(40, 'destroyed')]));
+    buf.push(1066, snapWith([prop(3, 'resting')]));
+    expect(buf.sampleProps(1033 + 100)[0]!.pos[0]).toBe(3);
+  });
+
+  it('returns nothing before any snapshot and tolerates snapshots without props', () => {
+    const buf = new SnapshotBuffer();
+    expect(buf.sampleProps(0)).toEqual([]);
+    buf.push(0, { t: 'snap', tick: 0, players: {} });
+    expect(buf.sampleProps(500)).toEqual([]);
+  });
+});

@@ -3,6 +3,8 @@ import { Sfx } from '../audio/sfx';
 import { content, getHero } from '../data';
 import { InputController } from '../input/inputController';
 import { OnlineClient, onlineOptionsFromUrl } from '../net/online';
+import { PropViews } from '../render/propView';
+import type { PropWire } from '../sim/props';
 import { Effects } from '../render/effects';
 import { EnemyView } from '../render/enemyView';
 import { FollowCamera } from '../render/followCamera';
@@ -49,6 +51,7 @@ export class Game {
   private readonly hud = new Hud();
   private readonly hero: HeroParams;
   private readonly levelView: LevelView;
+  private readonly propViews: PropViews;
   private readonly overlay = document.getElementById('overlay') as HTMLElement;
   private frameCount = 0;
   private clock = 0;
@@ -66,7 +69,12 @@ export class Game {
     const world = new World(arena);
     const onlineOpts = onlineOptionsFromUrl(window.location.search);
     // Online play is movement-only for now: no enemies or waves, just players swinging around together.
-    this.sim = new Sim(world, this.hero, content.enemies, { waves: !onlineOpts });
+    // Online play is server-authoritative for props too: the client only draws the server's props.
+    this.sim = new Sim(world, this.hero, content.enemies, {
+      waves: !onlineOpts,
+      props: !onlineOpts,
+      propDefs: content.props,
+    });
     this.sim.addPlayer(LOCAL_ID);
     this.online = onlineOpts ? new OnlineClient(this.sim, LOCAL_ID, onlineOpts) : null;
 
@@ -77,6 +85,7 @@ export class Game {
     this.playerView = new PlayerView(this.view.scene, m.height, m.halfWidth, this.hero.movement.handHeight);
     this.cam = new FollowCamera(this.view.scene);
     this.effects = new Effects(this.view.scene);
+    this.propViews = new PropViews(this.view.scene, content.props);
     this.labels = new WorldLabels(document.getElementById('labels') as HTMLElement, this.view.scene, this.view.engine, canvas);
     this.input = new InputController(canvas);
     this.bindUi();
@@ -103,6 +112,7 @@ export class Game {
     if (this.hero.zip) kits.add('zip');
     if (this.hero.snare) kits.add('snare');
     if (this.hero.charge) kits.add('charge');
+    if (this.hero.lift) kits.add('lift');
     document.querySelectorAll<HTMLElement>('#overlay tr[data-kit]').forEach((row) => {
       row.style.display = kits.has(row.dataset.kit ?? '') ? '' : 'none';
     });
@@ -155,6 +165,7 @@ export class Game {
       const m = this.input.sample();
       const intent: PlayerIntent = { ...m, yaw: this.input.yaw, pitch: this.input.pitch };
       intent.chargePressed = m.chargePressed;
+      intent.grabPressed = m.grabPressed;
       if (this.online) {
         intent.attackPressed = false; // combat is not networked yet
         intent.snarePressed = false;
@@ -179,6 +190,7 @@ export class Game {
       z: p.z + (me.pos.z - p.z) * alpha + off.z,
     };
     this.syncRemotePlayers();
+    this.syncProps(dt, focus);
     this.levelView.sync(this.sim.world);
     this.cam.update(focus, this.input.yaw, this.input.pitch, this.sim.world, dt);
     this.effects.update(dt);
@@ -191,6 +203,44 @@ export class Game {
       const mode = me.zip ? 'zipping' : me.tether ? 'swinging' : me.grounded ? 'grounded' : 'airborne';
       const net = this.online ? ` · ${this.online.describe()}` : '';
       this.hud.setStatus(`${engine.getFps().toFixed(0)} fps · speed ${speed} m/s · ${mode}${net}`);
+    }
+  }
+
+  /** Draw props from their synced state; derive sounds and debris from mode changes (so remote throws are heard too). */
+  private syncProps(dt: number, localFocus: { x: number; y: number; z: number }): void {
+    const wires: readonly PropWire[] = this.online ? this.online.propWires() : this.sim.propWires;
+    if (wires.length === 0) return;
+    const remote = this.online?.remotePlayers() ?? {};
+    const me = this.sim.players.get(LOCAL_ID)!;
+    const myHeight = this.hero.movement.height;
+    const transitions = this.propViews.update(wires, dt, (holder) => {
+      // Held props ride on the carrier's *drawn* head, so they never lag behind the smoothed character.
+      if (holder === (this.online?.serverId ?? LOCAL_ID)) {
+        return { x: localFocus.x, y: localFocus.y + myHeight + 0.05, z: localFocus.z };
+      }
+      const r = remote[holder];
+      if (!r) return null;
+      const h = getHero(r.hero in content.heroes ? r.hero : DEFAULT_HERO).movement.height;
+      return { x: r.state.pos[0], y: r.state.pos[1] + h + 0.05, z: r.state.pos[2] };
+    });
+    for (const t of transitions) {
+      const size = t.def.size;
+      const at = { x: t.wire.pos[0], y: t.wire.pos[1], z: t.wire.pos[2] };
+      const color = new Color3(t.def.color[0]!, t.def.color[1]!, t.def.color[2]!);
+      if (t.cur === 'held') this.sfx.attach();
+      else if (t.cur === 'thrown') this.sfx.charge();
+      else if (t.prev === 'thrown' && t.cur === 'resting') {
+        this.sfx.hit(1);
+        if (Math.hypot(at.x - me.pos.x, at.z - me.pos.z) < 25) this.cam.shake(0.08);
+      } else if (t.cur === 'destroyed') {
+        this.effects.debris(
+          { x: at.x - size.halfWidth, y: at.y, z: at.z - size.halfWidth },
+          { x: at.x + size.halfWidth, y: at.y + size.height, z: at.z + size.halfWidth },
+          color,
+        );
+        this.sfx.smash();
+        this.cam.shake(0.12);
+      }
     }
   }
 
@@ -226,6 +276,8 @@ export class Game {
     this.hud.setHealth(me.health.shield, this.hero.health.shield.max, me.health.core, this.hero.health.core.max);
     this.hud.setAimValid(aimValid);
     this.hud.setSnare(!!this.hero.snare, me.snareCooldown <= 0 && me.energy >= (this.hero.snare?.cost ?? 0));
+    const carried = me.carrying ? content.props[me.carrying.def] : undefined;
+    this.hud.setCarrying(carried ? carried.displayName : null);
     this.hud.setCharge(
       !!this.hero.charge,
       !me.charge && me.chargeCooldown <= 0 && me.energy >= (this.hero.charge?.cost ?? 0),

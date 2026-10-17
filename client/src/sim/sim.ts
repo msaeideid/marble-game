@@ -4,8 +4,9 @@ import { stepEnemyAi } from './ai';
 import { meleeTargets, pickSnareTarget, stepMelee } from './combat';
 import { createPlayerState, handPos, stepPlayer, type PlayerState } from './controller';
 import { trySpend } from './energy';
+import { carryScales, PropSystem, type PropEvent, type PropWire } from './props';
 import { applyDamage, regenHealth } from './health';
-import type { EnemyParams, HeroParams } from './params';
+import type { EnemyParams, HeroParams, PropParams } from './params';
 import { NEUTRAL_INTENT, type PlayerIntent, type Vec3 } from './types';
 import type { World } from './world';
 
@@ -19,7 +20,8 @@ export type SimEvent =
   | { type: 'enemyAttack'; id: string; target: string }
   | { type: 'wave'; wave: number }
   | { type: 'break'; id: number; by: string }
-  | { type: 'charge'; id: string; hits: string[] };
+  | { type: 'charge'; id: string; hits: string[] }
+  | PropEvent;
 
 /** The authoritative-style game simulation. No rendering, DOM or engine imports. */
 export class Sim {
@@ -31,14 +33,21 @@ export class Sim {
   private nextEnemyId = 1;
   private wave = 0;
   private waveTimer = 0;
+  /** Lift-and-throw props; null when the level has none or props are turned off (online clients draw the server's). */
+  readonly propSystem: PropSystem | null;
+  private readonly propDefs: Record<string, PropParams>;
 
   /** With `waves` on, the level's enemy spawns are (re)populated whenever the arena is cleared. */
   constructor(
     readonly world: World,
     readonly hero: HeroParams,
     readonly enemyDefs: Record<string, EnemyParams> = {},
-    private readonly opts: { waves?: boolean } = {},
-  ) {}
+    private readonly opts: { waves?: boolean; props?: boolean; propDefs?: Record<string, PropParams> } = {},
+  ) {
+    this.propDefs = opts.propDefs ?? {};
+    this.propSystem =
+      opts.props !== false && world.propSpawns.length > 0 && opts.propDefs ? new PropSystem(world, this.propDefs) : null;
+  }
 
   addPlayer(id: string): PlayerState {
     const state = createPlayerState(this.world.spawn, this.hero);
@@ -65,11 +74,16 @@ export class Sim {
         continue;
       }
       const intent = intents.get(id) ?? NEUTRAL_INTENT;
-      for (const c of stepPlayer(player, intent, this.hero, this.world, dt)) {
+      const carry = player.carrying ? carryScales(this.propDefs[player.carrying.def]) : undefined;
+      for (const c of stepPlayer(player, intent, this.hero, this.world, dt, carry)) {
         this.events.push({ type: 'break', id: c.id, by: id });
       }
       this.stepCharge(id, player);
-      this.stepPlayerMelee(id, player, intent, dt);
+      if (this.propSystem && intent.grabPressed) {
+        this.events.push(...this.propSystem.handleGrab(id, player, this.hero, intent.yaw, intent.pitch));
+      }
+      // Hands are full: no striking while carrying.
+      this.stepPlayerMelee(id, player, player.carrying ? { ...intent, attackPressed: false } : intent, dt);
       this.stepPlayerSnare(id, player, intent, dt);
       regenHealth(player.health, this.hero.health, dt);
       player.invulnerable = Math.max(0, player.invulnerable - dt);
@@ -95,7 +109,44 @@ export class Sim {
       regenHealth(enemy.health, def.health, dt);
     }
     this.stepWaves(dt);
+    this.stepProps(dt);
     this.tick++;
+  }
+
+  private stepProps(dt: number): void {
+    if (!this.propSystem) return;
+    this.events.push(
+      ...this.propSystem.step(dt, {
+        holderTop: (pid) => {
+          const p = this.players.get(pid);
+          if (!p || p.defeatedTimer !== null) return null;
+          return { x: p.pos.x, y: p.pos.y + this.hero.movement.height + 0.05, z: p.pos.z };
+        },
+        enemies: () =>
+          [...this.enemies.values()]
+            .filter((e) => e.defeatedTimer === null)
+            .map((e) => {
+              const m = this.enemyDefs[e.typeId]!.move;
+              return { id: e.id, pos: e.pos, halfWidth: m.halfWidth, height: m.height };
+            }),
+        hitEnemy: (id, damage, dirX, dirZ, knockback) => {
+          const e = this.enemies.get(id);
+          if (!e) return;
+          e.vel.x += dirX * knockback;
+          e.vel.z += dirZ * knockback;
+          this.damageEnemy(e, damage, 'prop');
+          if (e.defeatedTimer === null) {
+            e.aiState = 'stagger'; // a car to the face always knocks them off balance
+            e.aiTimer = this.enemyDefs[e.typeId]!.staggerTime;
+          }
+        },
+      }),
+    );
+  }
+
+  /** The synced state of every prop (for snapshots and conformance checks). */
+  get propWires(): PropWire[] {
+    return this.propSystem?.toWire() ?? [];
   }
 
   private stepPlayerMelee(id: string, player: PlayerState, intent: PlayerIntent, dt: number): void {
@@ -237,6 +288,8 @@ export class Sim {
       player.defeatedTimer = this.hero.respawnDelay;
       player.tether = null;
       player.zip = null;
+      this.propSystem?.dropHeldBy(id, player.pos);
+      player.carrying = null;
       this.events.push({ type: 'defeated', id });
     }
   }
@@ -245,6 +298,7 @@ export class Sim {
   private respawn(id: string): void {
     const state = this.players.get(id);
     if (!state) return;
+    this.propSystem?.dropHeldBy(id, state.pos);
     Object.assign(state, createPlayerState(this.world.spawn, this.hero));
     this.events.push({ type: 'respawn', id });
   }

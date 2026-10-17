@@ -285,3 +285,91 @@ class TestHeroes:
         room.enqueue_input(ziplash, 1, Intent(yaw=math.pi, chargePressed=True))
         room.step()
         assert ziplash.state.charge is None
+
+
+class TestProps:
+    CAR_A = 0  # level prop 0: a car at (3, 0, -6)
+
+    def _rampart(self, room: Room, x: float, z: float):
+        peer = room.add_peer("r", load_hero("hero.bruiser"))
+        peer.state.pos.x, peer.state.pos.y, peer.state.pos.z = x, 0.0, z
+        return peer
+
+    def _send(self, room: Room, peer, seq: int, intent: Intent) -> None:
+        room.enqueue_input(peer, seq, intent)
+        room.step()
+
+    def test_snapshots_list_every_prop(self, room: Room) -> None:
+        room.add_peer("a")
+        room.step()
+        room.step()
+        props = room.snapshot()["props"]
+        assert [p["id"] for p in props] == [0, 1, 2, 3, 4, 5]
+        assert props[0]["def"] == "prop.car" and props[0]["mode"] == "resting"
+
+    def test_a_rampart_player_lifts_a_car_and_is_slowed(self, room: Room) -> None:
+        peer = self._rampart(room, 3.0, -3.6)
+        self._send(room, peer, 1, Intent(grabPressed=True))
+        assert peer.state.carrying == (self.CAR_A, "prop.car")
+        snap = room.snapshot()
+        assert snap["props"][self.CAR_A]["mode"] == "held"
+        assert snap["props"][self.CAR_A]["holder"] == peer.id
+        assert snap["players"][peer.id]["state"]["carrying"] == {"id": self.CAR_A, "def": "prop.car"}
+        peer.state.pos.x, peer.state.pos.z = 30.0, 0.0
+        for i in range(2, 60):
+            self._send(room, peer, i, Intent(moveZ=1.0))
+        slowed = math.hypot(peer.state.vel.x, peer.state.vel.z)
+        assert slowed == pytest.approx(peer.hero.movement.runSpeed * room.game.prop_defs["prop.car"].carrySlow, abs=1e-3)
+
+    def test_throwing_breaks_the_reinforced_wall_for_everyone(self, room: Room) -> None:
+        peer = self._rampart(room, 0.0, -14.7)
+        self._send(room, peer, 1, Intent(grabPressed=True, yaw=math.pi))
+        assert peer.state.carrying == (1, "prop.car")  # the car between the two south walls
+        for i in range(2, 22):
+            self._send(room, peer, i, Intent(yaw=math.pi))
+        self._send(room, peer, 22, Intent(grabPressed=True, yaw=math.pi, pitch=-0.05))
+        for i in range(23, 80):
+            self._send(room, peer, i, Intent(yaw=math.pi))
+        assert 36 in room.world.broken_list()
+        assert 36 in room.snapshot()["broken"]
+
+    def test_disconnecting_drops_what_you_were_carrying(self, room: Room) -> None:
+        peer = self._rampart(room, 3.0, -3.6)
+        self._send(room, peer, 1, Intent(grabPressed=True))
+        assert room.game.props is not None and room.game.props.props[self.CAR_A].mode == "held"
+        room.remove_peer(peer.id)
+        room.step()
+        pr = room.game.props.props[self.CAR_A]
+        assert pr.mode == "resting" and pr.holder is None
+
+    def test_two_players_cannot_take_the_same_prop(self, room: Room) -> None:
+        a = self._rampart(room, 3.0, -3.6)
+        b = self._rampart(room, 3.4, -3.6)
+        room.enqueue_input(a, 1, Intent(grabPressed=True))
+        room.enqueue_input(b, 1, Intent(grabPressed=True))
+        room.step()
+        assert (a.state.carrying is not None) != (b.state.carrying is not None)
+
+    def test_other_heroes_cannot_lift(self, room: Room) -> None:
+        peer = room.add_peer("z", load_hero("hero.swinger"))
+        peer.state.pos.x, peer.state.pos.z = 3.0, -3.6
+        self._send(room, peer, 1, Intent(grabPressed=True))
+        assert peer.state.carrying is None
+
+    def test_sanitize_keeps_the_grab_button(self) -> None:
+        i = sanitize_intent({"grabPressed": True})
+        assert i is not None and i.grabPressed is True
+
+
+def test_the_world_resets_when_the_last_player_leaves(room: Room) -> None:
+    a = room.add_peer("a", load_hero("hero.bruiser"))
+    b = room.add_peer("b", load_hero("hero.swinger"))
+    room.world.break_collider(34)
+    assert room.game.props is not None
+    room.game.props.props[0].pos.x = 50.0
+    room.remove_peer(a.id)
+    assert room.world.broken_list() == [34]  # someone is still here: the world carries on
+    room.remove_peer(b.id)
+    assert room.world.broken_list() == []
+    assert room.game.props is not None
+    assert room.game.props.props[0].pos.x == 3.0  # back at home

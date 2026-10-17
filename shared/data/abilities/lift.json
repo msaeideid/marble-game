@@ -1,0 +1,10 @@
+{
+  "id": "ability.lift",
+  "kind": "lift",
+  "displayName": "Lift and Throw",
+  "lift": {
+    "liftRange": 2.6,
+    "cooldown": 0.5,
+    "strength": 1.0
+  }
+}

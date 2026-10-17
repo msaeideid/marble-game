@@ -7,6 +7,7 @@ export interface LevelData {
   waveDelay?: number;
   base?: { pos: number[]; radius: number; regenPerSecond: number };
   enemySpawns?: { type: string; pos: number[] }[];
+  props?: { type: string; pos: number[] }[];
   colliders: { kind: string; min: number[]; max: number[]; breakable?: number }[];
 }
 
@@ -34,6 +35,8 @@ export class World {
   /** Safe pad where players recover: shield and energy refill quickly, core health slowly. */
   readonly base: { pos: Vec3; radius: number; regenPerSecond: number } | null;
   readonly enemySpawns: { type: string; pos: Vec3 }[];
+  /** Where liftable props start (and respawn). */
+  readonly propSpawns: { type: string; pos: Vec3 }[];
 
   constructor(level: LevelData) {
     this.colliders = level.colliders.map((c, id) => ({
@@ -54,6 +57,10 @@ export class World {
           regenPerSecond: level.base.regenPerSecond,
         }
       : null;
+    this.propSpawns = (level.props ?? []).map((e) => ({
+      type: e.type,
+      pos: { x: e.pos[0]!, y: e.pos[1]!, z: e.pos[2]! },
+    }));
     this.enemySpawns = (level.enemySpawns ?? []).map((e) => ({
       type: e.type,
       pos: { x: e.pos[0]!, y: e.pos[1]!, z: e.pos[2]! },

@@ -1,3 +1,4 @@
+import type { PropWire } from '../sim/props';
 import type { Sim } from '../sim/sim';
 import type { PlayerIntent } from '../sim/types';
 import { Connection, type LagSimulation } from './connection';
@@ -92,6 +93,11 @@ export class OnlineClient {
 
   onLocalStep(intent: PlayerIntent): void {
     this.session.onLocalStep(intent);
+  }
+
+  /** Props as the server last described them, smoothed. */
+  propWires(): PropWire[] {
+    return this.buffer.sampleProps(performance.now());
   }
 
   remotePlayers(): Record<string, RemoteSample> {

@@ -8,7 +8,7 @@ See [PLAN.md](PLAN.md) for the plan and [docs/](docs/) for short per-system docs
 and zip-pull, energy, shield-over-core health, melee combo, tether-snare, thug AI with waves, base pad and respawn, hit
 feedback and synthesized sound. Phase 2 has started with a **multiplayer spike** ([docs/netcode.md](docs/netcode.md)):
 several players can swing around together on a Python server. Heroes are data ([docs/heroes.md](docs/heroes.md)): ZIPLASH and the powerhouse RAMPART (charge through breakable walls) are playable.
-Next: props to lift and throw, then METALHEAD and VOLTAGE.
+RAMPART can lift and throw props. Next: METALHEAD and VOLTAGE, then the team-up combo (throw a car, detonate it mid-air).
 
 ## Run it
 ```bash
@@ -35,6 +35,7 @@ npm run dev                                                          # terminal 
 | J or left-click | strike (tap in rhythm for a 3-hit combo) |
 | Q | ZIPLASH: snare a thug in your sights |
 | Shift / C | RAMPART: charge - bulldoze enemies and smash weak (orange) walls |
+| E / G | RAMPART: lift the nearest car, crate or dumpster; press again to throw it (a car breaks the reinforced wall) |
 | P / Esc, M | pause, mute |
 
 Gamepad: left stick move, right stick look, A jump, X strike, Y zip, B snare, RT swing, LT reel / charge.

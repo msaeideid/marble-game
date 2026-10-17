@@ -11,13 +11,19 @@ export { content };
 
 /** `withBase` keeps the healing base pad at the spawn; most tests turn it off so nothing heals mid-test. */
 export function makeSimFor(heroId: string, withBase = false): Sim {
-  const sim = new Sim(new World(withBase ? arena : { ...arena, base: undefined }), getHero(heroId), content.enemies);
+  const sim = new Sim(new World(withBase ? arena : { ...arena, base: undefined }), getHero(heroId), content.enemies, {
+    props: true,
+    propDefs: content.props,
+  });
   sim.addPlayer('p1').invulnerable = 0;
   return sim;
 }
 
 export function makeSim(withPlayer = true, withBase = false): Sim {
-  const sim = new Sim(new World(withBase ? arena : { ...arena, base: undefined }), hero, content.enemies);
+  const sim = new Sim(new World(withBase ? arena : { ...arena, base: undefined }), hero, content.enemies, {
+    props: true,
+    propDefs: content.props,
+  });
   // Most tests want a mortal player; spawn protection has its own tests.
   if (withPlayer) sim.addPlayer('p1').invulnerable = 0;
   return sim;

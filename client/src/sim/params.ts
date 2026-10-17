@@ -75,6 +75,35 @@ export interface ChargeParams {
   hitRadius: number;
 }
 
+export interface LiftParams {
+  /** How close (beyond the prop's own size) a prop must be to lift it. */
+  liftRange: number;
+  /** Seconds before the next lift or throw. */
+  cooldown: number;
+  /** Multiplier on a prop's throw speed (the hero's strength). */
+  strength: number;
+}
+
+/** A liftable, throwable world object (car, crate, dumpster). Loaded from shared/data/props. */
+export interface PropParams {
+  id: string;
+  displayName: string;
+  size: BoxSize;
+  /** Movement speed multiplier while carrying it (heavier = smaller). Jump uses its square root. */
+  carrySlow: number;
+  throwSpeed: number;
+  throwDamage: number;
+  throwKnockback: number;
+  /** Breakable walls up to this tier are smashed when it is thrown hard into them. */
+  breakPower: number;
+  /** Hard impacts it survives before breaking. */
+  hp: number;
+  respawnTime: number;
+  /** Visual hints only. */
+  look: 'car' | 'crate' | 'dumpster';
+  color: number[];
+}
+
 export interface EnemyParams {
   id: string;
   displayName: string;
@@ -148,4 +177,5 @@ export interface HeroParams {
   melee: MeleeParams;
   snare?: SnareParams;
   charge?: ChargeParams;
+  lift?: LiftParams;
 }

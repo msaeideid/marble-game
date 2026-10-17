@@ -62,6 +62,13 @@ reason to. Revisit only if porting the combat/AI layer proves much slower than t
 The server now runs a different hero per player (`&hero=` on the socket URL) and shares the world's broken walls in every
 snapshot. See [heroes.md](heroes.md). The conformance suite grew to 21 scenarios.
 
+## Update: props
+Lift-and-throw props run on the server only (the client's local sim has props switched off when online). The server loop
+is now `GameSim` (`server/app/sim/game.py`), a Python mirror of the TypeScript `Sim` player loop: movement, grab/throw,
+base energy regeneration, void respawn, then the props once per tick. Conformance scenarios run through the whole
+thing (28 scenarios, props included). Each lift and throw causes one small correction on the thrower's client because
+`carrying` is decided by the server. The room resets its world when the last player leaves.
+
 ## Known limits / next steps
 - Movement only. Combat, enemies, health and waves are solo-only for now.
 - One global room, guest names only, no accounts, no reconnect, JSON messages (switch to MessagePack when stable).

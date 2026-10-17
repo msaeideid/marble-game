@@ -14,6 +14,7 @@ export interface MoveInput {
   attackPressed: boolean;
   snarePressed: boolean;
   chargePressed: boolean;
+  grabPressed: boolean;
 }
 
 function deadzone(v: number): number {
@@ -35,6 +36,7 @@ export class InputController {
   private attackLatch = false;
   private snareLatch = false;
   private chargeLatch = false;
+  private grabLatch = false;
   private padChargeHeld = false;
   private padSnareHeld = false;
   private padAttackHeld = false;
@@ -54,7 +56,11 @@ export class InputController {
         this.jumpLatch = true;
         e.preventDefault();
       }
-      if (e.code === 'KeyE') this.swingLatch = true;
+      if (e.code === 'KeyE') {
+        this.swingLatch = true;
+        this.grabLatch = true;
+      }
+      if (e.code === 'KeyG') this.grabLatch = true;
       if (e.code === 'KeyF') this.zipLatch = true;
       if (e.code === 'KeyJ') this.attackLatch = true;
       if (e.code === 'KeyQ') this.snareLatch = true;
@@ -81,6 +87,7 @@ export class InputController {
       if (e.button === 2) {
         this.rmbHeld = true;
         this.swingLatch = true;
+        this.grabLatch = true;
         return;
       }
       if (document.pointerLockElement === canvas) this.attackLatch = true;
@@ -135,6 +142,7 @@ export class InputController {
     this.padAttackHeld = attackDown;
     const snareDown = pad.buttons[1]?.pressed ?? false;
     if (snareDown && !this.padSnareHeld) this.snareLatch = true;
+    if (snareDown && !this.padSnareHeld) this.grabLatch = true; // B: snare for ZIPLASH, lift/throw for RAMPART
     this.padSnareHeld = snareDown;
     const chargeDown = (pad.buttons[4]?.pressed || pad.buttons[6]?.pressed) ?? false;
     if (chargeDown && !this.padChargeHeld) this.chargeLatch = true;
@@ -165,6 +173,8 @@ export class InputController {
     const snarePressed = this.snareLatch;
     const chargePressed = this.chargeLatch;
     this.chargeLatch = false;
+    const grabPressed = this.grabLatch;
+    this.grabLatch = false;
     this.snareLatch = false;
     this.attackLatch = false;
     this.jumpLatch = false;
@@ -180,6 +190,7 @@ export class InputController {
       attackPressed,
       snarePressed,
       chargePressed,
+      grabPressed,
     };
   }
 }

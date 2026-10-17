@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from types import SimpleNamespace
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .energy import drain, regen, try_spend
 from .swing import (
@@ -15,6 +15,9 @@ from .swing import (
 )
 from .vec import Vec3
 from .world import Collider, World
+
+if TYPE_CHECKING:
+    from .props import CarryScales
 
 MAX_SUBSTEP = 0.4
 EPS = 1e-6
@@ -54,6 +57,7 @@ class Intent:
     reelHeld: bool = False
     zipPressed: bool = False
     chargePressed: bool = False
+    grabPressed: bool = False
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> Intent:
@@ -67,6 +71,7 @@ class Intent:
             reelHeld=bool(d.get("reelHeld", False)),
             zipPressed=bool(d.get("zipPressed", False)),
             chargePressed=bool(d.get("chargePressed", False)),
+            grabPressed=bool(d.get("grabPressed", False)),
         )
 
 
@@ -86,6 +91,8 @@ class PlayerState:
     swing_held_prev: bool = False
     charge: Charge | None = None
     charge_cooldown: float = 0.0
+    carrying: tuple[int, str] | None = None  # (prop id, prop type) of the prop held overhead
+    grab_cooldown: float = 0.0
 
 
 def create_player_state(spawn: Vec3, hero: SimpleNamespace) -> PlayerState:
@@ -176,13 +183,21 @@ def _release_tether(s: PlayerState, swing: SimpleNamespace) -> None:
 
 
 def step_player(
-    s: PlayerState, intent: Intent, hero: SimpleNamespace, world: World, dt: float
+    s: PlayerState,
+    intent: Intent,
+    hero: SimpleNamespace,
+    world: World,
+    dt: float,
+    carry: CarryScales | None = None,
 ) -> list[Collider]:
     """Advance one player by one fixed tick. Mirrors stepPlayer in client/src/sim/controller.ts.
 
     Returns the colliders this player broke this tick.
     """
     p = hero.movement
+    # Carrying a prop makes you slower and lowers your jump.
+    run_speed = p.runSpeed * (carry.speed_scale if carry else 1.0)
+    jump_speed = p.jumpSpeed * (carry.jump_scale if carry else 1.0)
     swing = getattr(hero, "swing", None)
     zip_p = getattr(hero, "zip", None)
     charge_p = getattr(hero, "charge", None)
@@ -238,6 +253,7 @@ def step_player(
 
     # ---- charge (heroes with a charge kit) ----
     s.charge_cooldown = max(0.0, s.charge_cooldown - dt)
+    s.grab_cooldown = max(0.0, s.grab_cooldown - dt)
     if (
         charge_p is not None
         and intent.chargePressed
@@ -245,6 +261,7 @@ def step_player(
         and s.charge_cooldown <= 0
         and s.tether is None
         and s.zip is None
+        and s.carrying is None
         and try_spend(s, charge_p.cost, hero.energy)
     ):
         s.charge = Charge(float(charge_p.duration), math.sin(intent.yaw), math.cos(intent.yaw))
@@ -271,8 +288,8 @@ def step_player(
         s.vel.x += wish_x * swing.airControl * dt
         s.vel.z += wish_z * swing.airControl * dt
     elif s.grounded:
-        tx = wish_x * p.runSpeed
-        tz = wish_z * p.runSpeed
+        tx = wish_x * run_speed
+        tz = wish_z * run_speed
         dx = tx - s.vel.x
         dz = tz - s.vel.z
         dist = math.hypot(dx, dz)
@@ -285,7 +302,7 @@ def step_player(
         if wish_mag > 0:
             ux = wish_x / wish_mag
             uz = wish_z / wish_mag
-            wish_speed = wish_mag * p.runSpeed
+            wish_speed = wish_mag * run_speed
             add = wish_speed - (s.vel.x * ux + s.vel.z * uz)
             if add > 0:
                 a = min(add, p.airAccel * dt)
@@ -296,7 +313,7 @@ def step_player(
     s.coyote = float(p.coyoteTime) if s.grounded else max(0.0, s.coyote - dt)
     s.jump_buffer = float(p.jumpBufferTime) if intent.jumpPressed else max(0.0, s.jump_buffer - dt)
     if s.zip is None and s.charge is None and s.jump_buffer > 0 and s.coyote > 0:
-        s.vel.y = p.jumpSpeed
+        s.vel.y = jump_speed
         s.jump_buffer = 0.0
         s.coyote = 0.0
         s.grounded = False
@@ -395,6 +412,8 @@ def to_wire(s: PlayerState) -> dict[str, Any]:
             {"timeLeft": s.charge.time_left, "dirX": s.charge.dir_x, "dirZ": s.charge.dir_z} if s.charge else None
         ),
         "chargeCooldown": s.charge_cooldown,
+        "carrying": {"id": s.carrying[0], "def": s.carrying[1]} if s.carrying else None,
+        "grabCooldown": s.grab_cooldown,
         "tether": (
             {"anchor": s.tether.anchor.to_list(), "length": s.tether.length, "targetLength": s.tether.target_length}
             if s.tether

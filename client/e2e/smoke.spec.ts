@@ -192,3 +192,43 @@ test('RAMPART charges through a weak wall and the wall disappears', async ({ pag
   expect(out.chip).not.toBe('none');
   expect(errors, errors.join('\n')).toEqual([]);
 });
+
+test('RAMPART lifts a car, throws it at the reinforced wall and breaks it', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('./?hero=hero.bruiser');
+  await expect(page.locator('#overlay tr[data-kit="lift"]')).toBeVisible();
+  await page.locator('#overlay').click();
+  await page.waitForFunction(() => (window.__vanguard?.sim.tick ?? 0) > 3);
+  const out = await page.evaluate(() => {
+    const g = window.__vanguard;
+    g.setPaused(false);
+    for (let i = 0; i < 20; i++) g.frame(1 / 60);
+    const me = g.sim.players.get('local')!;
+    // Stand between the two south walls with the car (prop 1) a couple of metres away.
+    Object.assign(me.pos, { x: 0, y: 0, z: -14.7 });
+    const press = () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE', bubbles: true }));
+      window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyE', bubbles: true }));
+    };
+    g.input.yaw = Math.PI;
+    g.input.pitch = 0.1;
+    press();
+    for (let i = 0; i < 4; i++) g.frame(1 / 60);
+    const carrying = me.carrying?.def ?? null;
+    const chipShown = getComputedStyle(document.getElementById('carry-chip')!).display !== 'none';
+    const chipText = document.getElementById('carry-chip')!.textContent;
+    for (let i = 0; i < 40; i++) g.frame(1 / 60); // let the grab cooldown pass
+    g.input.pitch = -0.05;
+    press();
+    for (let i = 0; i < 180; i++) g.frame(1 / 60);
+    const car = g.sim.propWires.find((w) => w.id === 1)!;
+    return { carrying, chipShown, chipText, broken: [...g.sim.world.broken], carryingAfter: me.carrying, carMode: car.mode };
+  });
+  expect(out.carrying).toBe('prop.car');
+  expect(out.chipShown).toBe(true);
+  expect(out.chipText).toContain('Car');
+  expect(out.broken).toContain(36); // the reinforced wall that a charge cannot break
+  expect(out.carryingAfter).toBeNull();
+  expect(['resting', 'destroyed']).toContain(out.carMode);
+  expect(errors, errors.join('\n')).toEqual([]);
+});

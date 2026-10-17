@@ -4,6 +4,7 @@ import Ajv from 'ajv';
 import { describe, expect, it } from 'vitest';
 import { resolveHero, type AbilityData } from '../src/data/content';
 import { applyUpgrades, MAX_RAW_POWER_MULTIPLIER, validateUpgrade } from '../src/sim/upgrades';
+import arena from '@shared/levels/arena.json';
 import { content, hero } from './helpers';
 
 const sharedDir = fileURLToPath(new URL('../../shared/', import.meta.url));
@@ -20,6 +21,7 @@ const KINDS: [string, string][] = [
   ['abilities', 'ability.schema.json'],
   ['enemies', 'enemy.schema.json'],
   ['upgrades', 'upgrade.schema.json'],
+  ['props', 'prop.schema.json'],
 ];
 
 describe('data files match their JSON schemas', () => {
@@ -74,6 +76,35 @@ describe('content cross-references', () => {
     const extra: AbilityData = { ...content.abilities['ability.swing']!, id: 'ability.swing2' };
     const h = { ...content.heroes['hero.swinger']!, abilities: ['ability.swing', 'ability.swing2', 'ability.zip', 'ability.strike'] };
     expect(() => resolveHero(h, { ...content.abilities, [extra.id]: extra })).toThrow(/two "swing"/);
+  });
+});
+
+describe('props', () => {
+  it('every prop the level places has a definition', () => {
+    for (const spawn of arena.props) expect(content.props[spawn.type], spawn.type).toBeDefined();
+  });
+
+  it('heavier props are slower to carry, hit harder and need more strength to be worth it', () => {
+    const car = content.props['prop.car']!;
+    const crate = content.props['prop.crate']!;
+    const dumpster = content.props['prop.dumpster']!;
+    expect(car.carrySlow).toBeLessThan(dumpster.carrySlow);
+    expect(dumpster.carrySlow).toBeLessThan(crate.carrySlow);
+    expect(car.throwDamage).toBeGreaterThan(dumpster.throwDamage);
+    expect(dumpster.throwDamage).toBeGreaterThan(crate.throwDamage);
+  });
+
+  it('a lift ability only goes on a hero through the data (and the schema rejects bad ones)', () => {
+    const ajv = makeAjv();
+    const validate = ajv.getSchema('ability.schema.json')!;
+    const lift = readJson('data/abilities/lift.json') as Record<string, unknown>;
+    expect(validate(lift)).toBe(true);
+    expect(validate({ ...lift, kind: 'charge' })).toBe(false);
+    expect(validate({ ...lift, lift: { liftRange: -1, cooldown: 0.5, strength: 1 } })).toBe(false);
+    const prop = ajv.getSchema('prop.schema.json')!;
+    const car = readJson('data/props/car.json') as Record<string, unknown>;
+    expect(prop({ ...car, carrySlow: 1.5 })).toBe(false); // cannot make you faster than not carrying
+    expect(prop({ ...car, look: 'spaceship' })).toBe(false);
   });
 });
 

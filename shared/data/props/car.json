@@ -1,0 +1,21 @@
+{
+  "id": "prop.car",
+  "displayName": "Car",
+  "size": {
+    "halfWidth": 1.1,
+    "height": 1.3
+  },
+  "carrySlow": 0.4,
+  "throwSpeed": 17,
+  "throwDamage": 40,
+  "throwKnockback": 14,
+  "breakPower": 2,
+  "hp": 2,
+  "respawnTime": 20,
+  "look": "car",
+  "color": [
+    0.9,
+    0.25,
+    0.3
+  ]
+}

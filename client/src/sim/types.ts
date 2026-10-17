@@ -48,6 +48,8 @@ export interface PlayerIntent {
   snarePressed: boolean;
   /** True only on the tick the charge button went down. */
   chargePressed: boolean;
+  /** True only on the tick the grab button went down: lift a prop, or throw the one you carry. */
+  grabPressed: boolean;
 }
 
 export const NEUTRAL_INTENT: PlayerIntent = {
@@ -62,6 +64,7 @@ export const NEUTRAL_INTENT: PlayerIntent = {
   attackPressed: false,
   snarePressed: false,
   chargePressed: false,
+  grabPressed: false,
 };
 
 export const vec3 = (x = 0, y = 0, z = 0): Vec3 => ({ x, y, z });

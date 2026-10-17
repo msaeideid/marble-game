@@ -51,6 +51,7 @@ class World:
         self.broken: set[int] = set()
         self.broken_version = 0
         self.active: list[Collider] = list(self.colliders)
+        self.prop_spawns: list[dict[str, Any]] = list(level.get("props", []))
         self.spawn = Vec3.from_list(level["spawn"])
         self.kill_y: float = float(level["killY"])
         b = level.get("base")

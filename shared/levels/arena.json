@@ -9,6 +9,14 @@
   {"type":"enemy.thug","pos":[-5,0.01,12]},
   {"type":"enemy.thug","pos":[0,0.01,18]}
  ],
+ "props": [
+  {"type":"prop.car","pos":[3,0,-6]},
+  {"type":"prop.car","pos":[0,0,-16.5]},
+  {"type":"prop.crate","pos":[-3,0,-4]},
+  {"type":"prop.crate","pos":[5,0,4.5]},
+  {"type":"prop.dumpster","pos":[-4,0,5.5]},
+  {"type":"prop.crate","pos":[-20,0,2]}
+ ],
  "colliders": [
   {"kind":"ground","min":[-120,-2,-120],"max":[120,0,120]},
   {"kind":"building","min":[-41,0,-41],"max":[-31,8,-31]},

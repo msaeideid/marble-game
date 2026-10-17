@@ -19,7 +19,9 @@ from dataclasses import dataclass, field
 from types import SimpleNamespace
 from typing import Any
 
-from .sim.controller import Intent, PlayerState, create_player_state, step_player, to_wire
+from .sim.content import load_props
+from .sim.controller import Intent, PlayerState, to_wire
+from .sim.game import GameSim
 from .sim.world import World
 
 PROTOCOL_VERSION = 1
@@ -56,6 +58,7 @@ def sanitize_intent(raw: Any) -> Intent | None:
         reelHeld=bool(raw.get("reelHeld", False)),
         zipPressed=bool(raw.get("zipPressed", False)),
         chargePressed=bool(raw.get("chargePressed", False)),
+        grabPressed=bool(raw.get("grabPressed", False)),
     )
 
 
@@ -78,6 +81,7 @@ class Room:
     def __init__(self, hero: SimpleNamespace, world: World, tick_rate: int = TICK_RATE) -> None:
         self.hero = hero
         self.world = world
+        self.game = GameSim(world, load_props(), hero)
         self.tick_rate = tick_rate
         self.dt = 1.0 / tick_rate
         self.tick = 0
@@ -96,12 +100,15 @@ class Room:
         pid = f"p{self._next_id}"
         self._next_id += 1
         chosen = hero or self.hero
-        peer = Peer(pid, name[:16] or pid, chosen, create_player_state(self.world.spawn, chosen))
+        peer = Peer(pid, name[:16] or pid, chosen, self.game.add_player(pid, chosen))
         self.peers[pid] = peer
         return peer
 
     def remove_peer(self, pid: str) -> None:
         self.peers.pop(pid, None)
+        self.game.remove_player(pid)  # anything they were carrying drops
+        if not self.peers:
+            self.game.reset_world()  # the last player left: the next session starts from a fresh level
 
     # ---- input ----
     def enqueue_input(self, peer: Peer, seq: int, intent: Intent) -> bool:
@@ -125,6 +132,7 @@ class Room:
                 self._apply(peer, intent)
                 peer.ack = seq
                 peer.processed += 1
+        self.game.step_world(self.dt)  # props: once per server tick, after everyone's inputs
         self.tick += 1
         if self.tick % SNAPSHOT_EVERY == 0:
             snap = self.snapshot()
@@ -134,21 +142,15 @@ class Room:
         self.max_tick_ms = max(self.max_tick_ms, self.last_tick_ms)
 
     def _apply(self, peer: Peer, intent: Intent) -> None:
-        """One player-tick, in the same order as Sim.step on the client (movement, base regen, void respawn)."""
-        step_player(peer.state, intent, peer.hero, self.world, self.dt)  # may break walls: world state is shared
-        base = self.world.base
-        if base is not None and self.world.is_on_base(peer.state.pos):
-            peer.state.energy = min(
-                float(peer.hero.energy.max), peer.state.energy + base.regenPerSecond * 2 * self.dt
-            )
-        if peer.state.pos.y < self.world.kill_y:
-            peer.state = create_player_state(self.world.spawn, peer.hero)
+        """One player-tick, exactly as the client predicts it (movement, grab/throw, base regen, void respawn)."""
+        self.game.step_player(peer.id, intent, self.dt)  # may break walls: world state is shared
 
     def snapshot(self) -> dict[str, Any]:
         return {
             "t": "snap",
             "tick": self.tick,
             "broken": self.world.broken_list(),
+            "props": self.game.props.to_wire() if self.game.props else [],
             "players": {
                 pid: {"name": p.name, "hero": p.hero.id, "ack": p.ack, "state": to_wire(p.state)}
                 for pid, p in self.peers.items()

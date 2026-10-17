@@ -25,6 +25,9 @@ schemas, so a typo is caught immediately.
 | Thug threat | `attack.damage`, `attack.range`, `attack.windup`, `move.speed`, `attack.knockback` | longer windup = easier to dodge |
 | RAMPART charge | `abilities/charge.json` -> `charge.speed`, `duration`, `cooldown`, `cost`, `damage`, `breakPower` | `breakPower` 2 breaks the reinforced wall |
 | RAMPART toughness / melee | `heroes/bruiser.json`, `abilities/smash.json` | see docs/heroes.md |
+| Prop weight / throw | `props/<type>.json` -> `carrySlow`, `throwSpeed`, `throwDamage`, `throwKnockback`, `breakPower`, `hp`, `respawnTime` | `carrySlow` 1 = no slowdown |
+| Lift reach / cooldown | `abilities/lift.json` -> `liftRange`, `cooldown`, `strength` | `strength` scales every throw speed |
+| Where props are | `levels/arena.json` -> `props` | type + position; they respawn there |
 | Wave pacing | `levels/arena.json` -> `waveDelay`, `enemySpawns` | wave n adds one thug, cap 5 |
 | Base pad healing | `levels/arena.json` -> `base.regenPerSecond`, `base.radius` | |
 | Level layout | `levels/arena.json` -> `colliders` | boxes; visuals follow automatically |

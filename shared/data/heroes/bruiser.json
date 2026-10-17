@@ -35,6 +35,7 @@
   "respawnInvulnerable": 2,
   "abilities": [
     "ability.smash",
-    "ability.charge"
+    "ability.charge",
+    "ability.lift"
   ]
 }
