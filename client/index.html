@@ -56,6 +56,10 @@
       #overlay table { margin: 0 auto 16px; text-align: left; font-size: 14px; border-collapse: collapse; }
       #overlay td { padding: 3px 10px; }
       #overlay td:first-child { font-weight: 700; color: #9fe8ff; white-space: nowrap; }
+      #hero-select { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 4px 0 14px; }
+      #hero-select a { padding: 8px 18px; border-radius: 8px; background: rgba(255,255,255,.12); color: #fff; text-decoration: none; font-weight: 700; border: 2px solid transparent; }
+      #hero-select a:hover { background: rgba(255,255,255,.22); }
+      #hero-select a.selected { border-color: #7af0ff; background: rgba(122,240,255,.2); }
       #overlay .go { font-size: 18px; font-weight: 700; animation: pulse 1.2s infinite; }
       @keyframes pulse { 50% { opacity: .45; } }
       #energy-fill.low { background: linear-gradient(90deg, #ff6b6b, #ffb36b); }
@@ -71,7 +75,10 @@
       </div>
       <div id="hurt"></div>
       <div id="wave"></div>
-      <div id="abilities"><div class="chip" id="snare-chip">Q &middot; Snare</div></div>
+      <div id="abilities">
+        <div class="chip" id="snare-chip">Q &middot; Snare</div>
+        <div class="chip" id="charge-chip">Shift &middot; Charge</div>
+      </div>
       <div id="banner"></div>
       <div id="energy"><div id="energy-fill"></div></div>
       <div class="status" id="build">VANGUARD prototype</div>
@@ -84,15 +91,17 @@
     <div id="overlay">
       <div class="card">
         <h1>VANGUARD</h1>
-        <p>Prototype &middot; hero: ZIPLASH</p>
+        <p>Prototype &middot; choose your hero</p>
+        <div id="hero-select"></div>
         <table>
           <tr><td>WASD</td><td>Move (Space to jump)</td></tr>
           <tr><td>Mouse</td><td>Look (click to capture, or hold the button and drag)</td></tr>
-          <tr><td>E / right-mouse</td><td>Hold to swing from the crosshair's green marker</td></tr>
-          <tr><td>Shift</td><td>Reel in while swinging</td></tr>
-          <tr><td>F</td><td>Zip-pull to the marker (aim just under a roof edge to climb up)</td></tr>
+          <tr data-kit="swing"><td>E / right-mouse</td><td>Hold to swing from the crosshair's green marker</td></tr>
+          <tr data-kit="swing"><td>Shift</td><td>Reel in while swinging</td></tr>
+          <tr data-kit="zip"><td>F</td><td>Zip-pull to the marker (aim just under a roof edge to climb up)</td></tr>
           <tr><td>J / left-click</td><td>Strike (tap in rhythm for a 3-hit combo)</td></tr>
-          <tr><td>Q</td><td>Snare a thug in your sights</td></tr>
+          <tr data-kit="snare"><td>Q</td><td>Snare a thug in your sights</td></tr>
+          <tr data-kit="charge"><td>Shift / C</td><td>Charge: bulldoze enemies and smash weak walls (orange)</td></tr>
           <tr><td>M / P</td><td>Mute / pause</td></tr>
         </table>
         <div class="go">Click to play</div>

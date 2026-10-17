@@ -11,7 +11,8 @@
     "coyoteTime": 0.1,
     "jumpBufferTime": 0.1,
     "halfWidth": 0.35,
-    "height": 1.8
+    "height": 1.8,
+    "handHeight": 1.4
   },
   "energy": {
     "max": 100,

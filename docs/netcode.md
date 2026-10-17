@@ -58,6 +58,10 @@ is real but linear and bounded: roughly one extra port + one conformance scenari
 Node room server (option b) would remove that duplication, but would change your locked backend and the spike gives no
 reason to. Revisit only if porting the combat/AI layer proves much slower than the movement layer did.
 
+## Update: heroes and breakable walls
+The server now runs a different hero per player (`&hero=` on the socket URL) and shares the world's broken walls in every
+snapshot. See [heroes.md](heroes.md). The conformance suite grew to 21 scenarios.
+
 ## Known limits / next steps
 - Movement only. Combat, enemies, health and waves are solo-only for now.
 - One global room, guest names only, no accounts, no reconnect, JSON messages (switch to MessagePack when stable).

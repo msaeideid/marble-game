@@ -99,6 +99,16 @@ export class Sfx {
     this.tone(390, 780, 0.12, 'sine', 0.2, 0.1);
     this.tone(520, 1040, 0.2, 'sine', 0.2, 0.2);
   }
+  /** A wall giving way: a low crunch plus a burst of noise. */
+  smash(): void {
+    this.noise(0.35, 0.5, 300, 0.6);
+    this.tone(120, 35, 0.4, 'sawtooth', 0.3);
+    this.noise(0.2, 0.3, 1800, 1, 0.05);
+  }
+  charge(): void {
+    this.tone(140, 420, 0.3, 'sawtooth', 0.18);
+    this.noise(0.3, 0.2, 700, 0.8);
+  }
   wave(): void {
     this.tone(330, 330, 0.15, 'square', 0.12);
     this.tone(440, 440, 0.15, 'square', 0.12, 0.17);

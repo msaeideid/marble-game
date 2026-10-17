@@ -17,7 +17,8 @@
         "swing",
         "zip",
         "melee",
-        "snare"
+        "snare",
+        "charge"
       ]
     },
     "displayName": {
@@ -35,6 +36,9 @@
     },
     "snare": {
       "$ref": "#/definitions/snare"
+    },
+    "charge": {
+      "$ref": "#/definitions/charge"
     }
   },
   "allOf": [
@@ -65,6 +69,11 @@
             {
               "required": [
                 "snare"
+              ]
+            },
+            {
+              "required": [
+                "charge"
               ]
             }
           ]
@@ -99,6 +108,11 @@
               "required": [
                 "snare"
               ]
+            },
+            {
+              "required": [
+                "charge"
+              ]
             }
           ]
         }
@@ -131,6 +145,11 @@
             {
               "required": [
                 "snare"
+              ]
+            },
+            {
+              "required": [
+                "charge"
               ]
             }
           ]
@@ -165,6 +184,49 @@
               "required": [
                 "melee"
               ]
+            },
+            {
+              "required": [
+                "charge"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "charge"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "charge"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "swing"
+              ]
+            },
+            {
+              "required": [
+                "zip"
+              ]
+            },
+            {
+              "required": [
+                "melee"
+              ]
+            },
+            {
+              "required": [
+                "snare"
+              ]
             }
           ]
         }
@@ -176,7 +238,6 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "handHeight",
         "maxRange",
         "minLength",
         "attachCost",
@@ -192,9 +253,6 @@
         "ropeClearTolerance"
       ],
       "properties": {
-        "handHeight": {
-          "$ref": "common.schema.json#/$defs/positive"
-        },
         "maxRange": {
           "$ref": "common.schema.json#/$defs/positive"
         },
@@ -365,6 +423,47 @@
           "$ref": "common.schema.json#/$defs/positive"
         },
         "duration": {
+          "$ref": "common.schema.json#/$defs/positive"
+        }
+      }
+    },
+    "charge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cost",
+        "cooldown",
+        "speed",
+        "duration",
+        "breakPower",
+        "damage",
+        "knockback",
+        "hitRadius"
+      ],
+      "properties": {
+        "cost": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "cooldown": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "speed": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "duration": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "breakPower": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "damage": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "knockback": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "hitRadius": {
           "$ref": "common.schema.json#/$defs/positive"
         }
       }

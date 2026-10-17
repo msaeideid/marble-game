@@ -1,0 +1,15 @@
+{
+  "id": "ability.charge",
+  "kind": "charge",
+  "displayName": "Charge",
+  "charge": {
+    "cost": 25,
+    "cooldown": 3,
+    "speed": 18,
+    "duration": 0.8,
+    "breakPower": 1,
+    "damage": 22,
+    "knockback": 12,
+    "hitRadius": 1.6
+  }
+}

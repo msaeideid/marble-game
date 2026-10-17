@@ -34,7 +34,8 @@
         "coyoteTime",
         "jumpBufferTime",
         "halfWidth",
-        "height"
+        "height",
+        "handHeight"
       ],
       "properties": {
         "runSpeed": {
@@ -66,6 +67,9 @@
         },
         "height": {
           "$ref": "common.schema.json#/$defs/positive"
+        },
+        "handHeight": {
+          "$ref": "common.schema.json#/$defs/positive"
         }
       }
     },
@@ -83,7 +87,8 @@
       "items": {
         "$ref": "common.schema.json#/$defs/id"
       },
-      "uniqueItems": true
+      "uniqueItems": true,
+      "minItems": 1
     },
     "respawnInvulnerable": {
       "$ref": "common.schema.json#/$defs/nonNegative"

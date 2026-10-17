@@ -17,6 +17,8 @@ export interface PlayerWire {
   energy: number;
   energyDelay: number;
   swingHeldPrev: boolean;
+  charge: { timeLeft: number; dirX: number; dirZ: number } | null;
+  chargeCooldown: number;
   tether: { anchor: V3; length: number; targetLength: number } | null;
   zip: { anchor: V3; timeLeft: number } | null;
 }
@@ -35,6 +37,8 @@ export function toWire(s: PlayerState): PlayerWire {
     energy: s.energy,
     energyDelay: s.energyDelay,
     swingHeldPrev: s.swingHeldPrev,
+    charge: s.charge ? { ...s.charge } : null,
+    chargeCooldown: s.chargeCooldown,
     tether: s.tether
       ? { anchor: v3(s.tether.anchor), length: s.tether.length, targetLength: s.tether.targetLength }
       : null,
@@ -54,6 +58,9 @@ export function applyWire(s: PlayerState, w: PlayerWire): void {
   s.energy = w.energy;
   s.energyDelay = w.energyDelay;
   s.swingHeldPrev = w.swingHeldPrev;
+  s.charge = w.charge ? { ...w.charge } : null;
+  s.chargeCooldown = w.chargeCooldown;
+  s.chargeHits = [];
   s.tether = w.tether
     ? { anchor: vec(w.tether.anchor), length: w.tether.length, targetLength: w.tether.targetLength }
     : null;
@@ -66,6 +73,7 @@ export function wireDistance(a: PlayerWire, b: PlayerWire): number {
     a.grounded !== b.grounded ||
     a.swingHeldPrev !== b.swingHeldPrev ||
     (a.tether === null) !== (b.tether === null) ||
+    (a.charge === null) !== (b.charge === null) ||
     (a.zip === null) !== (b.zip === null)
   ) {
     return Infinity;
@@ -82,6 +90,8 @@ export function wireDistance(a: PlayerWire, b: PlayerWire): number {
   cmp(a.coyote, b.coyote);
   cmp(a.jumpBuffer, b.jumpBuffer);
   cmp(a.facing, b.facing);
+  cmp(a.chargeCooldown, b.chargeCooldown);
+  if (a.charge && b.charge) cmp(a.charge.timeLeft, b.charge.timeLeft);
   if (a.tether && b.tether) {
     cmp(a.tether.length, b.tether.length);
     for (let i = 0; i < 3; i++) cmp(a.tether.anchor[i]!, b.tether.anchor[i]!);

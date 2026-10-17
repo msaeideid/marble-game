@@ -191,3 +191,4 @@ On approval I start S0: `git init`, workspace scaffold, CI, an empty Babylon sce
 | 2026-10-17 | Netcode spike done before the other heroes (D4) | docs/netcode.md |
 | 2026-10-17 | Phase 2 order: hero framework + RAMPART first | |
 | 2026-10-17 | **D1 confirmed: Python port + conformance tests** for the authoritative sim (option a) | evidence in docs/netcode.md; every new authoritative mechanic gets a Python port and a conformance scenario |
+| 2026-10-17 | Hero framework built: heroes are data with optional ability kits; RAMPART playable with charge and breakable walls; hero select; per-player hero online | docs/heroes.md. Policy: movement/world mechanics get a Python port + conformance scenarios immediately; combat mechanics are ported when combat is networked (Phase 3). |

@@ -152,3 +152,43 @@ test('performance budget: bounded mesh count, and frame cost is logged', async (
   expect(stats.activeMeshes).toBeLessThan(300);
   if (stats.drawCalls >= 0) expect(stats.drawCalls).toBeLessThan(300);
 });
+
+test('hero select lists both heroes and RAMPART shows only its own controls', async ({ page }) => {
+  await page.goto('./?hero=hero.bruiser');
+  await expect(page.locator('#hero-select a')).toHaveText(['RAMPART', 'ZIPLASH']);
+  await expect(page.locator('#hero-select a.selected')).toHaveText('RAMPART');
+  await expect(page.locator('#overlay tr[data-kit="charge"]')).toBeVisible();
+  await expect(page.locator('#overlay tr[data-kit="swing"]').first()).toBeHidden();
+  await expect(page.locator('#overlay tr[data-kit="snare"]')).toBeHidden();
+  // Picking the other hero reloads with ?hero=...
+  await page.locator('#hero-select a', { hasText: 'ZIPLASH' }).click();
+  await page.waitForURL(/hero=hero\.swinger/);
+  await expect(page.locator('#hero-select a.selected')).toHaveText('ZIPLASH');
+  await expect(page.locator('#overlay tr[data-kit="swing"]').first()).toBeVisible();
+  await expect(page.locator('#overlay tr[data-kit="charge"]')).toBeHidden();
+});
+
+test('RAMPART charges through a weak wall and the wall disappears', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('./?hero=hero.bruiser');
+  await page.locator('#overlay').click();
+  await page.waitForFunction(() => (window.__vanguard?.sim.tick ?? 0) > 3);
+  const out = await page.evaluate(() => {
+    const g = window.__vanguard;
+    g.setPaused(false);
+    for (let i = 0; i < 20; i++) g.frame(1 / 60);
+    const me = g.sim.players.get('local')!;
+    Object.assign(me.pos, { x: 0, y: 0, z: -2 });
+    g.input.yaw = Math.PI; // face the south corridor, where the weak wall is
+    const before = g.sim.world.broken.size;
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyC', bubbles: true }));
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyC', bubbles: true }));
+    for (let i = 0; i < 90; i++) g.frame(1 / 60);
+    return { before, after: g.sim.world.broken.size, z: me.pos.z, chip: getComputedStyle(document.getElementById('charge-chip')!).display };
+  });
+  expect(out.before).toBe(0);
+  expect(out.after).toBe(1);
+  expect(out.z).toBeLessThan(-14.5);
+  expect(out.chip).not.toBe('none');
+  expect(errors, errors.join('\n')).toEqual([]);
+});

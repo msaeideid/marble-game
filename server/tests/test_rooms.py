@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import random
 import time
 
@@ -227,3 +228,60 @@ class TestWebSocket:
                 if msg["t"] == "snap":
                     seen = set(msg["players"])
             assert seen == {ida, idb}
+
+
+class TestHeroes:
+    def test_each_player_gets_the_hero_they_asked_for(self, room: Room) -> None:
+        ziplash = room.add_peer("a", load_hero("hero.swinger"))
+        rampart = room.add_peer("b", load_hero("hero.bruiser"))
+        room.step()
+        room.step()
+        snap = room.snapshot()
+        assert snap["players"][ziplash.id]["hero"] == "hero.swinger"
+        assert snap["players"][rampart.id]["hero"] == "hero.bruiser"
+        assert rampart.hero.movement.runSpeed < ziplash.hero.movement.runSpeed
+
+    def test_unknown_hero_ids_fall_back_to_the_default_over_the_socket(self) -> None:
+        with TestClient(app) as client, client.websocket_connect("/ws?hero=hero.nope") as ws:
+            assert ws.receive_json()["hero"] == "hero.swinger"
+
+    def test_welcome_reports_the_chosen_hero(self) -> None:
+        with TestClient(app) as client, client.websocket_connect("/ws?hero=hero.bruiser") as ws:
+            welcome = ws.receive_json()
+            assert welcome["hero"] == "hero.bruiser"
+            assert welcome["broken"] == []
+
+    def test_a_charge_smashes_a_wall_for_everyone(self, room: Room) -> None:
+        rampart = room.add_peer("b", load_hero("hero.bruiser"))
+        other = room.add_peer("c", load_hero("hero.swinger"))
+        rampart.state.pos.z = -2.0
+        rampart.state.pos.y = 0.0
+        for i in range(60):
+            room.enqueue_input(rampart, i + 1, Intent(yaw=math.pi, chargePressed=(i == 10)))
+            room.step()
+        snap = room.snapshot()
+        assert len(snap["broken"]) == 1  # the weak wall in the south corridor
+        assert rampart.state.pos.z < -14.5  # and he ran straight through it
+        # A snapshot is what a late-joining or watching client learns about the world from.
+        assert snap["broken"] == room.world.broken_list()
+        # Walls stay broken for later players too, and block nobody.
+        other.state.pos.z = -2.0
+        for i in range(120):
+            room.enqueue_input(other, i + 1, Intent(yaw=math.pi, moveZ=1.0))
+            room.step()
+        assert other.state.pos.z < -14.5
+
+    def test_unbroken_walls_still_block_other_heroes(self, room: Room) -> None:
+        ziplash = room.add_peer("a", load_hero("hero.swinger"))
+        ziplash.state.pos.z = -2.0
+        for i in range(150):
+            room.enqueue_input(ziplash, i + 1, Intent(yaw=math.pi, moveZ=1.0))
+            room.step()
+        assert ziplash.state.pos.z > -12.5  # stopped by the tier-1 wall (z -14 .. -12.5)
+        assert room.world.broken_list() == []
+
+    def test_charge_is_ignored_by_heroes_without_it(self, room: Room) -> None:
+        ziplash = room.add_peer("a", load_hero("hero.swinger"))
+        room.enqueue_input(ziplash, 1, Intent(yaw=math.pi, chargePressed=True))
+        room.step()
+        assert ziplash.state.charge is None

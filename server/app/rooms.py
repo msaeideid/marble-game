@@ -55,6 +55,7 @@ def sanitize_intent(raw: Any) -> Intent | None:
         swingHeld=bool(raw.get("swingHeld", False)),
         reelHeld=bool(raw.get("reelHeld", False)),
         zipPressed=bool(raw.get("zipPressed", False)),
+        chargePressed=bool(raw.get("chargePressed", False)),
     )
 
 
@@ -62,6 +63,7 @@ def sanitize_intent(raw: Any) -> Intent | None:
 class Peer:
     id: str
     name: str
+    hero: SimpleNamespace
     state: PlayerState
     queue: deque[tuple[int, Intent]] = field(default_factory=deque)
     outbox: asyncio.Queue[dict[str, Any]] = field(default_factory=asyncio.Queue)
@@ -90,10 +92,11 @@ class Room:
     def is_full(self) -> bool:
         return len(self.peers) >= MAX_PLAYERS
 
-    def add_peer(self, name: str) -> Peer:
+    def add_peer(self, name: str, hero: SimpleNamespace | None = None) -> Peer:
         pid = f"p{self._next_id}"
         self._next_id += 1
-        peer = Peer(pid, name[:16] or pid, create_player_state(self.world.spawn, self.hero))
+        chosen = hero or self.hero
+        peer = Peer(pid, name[:16] or pid, chosen, create_player_state(self.world.spawn, chosen))
         self.peers[pid] = peer
         return peer
 
@@ -132,21 +135,23 @@ class Room:
 
     def _apply(self, peer: Peer, intent: Intent) -> None:
         """One player-tick, in the same order as Sim.step on the client (movement, base regen, void respawn)."""
-        step_player(peer.state, intent, self.hero, self.world, self.dt)
+        step_player(peer.state, intent, peer.hero, self.world, self.dt)  # may break walls: world state is shared
         base = self.world.base
         if base is not None and self.world.is_on_base(peer.state.pos):
             peer.state.energy = min(
-                float(self.hero.energy.max), peer.state.energy + base.regenPerSecond * 2 * self.dt
+                float(peer.hero.energy.max), peer.state.energy + base.regenPerSecond * 2 * self.dt
             )
         if peer.state.pos.y < self.world.kill_y:
-            peer.state = create_player_state(self.world.spawn, self.hero)
+            peer.state = create_player_state(self.world.spawn, peer.hero)
 
     def snapshot(self) -> dict[str, Any]:
         return {
             "t": "snap",
             "tick": self.tick,
+            "broken": self.world.broken_list(),
             "players": {
-                pid: {"name": p.name, "ack": p.ack, "state": to_wire(p.state)} for pid, p in self.peers.items()
+                pid: {"name": p.name, "hero": p.hero.id, "ack": p.ack, "state": to_wire(p.state)}
+                for pid, p in self.peers.items()
             },
         }
 

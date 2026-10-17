@@ -1,4 +1,5 @@
 import type {
+  ChargeParams,
   EnemyParams,
   EnergyParams,
   HealthParams,
@@ -24,12 +25,13 @@ export interface HeroData {
 
 export interface AbilityData {
   id: string;
-  kind: 'swing' | 'zip' | 'melee' | 'snare';
+  kind: 'swing' | 'zip' | 'melee' | 'snare' | 'charge';
   displayName: string;
   swing?: SwingParams;
   zip?: ZipParams;
   melee?: MeleeParams;
   snare?: SnareParams;
+  charge?: ChargeParams;
 }
 
 export interface UpgradeData {
@@ -87,14 +89,9 @@ export function resolveHero(hero: HeroData, abilities: Record<string, AbilityDat
     if (byKind[ability.kind]) throw new Error(`Hero ${hero.id} has two "${ability.kind}" abilities`);
     byKind[ability.kind] = ability;
   }
-  const swing = byKind.swing?.swing;
-  const zip = byKind.zip?.zip;
   const melee = byKind.melee?.melee;
-  const snare = byKind.snare?.snare;
-  if (!swing || !zip || !melee || !snare) {
-    throw new Error(`Hero ${hero.id} is missing a swing, zip, melee or snare ability`);
-  }
-  return {
+  if (!melee) throw new Error(`Hero ${hero.id} has no melee ability`);
+  const out: HeroParams = {
     id: hero.id,
     displayName: hero.displayName,
     movement: hero.movement,
@@ -102,9 +99,12 @@ export function resolveHero(hero: HeroData, abilities: Record<string, AbilityDat
     health: hero.health,
     respawnDelay: hero.respawnDelay,
     respawnInvulnerable: hero.respawnInvulnerable,
-    swing,
-    zip,
     melee,
-    snare,
   };
+  if (byKind.swing?.swing) out.swing = byKind.swing.swing;
+  if (byKind.zip?.zip) out.zip = byKind.zip.zip;
+  if (byKind.snare?.snare) out.snare = byKind.snare.snare;
+  if (byKind.charge?.charge) out.charge = byKind.charge.charge;
+  if (out.zip && !out.swing) throw new Error(`Hero ${hero.id} has a zip but no swing`);
+  return out;
 }

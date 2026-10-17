@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
@@ -11,9 +12,11 @@ AXES = ("x", "y", "z")
 
 @dataclass(slots=True)
 class Collider:
+    id: int
     kind: str
     min: Vec3
     max: Vec3
+    breakable: int | None = None  # tier; a charge with at least this break power smashes it
 
 
 @dataclass(slots=True)
@@ -32,16 +35,51 @@ class Base:
 
 
 class World:
-    """Static collision world of axis-aligned boxes (mirrors client/src/sim/world.ts)."""
+    """Collision world of axis-aligned boxes (mirrors client/src/sim/world.ts), including breakable walls."""
 
     def __init__(self, level: dict[str, Any]) -> None:
         self.colliders = [
-            Collider(c["kind"], Vec3.from_list(c["min"]), Vec3.from_list(c["max"])) for c in level["colliders"]
+            Collider(
+                i,
+                c["kind"],
+                Vec3.from_list(c["min"]),
+                Vec3.from_list(c["max"]),
+                c.get("breakable"),
+            )
+            for i, c in enumerate(level["colliders"])
         ]
+        self.broken: set[int] = set()
+        self.broken_version = 0
+        self.active: list[Collider] = list(self.colliders)
         self.spawn = Vec3.from_list(level["spawn"])
         self.kill_y: float = float(level["killY"])
         b = level.get("base")
         self.base = Base(Vec3.from_list(b["pos"]), float(b["radius"]), float(b["regenPerSecond"])) if b else None
+
+    # ---- breakable walls ----
+    def break_collider(self, cid: int) -> bool:
+        """Smash a breakable collider. Returns True if it was newly broken."""
+        if not 0 <= cid < len(self.colliders):
+            return False
+        c = self.colliders[cid]
+        if c.breakable is None or cid in self.broken:
+            return False
+        self.broken.add(cid)
+        self._refresh_active()
+        return True
+
+    def set_broken(self, ids: Iterable[int]) -> None:
+        nxt = {i for i in ids if 0 <= i < len(self.colliders) and self.colliders[i].breakable is not None}
+        if nxt != self.broken:
+            self.broken = nxt
+            self._refresh_active()
+
+    def _refresh_active(self) -> None:
+        self.active = [c for c in self.colliders if c.id not in self.broken]
+        self.broken_version += 1
+
+    def broken_list(self) -> list[int]:
+        return sorted(self.broken)
 
     def is_on_base(self, pos: Vec3) -> bool:
         b = self.base
@@ -57,7 +95,7 @@ class World:
             return None
         d = Vec3(direction.x / length, direction.y / length, direction.z / length)
         best: RayHit | None = None
-        for c in self.colliders:
+        for c in self.active:
             hit = ray_vs_box(origin, d, c.min, c.max, max_distance)
             if hit is not None and (best is None or hit[0] < best.distance):
                 best = RayHit(hit[0], hit[1], hit[2], c)

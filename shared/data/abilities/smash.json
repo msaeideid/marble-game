@@ -1,0 +1,29 @@
+{
+  "id": "ability.smash",
+  "kind": "melee",
+  "displayName": "Smash",
+  "melee": {
+    "cost": 0,
+    "range": 2.8,
+    "arcDegrees": 140,
+    "verticalReach": 2.4,
+    "windup": 0.18,
+    "recovery": 0.28,
+    "comboWindow": 0.7,
+    "inputBuffer": 0.25,
+    "steps": [
+      {
+        "damage": 16,
+        "knockback": 7
+      },
+      {
+        "damage": 16,
+        "knockback": 7
+      },
+      {
+        "damage": 28,
+        "knockback": 14
+      }
+    ]
+  }
+}

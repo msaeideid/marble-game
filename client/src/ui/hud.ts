@@ -6,6 +6,7 @@ export class Hud {
   private readonly coreFill = document.getElementById('core-fill') as HTMLElement;
   private readonly banner = document.getElementById('banner') as HTMLElement;
   private readonly snareChip = document.getElementById('snare-chip') as HTMLElement;
+  private readonly chargeChip = document.getElementById('charge-chip') as HTMLElement;
   private readonly hurt = document.getElementById('hurt') as HTMLElement;
   private hurtTimer = 0;
   private readonly waveText = document.getElementById('wave') as HTMLElement;
@@ -28,8 +29,15 @@ export class Hud {
     if (text) this.banner.textContent = text;
   }
 
-  setSnareReady(ready: boolean): void {
+  /** Show an ability chip only for heroes that have the ability; dim it while it is not usable. */
+  setSnare(has: boolean, ready: boolean): void {
+    this.snareChip.style.display = has ? '' : 'none';
     this.snareChip.classList.toggle('cooling', !ready);
+  }
+
+  setCharge(has: boolean, ready: boolean): void {
+    this.chargeChip.style.display = has ? '' : 'none';
+    this.chargeChip.classList.toggle('cooling', !ready);
   }
 
   /** Flash the screen edges red. Call `tick` each frame so it fades out. */

@@ -247,3 +247,56 @@ describe('remote player interpolation', () => {
     expect(buf.size).toBeLessThan(60);
   });
 });
+
+
+describe('breakable walls over the network', () => {
+  const WALL = 34; // the weak wall in the south corridor of the arena level
+
+  function setup() {
+    const sim = newSim();
+    const session = new NetSession(sim, 'me', () => {});
+    session.update(0);
+    return { sim, session };
+  }
+  const snap = (state: PlayerWire, ack: number, broken: number[]): ServerSnapshot => ({
+    t: 'snap',
+    tick: 0,
+    broken,
+    players: { me: { name: 'me', ack, state } },
+  });
+
+  it('applies walls other players smashed (the union of what we and the server know)', () => {
+    const { sim, session } = setup();
+    expect(sim.world.broken.has(WALL)).toBe(false);
+    session.onSnapshot(snap(toWire(sim.players.get('me')!), 0, [WALL]));
+    expect(sim.world.broken.has(WALL)).toBe(true);
+    expect(sim.world.active.some((c) => c.id === WALL)).toBe(false);
+  });
+
+  it('keeps a wall we broke ourselves while the server has not heard about it yet', () => {
+    const { sim, session } = setup();
+    sim.world.breakCollider(WALL);
+    session.onLocalStep(intent());
+    const matching = toWire(sim.players.get('me')!);
+    session.onSnapshot(snap(matching, 1, [])); // older server state: no break yet, but prediction matches
+    expect(sim.world.broken.has(WALL)).toBe(true);
+    expect(session.stats.corrections).toBe(0);
+  });
+
+  it('adopts the server world when it reconciles, un-breaking a wall that was only predicted', () => {
+    const { sim, session } = setup();
+    sim.step(SIM_DT, new Map([['me', intent()]]));
+    session.onLocalStep(intent());
+    sim.world.breakCollider(WALL); // we predicted a break the server never made
+    const wrong = toWire(sim.players.get('me')!);
+    wrong.pos = [wrong.pos[0] + 5, wrong.pos[1], wrong.pos[2]]; // and the server disagrees about where we are
+    session.onSnapshot(snap(wrong, 1, []));
+    expect(session.stats.corrections).toBe(1);
+    expect(sim.world.broken.has(WALL)).toBe(false);
+  });
+
+  it('sends the charge button to the server', async () => {
+    const { wireIntent } = await import('../src/net/session');
+    expect(wireIntent(intent({ chargePressed: true })).chargePressed).toBe(true);
+  });
+});

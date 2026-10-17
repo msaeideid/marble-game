@@ -120,10 +120,10 @@ describe('upgrades widen options, they do not inflate power', () => {
 
   it('applies modifiers without mutating the base hero', () => {
     const u = content.upgrades['upgrade.swinger.long_tether']!;
-    const before = hero.swing.maxRange;
+    const before = hero.swing!.maxRange;
     const up = applyUpgrades(hero, [u]);
-    expect(up.swing.maxRange).toBeCloseTo(before * 1.25, 9);
-    expect(hero.swing.maxRange).toBe(before);
+    expect(up.swing!.maxRange).toBeCloseTo(before * 1.25, 9);
+    expect(hero.swing!.maxRange).toBe(before);
   });
 
   it('refuses unknown paths and the wrong hero', () => {

@@ -13,6 +13,8 @@ export interface MovementParams extends BoxSize {
   maxFallSpeed: number;
   coyoteTime: number;
   jumpBufferTime: number;
+  /** Height of the hands above the feet: the origin for aiming tethers, zips and snares. */
+  handHeight: number;
 }
 
 /** A regenerating pool (energy, shield, core health). */
@@ -60,6 +62,19 @@ export interface SnareParams {
   duration: number;
 }
 
+export interface ChargeParams {
+  cost: number;
+  cooldown: number;
+  speed: number;
+  duration: number;
+  /** Walls with a `breakable` tier at or below this are smashed; stronger ones stop the charge. */
+  breakPower: number;
+  /** Damage and knockback dealt once to each enemy the charge runs into. */
+  damage: number;
+  knockback: number;
+  hitRadius: number;
+}
+
 export interface EnemyParams {
   id: string;
   displayName: string;
@@ -82,8 +97,6 @@ export interface EnemyParams {
 }
 
 export interface SwingParams {
-  /** Height of the tether hand above the feet. */
-  handHeight: number;
   maxRange: number;
   minLength: number;
   attachCost: number;
@@ -129,8 +142,10 @@ export interface HeroParams {
   respawnDelay: number;
   /** Seconds of damage immunity after (re)spawning at base. */
   respawnInvulnerable: number;
-  swing: SwingParams;
-  zip: ZipParams;
+  /** Optional ability kits: a hero has the ones its ability list names. Every hero has a melee attack. */
+  swing?: SwingParams;
+  zip?: ZipParams;
   melee: MeleeParams;
-  snare: SnareParams;
+  snare?: SnareParams;
+  charge?: ChargeParams;
 }

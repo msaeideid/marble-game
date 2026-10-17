@@ -17,6 +17,8 @@ const PALETTE: Record<ColliderKind, Color3[]> = {
     new Color3(0.62, 0.5, 0.9),
   ],
   crate: [new Color3(1, 0.65, 0.25)],
+  // Breakable walls: tier 1 is warm brick, tier 2 is dark reinforced concrete.
+  wall: [new Color3(0.85, 0.45, 0.3), new Color3(0.38, 0.4, 0.46)],
 };
 
 function flatMaterial(scene: Scene, name: string, color: Color3): StandardMaterial {
@@ -27,7 +29,14 @@ function flatMaterial(scene: Scene, name: string, color: Color3): StandardMateri
 }
 
 /** Draws the sim's collider boxes as flat-shaded instances (S1 greybox; real art replaces this later). */
-export function buildLevelView(scene: Scene, world: World): void {
+export interface LevelView {
+  /** Show or hide each collider's mesh so it matches `world.broken`. Cheap to call every frame. */
+  sync(world: World): void;
+}
+
+export function buildLevelView(scene: Scene, world: World): LevelView {
+  const instances: ReturnType<Mesh['createInstance']>[] = [];
+  let shownVersion = -1;
   const sources = new Map<string, Mesh>();
   const sourceFor = (kind: ColliderKind, variant: number): Mesh => {
     const key = `${kind}:${variant}`;
@@ -42,12 +51,21 @@ export function buildLevelView(scene: Scene, world: World): void {
   };
 
   world.colliders.forEach((c, i) => {
-    const variant = i % PALETTE[c.kind].length;
+    const variant = c.kind === 'wall' ? Math.min((c.breakable ?? 1) - 1, 1) : i % PALETTE[c.kind].length;
     const inst = sourceFor(c.kind, variant).createInstance(`c${i}`);
     inst.scaling.set(c.max.x - c.min.x, c.max.y - c.min.y, c.max.z - c.min.z);
     inst.position.set((c.min.x + c.max.x) / 2, (c.min.y + c.max.y) / 2, (c.min.z + c.max.z) / 2);
     inst.freezeWorldMatrix();
+    instances[c.id] = inst;
   });
+
+  return {
+    sync(w: World): void {
+      if (w.brokenVersion === shownVersion) return;
+      shownVersion = w.brokenVersion;
+      for (const c of w.colliders) instances[c.id]?.setEnabled(!w.broken.has(c.id));
+    },
+  };
 }
 
 /** The base pad: a glowing disc (visual only; the sim's `World.base` does the healing). */

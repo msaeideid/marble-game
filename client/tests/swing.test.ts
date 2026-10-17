@@ -45,7 +45,7 @@ describe('anchor picking', () => {
   it('finds a building wall when aiming up and forward', () => {
     const world = new World(arena);
     const hand = { x: 0, y: 1.4, z: 12 };
-    const a = pickSwingAnchor(world, hand, { x: Math.cos(0.6), y: Math.sin(0.6), z: 0 }, hero.swing.maxRange);
+    const a = pickSwingAnchor(world, hand, { x: Math.cos(0.6), y: Math.sin(0.6), z: 0 }, hero.swing!.maxRange);
     expect(a).not.toBeNull();
     expect(a!.x).toBeLessThan(7);
     expect(a!.x).toBeGreaterThan(6.9);
@@ -74,13 +74,13 @@ describe('swinging', () => {
     const anchor = { x: 0, y: 60, z: 0 };
     const p = hang(sim, { x: 0, y: 40, z: -20 }, anchor);
     const length = p.tether!.length;
-    const startHandY = p.pos.y + hero.swing.handHeight;
+    const startHandY = p.pos.y + hero.movement.handHeight;
     let lowestHandY = Infinity;
     let maxSpeed = 0;
     for (let i = 0; i < 150; i++) {
       sim.step(DT, new Map([['p1', intent({ swingHeld: true })]]));
       expect(dist(handPos(p, hero), anchor)).toBeLessThanOrEqual(length + 0.05);
-      lowestHandY = Math.min(lowestHandY, p.pos.y + hero.swing.handHeight);
+      lowestHandY = Math.min(lowestHandY, p.pos.y + hero.movement.handHeight);
       maxSpeed = Math.max(maxSpeed, Math.hypot(p.vel.x, p.vel.y, p.vel.z));
     }
     // Energy conservation: top speed is about sqrt(2 g h) for the height dropped.
@@ -130,7 +130,7 @@ describe('swinging', () => {
     // Face +X (yaw PI/2) and look up (pitch -0.6) to hit the building wall.
     run(sim, 1, () => intent({ swingHeld: true, yaw: Math.PI / 2, pitch: -0.6 }));
     expect(p.tether).not.toBeNull();
-    expect(p.energy).toBeLessThanOrEqual(50 - hero.swing.attachCost);
+    expect(p.energy).toBeLessThanOrEqual(50 - hero.swing!.attachCost);
     run(sim, 1, () => intent({ swingHeld: false }));
     expect(p.tether).toBeNull();
   });
@@ -139,7 +139,7 @@ describe('swinging', () => {
     const sim = makeSim();
     const p = sim.players.get('p1')!;
     p.pos = { x: 0, y: 3, z: 12 };
-    p.energy = hero.swing.attachCost - 1;
+    p.energy = hero.swing!.attachCost - 1;
     run(sim, 1, () => intent({ swingHeld: true, yaw: Math.PI / 2, pitch: -0.6 }));
     expect(p.tether).toBeNull();
   });
@@ -150,7 +150,7 @@ describe('swinging', () => {
     const start = p.tether!.length;
     run(sim, 20, () => intent({ swingHeld: true, reelHeld: true }));
     expect(p.tether!.length).toBeLessThan(start);
-    expect(p.tether!.length).toBeGreaterThanOrEqual(hero.swing.minLength);
+    expect(p.tether!.length).toBeGreaterThanOrEqual(hero.swing!.minLength);
   });
 
   it('auto-reels on attach so a ground start launches into the air', () => {
@@ -206,7 +206,7 @@ describe('zip pull', () => {
     const sim = makeSim();
     const p = sim.players.get('p1')!;
     p.pos = { x: 0, y: 0, z: 12 };
-    p.energy = hero.zip.cost - 1;
+    p.energy = hero.zip!.cost - 1;
     run(sim, 1, () => intent({ zipPressed: true, yaw: Math.PI / 2, pitch: -0.6 }));
     expect(p.zip).toBeNull();
   });

@@ -10,10 +10,11 @@ from typing import Any
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from .rooms import MAX_PLAYERS, PROTOCOL_VERSION, TICK_RATE, Room, sanitize_intent
-from .sim.content import load_hero, load_level
+from .sim.content import hero_ids, load_hero, load_level
 from .sim.world import World
 
 MAX_MESSAGE_BYTES = 4096
+DEFAULT_HERO = "hero.swinger"
 
 
 def build_room() -> Room:
@@ -57,13 +58,17 @@ async def ws_endpoint(ws: WebSocket) -> None:
         return
 
     name = ws.query_params.get("name", "")
-    peer = room.add_peer(name)
+    wanted = ws.query_params.get("hero", DEFAULT_HERO)
+    hero = load_hero(wanted if wanted in hero_ids() else DEFAULT_HERO)
+    peer = room.add_peer(name, hero)
     await ws.send_text(
         json.dumps(
             {
                 "t": "welcome",
                 "v": PROTOCOL_VERSION,
                 "id": peer.id,
+                "hero": hero.id,
+                "broken": room.world.broken_list(),
                 "tickRate": room.tick_rate,
                 "snapshotEvery": 2,
                 "spawn": room.world.spawn.to_list(),

@@ -7,7 +7,9 @@ import { applyWire, toWire, wireDistance, type PlayerWire } from '../sim/wire';
 export interface ServerSnapshot {
   t: 'snap';
   tick: number;
-  players: Record<string, { name: string; ack: number; state: PlayerWire }>;
+  /** Ids of every wall smashed so far (the world's authoritative breakage). */
+  broken?: number[];
+  players: Record<string, { name: string; hero?: string; ack: number; state: PlayerWire }>;
 }
 
 /** Fields the server reads from an intent. Combat inputs are not part of the movement spike. */
@@ -21,6 +23,7 @@ export function wireIntent(i: PlayerIntent) {
     swingHeld: i.swingHeld,
     reelHeld: i.reelHeld,
     zipPressed: i.zipPressed,
+    chargePressed: i.chargePressed,
   };
 }
 
@@ -89,6 +92,8 @@ export class NetSession {
   }
 
   onSnapshot(snap: ServerSnapshot): void {
+    // Walls other players smashed arrive here. Breakage only ever grows, so this never undoes our own prediction.
+    if (snap.broken) this.sim.world.unionBroken(snap.broken);
     const mine = snap.players[this.serverId];
     if (!mine) return;
     const ack = mine.ack;
@@ -114,11 +119,13 @@ export class NetSession {
 
     this.stats.lastCorrection = { ack, error: this.stats.lastError, pending: this.pending.length };
     this.stats.firstCorrection ??= { ack, predicted: predictedAtAck, server: mine.state };
-    this.reconcile(mine.state);
+    this.reconcile(mine.state, snap.broken);
   }
 
-  private reconcile(authoritative: PlayerWire): void {
+  private reconcile(authoritative: PlayerWire, broken: number[] | undefined): void {
     const local = this.sim.players.get(this.localId)!;
+    // Adopt the server's world too: a wall we only *predicted* breaking is un-broken until the replay re-breaks it.
+    if (broken) this.sim.world.setBroken(broken);
     const before = { ...local.pos };
     applyWire(local, authoritative);
     for (const p of this.pending) {

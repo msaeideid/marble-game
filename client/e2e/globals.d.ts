@@ -5,7 +5,7 @@ interface VanguardOnline {
   playerCount: number;
   pingMs: number;
   session: { stats: { corrections: number; acked: number; inputsSent: number; maxError: number; rttMs: number; lastCorrection: unknown; firstCorrection: unknown } };
-  remotePlayers(): Record<string, { name: string; state: { pos: number[]; tether: unknown } }>;
+  remotePlayers(): Record<string, { name: string; hero: string; state: { pos: number[]; tether: unknown; charge: unknown } }>;
 }
 
 interface VanguardHook {
@@ -17,6 +17,7 @@ interface VanguardHook {
   sim: {
     tick: number;
     currentWave: number;
+    world: { broken: Set<number>; active: { id: number }[] };
     players: Map<
       string,
       {

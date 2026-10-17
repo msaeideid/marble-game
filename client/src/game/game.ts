@@ -6,7 +6,7 @@ import { OnlineClient, onlineOptionsFromUrl } from '../net/online';
 import { Effects } from '../render/effects';
 import { EnemyView } from '../render/enemyView';
 import { FollowCamera } from '../render/followCamera';
-import { buildBaseView, buildLevelView } from '../render/levelView';
+import { buildBaseView, buildLevelView, type LevelView } from '../render/levelView';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { PlayerView } from '../render/playerView';
 import { createGameView, type GameView } from '../render/scene';
@@ -14,6 +14,7 @@ import { aimDir } from '../sim/aim';
 import { createPlayerState, handPos } from '../sim/controller';
 import type { AiState } from '../sim/enemy';
 import { FixedStepper, SIM_DT } from '../sim/fixedStep';
+import type { HeroParams } from '../sim/params';
 import { Sim, type SimEvent } from '../sim/sim';
 import { pickSwingAnchor } from '../sim/swing';
 import type { PlayerIntent } from '../sim/types';
@@ -23,6 +24,7 @@ import { Hud } from '../ui/hud';
 import { WorldLabels } from '../ui/worldLabels';
 
 const LOCAL_ID = 'local';
+const DEFAULT_HERO = 'hero.swinger';
 const HITSTOP_LIGHT = 0.05;
 const HITSTOP_HEAVY = 0.09;
 
@@ -45,7 +47,8 @@ export class Game {
   private readonly effects: Effects;
   private readonly labels: WorldLabels;
   private readonly hud = new Hud();
-  private readonly hero = getHero('hero.swinger');
+  private readonly hero: HeroParams;
+  private readonly levelView: LevelView;
   private readonly overlay = document.getElementById('overlay') as HTMLElement;
   private frameCount = 0;
   private clock = 0;
@@ -54,9 +57,12 @@ export class Game {
   private bannerText: string | null = null;
   private hadTether = false;
   private hadZip = false;
+  private hadCharge = false;
   private wasLocked = false;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
+    const heroId = new URLSearchParams(window.location.search).get('hero') ?? DEFAULT_HERO;
+    this.hero = getHero(heroId in content.heroes ? heroId : DEFAULT_HERO);
     const world = new World(arena);
     const onlineOpts = onlineOptionsFromUrl(window.location.search);
     // Online play is movement-only for now: no enemies or waves, just players swinging around together.
@@ -65,10 +71,10 @@ export class Game {
     this.online = onlineOpts ? new OnlineClient(this.sim, LOCAL_ID, onlineOpts) : null;
 
     this.view = createGameView(canvas);
-    buildLevelView(this.view.scene, world);
+    this.levelView = buildLevelView(this.view.scene, world);
     buildBaseView(this.view.scene, world);
     const m = this.hero.movement;
-    this.playerView = new PlayerView(this.view.scene, m.height, m.halfWidth, this.hero.swing.handHeight);
+    this.playerView = new PlayerView(this.view.scene, m.height, m.halfWidth, this.hero.movement.handHeight);
     this.cam = new FollowCamera(this.view.scene);
     this.effects = new Effects(this.view.scene);
     this.labels = new WorldLabels(document.getElementById('labels') as HTMLElement, this.view.scene, this.view.engine, canvas);
@@ -78,6 +84,29 @@ export class Game {
   }
 
   private bindUi(): void {
+    // Hero selection: each button reloads the page with ?hero=..., keeping any other URL parameters.
+    const select = document.getElementById('hero-select');
+    if (select) {
+      for (const h of Object.values(content.heroes)) {
+        const q = new URLSearchParams(window.location.search);
+        q.set('hero', h.id);
+        const a = document.createElement('a');
+        a.href = `?${q.toString()}`;
+        a.textContent = h.displayName;
+        a.classList.toggle('selected', h.id === this.hero.id);
+        a.addEventListener('click', (e) => e.stopPropagation()); // do not also start the game
+        select.appendChild(a);
+      }
+    }
+    const kits = new Set<string>(['melee']);
+    if (this.hero.swing) kits.add('swing');
+    if (this.hero.zip) kits.add('zip');
+    if (this.hero.snare) kits.add('snare');
+    if (this.hero.charge) kits.add('charge');
+    document.querySelectorAll<HTMLElement>('#overlay tr[data-kit]').forEach((row) => {
+      row.style.display = kits.has(row.dataset.kit ?? '') ? '' : 'none';
+    });
+
     this.overlay.addEventListener('click', () => {
       this.setPaused(false);
       this.canvas.focus();
@@ -125,6 +154,7 @@ export class Game {
     const alpha = this.stepper.advance(simDt, (stepDt) => {
       const m = this.input.sample();
       const intent: PlayerIntent = { ...m, yaw: this.input.yaw, pitch: this.input.pitch };
+      intent.chargePressed = m.chargePressed;
       if (this.online) {
         intent.attackPressed = false; // combat is not networked yet
         intent.snarePressed = false;
@@ -149,6 +179,7 @@ export class Game {
       z: p.z + (me.pos.z - p.z) * alpha + off.z,
     };
     this.syncRemotePlayers();
+    this.levelView.sync(this.sim.world);
     this.cam.update(focus, this.input.yaw, this.input.pitch, this.sim.world, dt);
     this.effects.update(dt);
     scene.render();
@@ -167,16 +198,17 @@ export class Game {
   private syncRemotePlayers(): void {
     if (!this.online) return;
     const samples = this.online.remotePlayers();
-    const m = this.hero.movement;
     for (const [id, sample] of Object.entries(samples)) {
       let view = this.remoteViews.get(id);
+      const theirs = getHero(sample.hero in content.heroes ? sample.hero : DEFAULT_HERO);
+      const m = theirs.movement;
       if (!view) {
         const hue = this.remoteViews.size % 3;
         const colors = [new Color3(1, 0.55, 0.25), new Color3(0.75, 0.45, 1), new Color3(1, 0.85, 0.3)];
-        view = new PlayerView(this.view.scene, m.height, m.halfWidth, this.hero.swing.handHeight, colors[hue]);
+        view = new PlayerView(this.view.scene, m.height, m.halfWidth, m.handHeight, colors[hue]);
         this.remoteViews.set(id, view);
       }
-      const ghost = createPlayerState(this.sim.world.spawn, this.hero);
+      const ghost = createPlayerState(this.sim.world.spawn, theirs);
       applyWire(ghost, sample.state);
       ghost.invulnerable = 0;
       view.update(ghost, 1, null, this.clock);
@@ -193,7 +225,11 @@ export class Game {
     this.hud.setEnergy(me.energy, this.hero.energy.max);
     this.hud.setHealth(me.health.shield, this.hero.health.shield.max, me.health.core, this.hero.health.core.max);
     this.hud.setAimValid(aimValid);
-    this.hud.setSnareReady(me.snareCooldown <= 0 && me.energy >= this.hero.snare.cost);
+    this.hud.setSnare(!!this.hero.snare, me.snareCooldown <= 0 && me.energy >= (this.hero.snare?.cost ?? 0));
+    this.hud.setCharge(
+      !!this.hero.charge,
+      !me.charge && me.chargeCooldown <= 0 && me.energy >= (this.hero.charge?.cost ?? 0),
+    );
     this.hud.tick(dt);
     this.bannerTimer = Math.max(0, this.bannerTimer - dt);
     const net = this.online;
@@ -251,6 +287,18 @@ export class Game {
           if (ev.id === LOCAL_ID) this.sfx.down();
           else this.sfx.powerDown();
           break;
+        case 'break': {
+          const c = this.sim.world.colliders[ev.id];
+          if (c) this.effects.debris(c.min, c.max, c.breakable === 2 ? new Color3(0.45, 0.47, 0.55) : new Color3(0.85, 0.45, 0.3));
+          this.cam.shake(0.22);
+          this.sfx.smash();
+          break;
+        }
+        case 'charge':
+          this.cam.shake(0.14);
+          this.hitStop = HITSTOP_HEAVY;
+          this.sfx.hit(2);
+          break;
         case 'snare':
           if (ev.source === LOCAL_ID) this.sfx.snare();
           break;
@@ -272,6 +320,8 @@ export class Game {
     const me = this.sim.players.get(LOCAL_ID)!;
     if (me.tether && !this.hadTether) this.sfx.attach();
     if (me.zip && !this.hadZip) this.sfx.zip();
+    if (me.charge && !this.hadCharge) this.sfx.charge();
+    this.hadCharge = me.charge !== null;
     this.hadTether = me.tether !== null;
     this.hadZip = me.zip !== null;
   }
@@ -315,12 +365,14 @@ export class Game {
 
   /** Where a swing would attach right now, for the aim marker and crosshair colour. */
   private previewAnchor() {
+    const swing = this.hero.swing;
+    if (!swing) return null;
     const me = this.sim.players.get(LOCAL_ID)!;
     return pickSwingAnchor(
       this.sim.world,
       handPos(me, this.hero),
       aimDir(this.input.yaw, this.input.pitch),
-      this.hero.swing.maxRange,
+      swing.maxRange,
     );
   }
 }

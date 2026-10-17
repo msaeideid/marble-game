@@ -131,3 +131,31 @@ test('a fifth player is turned away', async ({ browser }) => {
     for (const ws of sockets) ws.close();
   }
 });
+
+test('a RAMPART player smashes a wall and a ZIPLASH player sees both the wall go and the other hero', async ({ browser }) => {
+  const ann = await join(browser, 'Ann', '&hero=hero.bruiser');
+  const bo = await join(browser, 'Bo', '&hero=hero.swinger');
+  await Promise.all([ann, bo].map((p) => p.evaluate(() => window.__vanguard.setPaused(false))));
+  // Ann faces the south corridor (the weak wall is ~12 m away, inside charge range) and charges.
+  await ann.evaluate(() => {
+    window.__vanguard.input.yaw = Math.PI;
+  });
+  await key(ann, 'keydown', 'KeyC');
+  await key(ann, 'keyup', 'KeyC');
+  await bo.waitForFunction(() => window.__vanguard.sim.world.broken.size === 1, undefined, { timeout: 15_000 });
+  await ann.waitForFunction(() => window.__vanguard.sim.players.get('local')!.pos.z < -14.5, undefined, { timeout: 15_000 });
+  await ann.waitForTimeout(800);
+
+  const seen = await bo.evaluate(() => Object.values(window.__vanguard.online!.remotePlayers()).map((o) => ({ hero: o.hero, z: o.state.pos[2] })));
+  expect(seen.length).toBe(1);
+  expect(seen[0]!.hero).toBe('hero.bruiser');
+  expect(seen[0]!.z).toBeLessThan(-14);
+  // Both clients agree the wall is gone (and the other tier-1 wall is untouched).
+  for (const page of [ann, bo]) {
+    expect(await page.evaluate(() => [...window.__vanguard.sim.world.broken])).toEqual([34]);
+  }
+  // Ann's prediction (including her predicted wall break) matched the Python server exactly.
+  const stats = await ann.evaluate(() => window.__vanguard.online!.session.stats);
+  expect(stats.corrections).toBe(0);
+  expect(stats.maxError).toBeLessThan(1e-6);
+});

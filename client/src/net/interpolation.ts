@@ -9,6 +9,8 @@ interface Stamped {
 
 export interface RemoteSample {
   name: string;
+  /** Which hero they play (decides their size and look). */
+  hero: string;
   state: PlayerWire;
 }
 
@@ -61,7 +63,7 @@ export class SnapshotBuffer {
     for (const [id, pb] of Object.entries(b.players)) {
       if (id === excludeId) continue;
       const pa = a.players[id];
-      out[id] = { name: pb.name, state: pa ? lerpWire(pa.state, pb.state, t) : pb.state };
+      out[id] = { name: pb.name, hero: pb.hero ?? 'hero.swinger', state: pa ? lerpWire(pa.state, pb.state, t) : pb.state };
     }
     return out;
   }

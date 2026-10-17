@@ -43,6 +43,9 @@
   {"kind":"building","min":[25,0,-67],"max":[35,44,-57]},
   {"kind":"crate","min":[-9,0,-7],"max":[-7,1.2,-5]},
   {"kind":"crate","min":[-11,0,-7],"max":[-9,1.2,-5]},
-  {"kind":"crate","min":[-10,0,-9],"max":[-8,1.2,-7]}
+  {"kind":"crate","min":[-10,0,-9],"max":[-8,1.2,-7]},
+  {"kind":"wall","min":[-7,0,-14],"max":[7,4.5,-12.5],"breakable":1},
+  {"kind":"wall","min":[-14,0,-7],"max":[-12.5,4.5,7],"breakable":1},
+  {"kind":"wall","min":[-7,0,-20],"max":[7,5.5,-18.5],"breakable":2}
  ]
 }

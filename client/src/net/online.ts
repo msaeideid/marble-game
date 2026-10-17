@@ -18,7 +18,8 @@ export function onlineOptionsFromUrl(search: string): OnlineOptions | null {
   const server = q.get('server');
   if (!server) return null;
   const name = (q.get('name') ?? '').slice(0, 16);
-  const url = `${server}${server.includes('?') ? '&' : '?'}name=${encodeURIComponent(name)}`;
+  const hero = q.get('hero') ?? 'hero.swinger';
+  const url = `${server}${server.includes('?') ? '&' : '?'}name=${encodeURIComponent(name)}&hero=${encodeURIComponent(hero)}`;
   return {
     url,
     name,
@@ -39,7 +40,7 @@ export class OnlineClient {
   pingMs = 0;
 
   constructor(
-    sim: Sim,
+    private readonly sim: Sim,
     localSimId: string,
     opts: OnlineOptions,
   ) {
@@ -67,6 +68,7 @@ export class OnlineClient {
     switch (m.t) {
       case 'welcome':
         this.serverId = String(m.id);
+        this.sim.world.unionBroken((m.broken as number[] | undefined) ?? []);
         this.session.bindServerId(this.serverId);
         this.status = 'online';
         break;

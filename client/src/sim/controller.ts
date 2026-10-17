@@ -1,7 +1,7 @@
 import { aimDir } from './aim';
+import { createMelee, type MeleeState } from './combat';
 import { drain, regen, trySpend } from './energy';
 import { createHealth, type HealthState } from './health';
-import { createMelee, type MeleeState } from './combat';
 import type { BoxSize, HeroParams } from './params';
 import {
   pickSwingAnchor,
@@ -24,6 +24,13 @@ export interface Zip {
   timeLeft: number;
 }
 
+/** A charge in progress: a straight-line rush that breaks weak walls. */
+export interface Charge {
+  timeLeft: number;
+  dirX: number;
+  dirZ: number;
+}
+
 export interface PlayerState {
   /** Position of the centre of the feet. */
   pos: Vec3;
@@ -40,6 +47,11 @@ export interface PlayerState {
   tether: Tether | null;
   zip: Zip | null;
   swingHeldPrev: boolean;
+  charge: Charge | null;
+  /** Seconds until the charge can be used again. */
+  chargeCooldown: number;
+  /** Enemies already struck by the current charge (so one rush hits each enemy once). Not synced. */
+  chargeHits: string[];
   health: HealthState;
   /** Seconds until respawn while defeated, otherwise null. */
   defeatedTimer: number | null;
@@ -64,6 +76,9 @@ export function createPlayerState(spawn: Vec3, hero: HeroParams): PlayerState {
     tether: null,
     zip: null,
     swingHeldPrev: false,
+    charge: null,
+    chargeCooldown: 0,
+    chargeHits: [],
     health: createHealth(hero.health),
     defeatedTimer: null,
     melee: createMelee(),
@@ -81,6 +96,8 @@ export interface MoveResult {
   hitUp: boolean;
   hitX: boolean;
   hitZ: boolean;
+  /** Colliders that blocked sideways movement this move (each listed once). */
+  sideHits: Collider[];
 }
 
 /**
@@ -93,7 +110,7 @@ export function moveAndCollide(
   p: BoxSize,
   colliders: readonly Collider[],
 ): MoveResult {
-  const res: MoveResult = { hitDown: false, hitUp: false, hitX: false, hitZ: false };
+  const res: MoveResult = { hitDown: false, hitUp: false, hitX: false, hitZ: false, sideHits: [] };
   const largest = Math.max(Math.abs(delta.x), Math.abs(delta.y), Math.abs(delta.z));
   const steps = Math.max(1, Math.ceil(largest / MAX_SUBSTEP));
   const sx = delta.x / steps;
@@ -101,11 +118,11 @@ export function moveAndCollide(
   const sz = delta.z / steps;
   for (let i = 0; i < steps; i++) {
     pos.x += sx;
-    if (sx !== 0 && pushOut('x', sx, pos, p, colliders)) res.hitX = true;
+    if (sx !== 0 && pushOut('x', sx, pos, p, colliders, res.sideHits)) res.hitX = true;
     pos.z += sz;
-    if (sz !== 0 && pushOut('z', sz, pos, p, colliders)) res.hitZ = true;
+    if (sz !== 0 && pushOut('z', sz, pos, p, colliders, res.sideHits)) res.hitZ = true;
     pos.y += sy;
-    if (sy !== 0 && pushOut('y', sy, pos, p, colliders)) {
+    if (sy !== 0 && pushOut('y', sy, pos, p, colliders, null)) {
       if (sy < 0) res.hitDown = true;
       else res.hitUp = true;
     }
@@ -131,6 +148,7 @@ function pushOut(
   pos: Vec3,
   p: BoxSize,
   colliders: readonly Collider[],
+  sideHits: Collider[] | null,
 ): boolean {
   let hit = false;
   for (const c of colliders) {
@@ -140,65 +158,85 @@ function pushOut(
       pos.y = d < 0 ? c.max.y : c.min.y - p.height;
     } else {
       pos[axis] = d > 0 ? c.min[axis] - p.halfWidth : c.max[axis] + p.halfWidth;
+      if (sideHits && !sideHits.includes(c)) sideHits.push(c);
     }
   }
   return hit;
 }
 
+/** Where the character's hands are: the origin for aiming tethers, snares and zips. */
 export function handPos(s: PlayerState, hero: HeroParams): Vec3 {
-  return { x: s.pos.x, y: s.pos.y + hero.swing.handHeight, z: s.pos.z };
+  return { x: s.pos.x, y: s.pos.y + hero.movement.handHeight, z: s.pos.z };
 }
 
-function releaseTether(s: PlayerState, hero: HeroParams): void {
+function releaseTether(s: PlayerState, swing: NonNullable<HeroParams['swing']>): void {
   s.tether = null;
   const speed = Math.hypot(s.vel.x, s.vel.y, s.vel.z);
   if (speed > 6) {
-    const k = hero.swing.releaseBoost / speed;
+    const k = swing.releaseBoost / speed;
     s.vel.x += s.vel.x * k;
     s.vel.y += s.vel.y * k;
     s.vel.z += s.vel.z * k;
   }
 }
 
-/** Advance one player by one fixed tick. Deterministic given (state, intent, hero, world, dt). */
-export function stepPlayer(s: PlayerState, intent: PlayerIntent, hero: HeroParams, world: World, dt: number): void {
+/** Largest speed any hero may reach; keeps falling and launches bounded even without a swing ability. */
+const DEFAULT_MAX_SPEED = 60;
+
+/**
+ * Advance one player by one fixed tick. Deterministic given (state, intent, hero, world, dt).
+ * Returns the colliders this player broke this tick (charging through weak walls), so callers can emit events.
+ */
+export function stepPlayer(
+  s: PlayerState,
+  intent: PlayerIntent,
+  hero: HeroParams,
+  world: World,
+  dt: number,
+): Collider[] {
   const p = hero.movement;
+  const swing = hero.swing;
+  const zipP = hero.zip;
+  const chargeP = hero.charge;
+  const broken: Collider[] = [];
   s.prevPos = { ...s.pos };
   const aim = aimDir(intent.yaw, intent.pitch);
 
-  // ---- tether and zip state changes ----
-  if (intent.swingHeld && !s.swingHeldPrev && !s.zip && !s.tether) {
-    const hand = handPos(s, hero);
-    const anchor = pickSwingAnchor(world, hand, aim, hero.swing.maxRange);
-    if (anchor && trySpend(s, hero.swing.attachCost, hero.energy)) {
-      const length = Math.hypot(anchor.x - hand.x, anchor.y - hand.y, anchor.z - hand.z);
-      const groundY = world.raycast(hand, { x: 0, y: -1, z: 0 }, 300)?.point.y ?? s.pos.y;
-      const clearLength = anchor.y - groundY - hero.swing.arcClearance;
-      const targetLength = Math.max(hero.swing.minLength, Math.min(length, clearLength));
-      s.tether = { anchor, length, targetLength };
+  // ---- tether and zip state changes (heroes with a swing kit) ----
+  if (swing) {
+    if (intent.swingHeld && !s.swingHeldPrev && !s.zip && !s.tether && !s.charge) {
+      const hand = handPos(s, hero);
+      const anchor = pickSwingAnchor(world, hand, aim, swing.maxRange);
+      if (anchor && trySpend(s, swing.attachCost, hero.energy)) {
+        const length = Math.hypot(anchor.x - hand.x, anchor.y - hand.y, anchor.z - hand.z);
+        const groundY = world.raycast(hand, { x: 0, y: -1, z: 0 }, 300)?.point.y ?? s.pos.y;
+        const clearLength = anchor.y - groundY - swing.arcClearance;
+        const targetLength = Math.max(swing.minLength, Math.min(length, clearLength));
+        s.tether = { anchor, length, targetLength };
+      }
     }
+    if (!intent.swingHeld && s.tether) releaseTether(s, swing);
+    s.swingHeldPrev = intent.swingHeld;
   }
-  if (!intent.swingHeld && s.tether) releaseTether(s, hero);
-  s.swingHeldPrev = intent.swingHeld;
 
-  if (intent.zipPressed && !s.zip) {
+  if (zipP && swing && intent.zipPressed && !s.zip && !s.charge) {
     const hand = handPos(s, hero);
-    const anchor = pickZipAnchor(world, hand, aim, hero.swing.handHeight, hero.zip);
-    if (anchor && trySpend(s, hero.zip.cost, hero.energy)) {
+    const anchor = pickZipAnchor(world, hand, aim, p.handHeight, zipP);
+    if (anchor && trySpend(s, zipP.cost, hero.energy)) {
       s.tether = null;
-      s.zip = { anchor, timeLeft: hero.zip.maxDuration };
+      s.zip = { anchor, timeLeft: zipP.maxDuration };
     }
   }
 
-  if (s.tether) {
+  if (swing && s.tether) {
     const t = s.tether;
-    let cost = hero.swing.drainPerSecond;
+    let cost = swing.drainPerSecond;
     if (intent.reelHeld) {
-      cost += hero.swing.reelDrainPerSecond;
-      t.targetLength = Math.max(hero.swing.minLength, t.targetLength - hero.swing.reelSpeed * dt);
+      cost += swing.reelDrainPerSecond;
+      t.targetLength = Math.max(swing.minLength, t.targetLength - swing.reelSpeed * dt);
     }
     if (t.length > t.targetLength) {
-      const rate = intent.reelHeld ? hero.swing.reelSpeed : hero.swing.autoReelSpeed;
+      const rate = intent.reelHeld ? swing.reelSpeed : swing.autoReelSpeed;
       t.length = Math.max(t.targetLength, t.length - rate * dt);
       // Pull the player along the rope too, so the yank carries momentum instead of just teleporting.
       const hand = handPos(s, hero);
@@ -208,13 +246,24 @@ export function stepPlayer(s: PlayerState, intent: PlayerIntent, hero: HeroParam
       const d = Math.hypot(dx, dy, dz) || 1;
       const inward = (s.vel.x * dx + s.vel.y * dy + s.vel.z * dz) / d;
       if (inward < rate) {
-        const k = (rate - inward) * Math.min(1, hero.swing.pullGain * dt);
+        const k = (rate - inward) * Math.min(1, swing.pullGain * dt);
         s.vel.x += (dx / d) * k;
         s.vel.y += (dy / d) * k;
         s.vel.z += (dz / d) * k;
       }
     }
-    if (!drain(s, cost * dt, hero.energy)) releaseTether(s, hero);
+    if (!drain(s, cost * dt, hero.energy)) releaseTether(s, swing);
+  }
+
+  // ---- charge (heroes with a charge kit) ----
+  s.chargeCooldown = Math.max(0, s.chargeCooldown - dt);
+  if (chargeP && intent.chargePressed && !s.charge && s.chargeCooldown <= 0 && !s.tether && !s.zip) {
+    if (trySpend(s, chargeP.cost, hero.energy)) {
+      // Rush in the direction the camera faces (horizontal only).
+      s.charge = { timeLeft: chargeP.duration, dirX: Math.sin(intent.yaw), dirZ: Math.cos(intent.yaw) };
+      s.chargeCooldown = chargeP.cooldown;
+      s.chargeHits = [];
+    }
   }
 
   // ---- horizontal control ----
@@ -230,11 +279,14 @@ export function stepPlayer(s: PlayerState, intent: PlayerIntent, hero: HeroParam
   const wishX = mz * sin + mx * cos; // world-space wish direction scaled by stick magnitude (<= 1)
   const wishZ = mz * cos - mx * sin;
 
-  if (s.zip) {
+  if (s.charge && chargeP) {
+    s.vel.x = s.charge.dirX * chargeP.speed;
+    s.vel.z = s.charge.dirZ * chargeP.speed;
+  } else if (s.zip) {
     // Zip overrides velocity entirely.
-  } else if (s.tether) {
-    s.vel.x += wishX * hero.swing.airControl * dt;
-    s.vel.z += wishZ * hero.swing.airControl * dt;
+  } else if (swing && s.tether) {
+    s.vel.x += wishX * swing.airControl * dt;
+    s.vel.z += wishZ * swing.airControl * dt;
   } else if (s.grounded) {
     const tx = wishX * p.runSpeed;
     const tz = wishZ * p.runSpeed;
@@ -265,7 +317,7 @@ export function stepPlayer(s: PlayerState, intent: PlayerIntent, hero: HeroParam
   // ---- jump ----
   s.coyote = s.grounded ? p.coyoteTime : Math.max(0, s.coyote - dt);
   s.jumpBuffer = intent.jumpPressed ? p.jumpBufferTime : Math.max(0, s.jumpBuffer - dt);
-  if (!s.zip && s.jumpBuffer > 0 && s.coyote > 0) {
+  if (!s.zip && !s.charge && s.jumpBuffer > 0 && s.coyote > 0) {
     s.vel.y = p.jumpSpeed;
     s.jumpBuffer = 0;
     s.coyote = 0;
@@ -273,22 +325,23 @@ export function stepPlayer(s: PlayerState, intent: PlayerIntent, hero: HeroParam
   }
 
   // ---- gravity / zip pull ----
-  if (s.zip) {
+  if (s.zip && zipP) {
     const hand = handPos(s, hero);
     const dx = s.zip.anchor.x - hand.x;
     const dy = s.zip.anchor.y - hand.y;
     const dz = s.zip.anchor.z - hand.z;
     const d = Math.hypot(dx, dy, dz) || 1;
-    s.vel.x = (dx / d) * hero.zip.speed;
-    s.vel.y = (dy / d) * hero.zip.speed;
-    s.vel.z = (dz / d) * hero.zip.speed;
+    s.vel.x = (dx / d) * zipP.speed;
+    s.vel.y = (dy / d) * zipP.speed;
+    s.vel.z = (dz / d) * zipP.speed;
   } else {
     s.vel.y = Math.max(s.vel.y - p.gravity * dt, -p.maxFallSpeed);
   }
 
+  const maxSpeed = swing?.maxSpeed ?? DEFAULT_MAX_SPEED;
   const speed = Math.hypot(s.vel.x, s.vel.y, s.vel.z);
-  if (!s.zip && speed > hero.swing.maxSpeed) {
-    const k = hero.swing.maxSpeed / speed;
+  if (!s.zip && !s.charge && speed > maxSpeed) {
+    const k = maxSpeed / speed;
     s.vel.x *= k;
     s.vel.y *= k;
     s.vel.z *= k;
@@ -296,8 +349,8 @@ export function stepPlayer(s: PlayerState, intent: PlayerIntent, hero: HeroParam
 
   // ---- move ----
   let delta: Vec3 = { x: s.vel.x * dt, y: s.vel.y * dt, z: s.vel.z * dt };
-  if (s.tether) delta = ropeLimitedDelta(handPos(s, hero), delta, s.tether.anchor, s.tether.length);
-  const r = moveAndCollide(s.pos, delta, p, world.colliders);
+  if (swing && s.tether) delta = ropeLimitedDelta(handPos(s, hero), delta, s.tether.anchor, s.tether.length);
+  const r = moveAndCollide(s.pos, delta, p, world.active);
   if (r.hitX) s.vel.x = 0;
   if (r.hitZ) s.vel.z = 0;
   if (r.hitDown) {
@@ -308,8 +361,8 @@ export function stepPlayer(s: PlayerState, intent: PlayerIntent, hero: HeroParam
     if (r.hitUp && s.vel.y > 0) s.vel.y = 0;
   }
 
-  // ---- post-move: rope, zip arrival ----
-  if (s.tether) {
+  // ---- post-move: rope, zip arrival, charge impacts ----
+  if (swing && s.tether) {
     const hand = handPos(s, hero);
     removeOutwardVelocity(s.vel, hand, s.tether.anchor, s.tether.length);
     const to = {
@@ -318,23 +371,37 @@ export function stepPlayer(s: PlayerState, intent: PlayerIntent, hero: HeroParam
       z: s.tether.anchor.z - hand.z,
     };
     const dist = Math.hypot(to.x, to.y, to.z);
-    const blocked = world.raycast(hand, to, dist - hero.swing.ropeClearTolerance);
-    if (blocked) releaseTether(s, hero);
+    const blocked = world.raycast(hand, to, dist - swing.ropeClearTolerance);
+    if (blocked) releaseTether(s, swing);
   }
 
-  if (s.zip) {
+  if (s.zip && zipP) {
     s.zip.timeLeft -= dt;
     const hand = handPos(s, hero);
     const dist = Math.hypot(s.zip.anchor.x - hand.x, s.zip.anchor.y - hand.y, s.zip.anchor.z - hand.z);
-    if (dist <= hero.zip.arriveDistance || s.zip.timeLeft <= 0) {
+    if (dist <= zipP.arriveDistance || s.zip.timeLeft <= 0) {
       s.zip = null;
-      s.vel.x *= hero.zip.exitKeep;
-      s.vel.y = s.vel.y * hero.zip.exitKeep + hero.zip.popSpeed;
-      s.vel.z *= hero.zip.exitKeep;
+      s.vel.x *= zipP.exitKeep;
+      s.vel.y = s.vel.y * zipP.exitKeep + zipP.popSpeed;
+      s.vel.z *= zipP.exitKeep;
     }
+  }
+
+  if (s.charge && chargeP) {
+    let stopped = false;
+    for (const c of r.sideHits) {
+      if (c.breakable !== undefined && c.breakable <= chargeP.breakPower) {
+        if (world.breakCollider(c.id)) broken.push(c);
+      } else {
+        stopped = true; // a wall that will not break ends the rush
+      }
+    }
+    s.charge.timeLeft -= dt;
+    if (stopped || s.charge.timeLeft <= 0) s.charge = null;
   }
 
   if (!s.tether && !s.zip) regen(s, hero.energy, dt);
 
   if (Math.hypot(s.vel.x, s.vel.z) > 0.5) s.facing = Math.atan2(s.vel.x, s.vel.z);
+  return broken;
 }

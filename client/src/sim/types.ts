@@ -14,10 +14,14 @@ export interface Aabb {
   max: Vec3;
 }
 
-export type ColliderKind = 'ground' | 'building' | 'crate';
+export type ColliderKind = 'ground' | 'building' | 'crate' | 'wall';
 
 export interface Collider extends Aabb {
+  /** Index in the level's collider list; stable, and how breakage is identified over the network. */
+  id: number;
   kind: ColliderKind;
+  /** Breakable tier (1 = weak). A charge with at least this break power smashes it. */
+  breakable?: number;
 }
 
 /** What a controller (human, AI or network client) asks the character to do this tick. */
@@ -42,6 +46,8 @@ export interface PlayerIntent {
   attackPressed: boolean;
   /** True only on the tick the snare button went down. */
   snarePressed: boolean;
+  /** True only on the tick the charge button went down. */
+  chargePressed: boolean;
 }
 
 export const NEUTRAL_INTENT: PlayerIntent = {
@@ -55,6 +61,7 @@ export const NEUTRAL_INTENT: PlayerIntent = {
   zipPressed: false,
   attackPressed: false,
   snarePressed: false,
+  chargePressed: false,
 };
 
 export const vec3 = (x = 0, y = 0, z = 0): Vec3 => ({ x, y, z });

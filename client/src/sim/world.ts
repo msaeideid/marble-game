@@ -7,7 +7,7 @@ export interface LevelData {
   waveDelay?: number;
   base?: { pos: number[]; radius: number; regenPerSecond: number };
   enemySpawns?: { type: string; pos: number[] }[];
-  colliders: { kind: string; min: number[]; max: number[] }[];
+  colliders: { kind: string; min: number[]; max: number[]; breakable?: number }[];
 }
 
 export interface RayHit {
@@ -21,7 +21,13 @@ type BoxHit = Omit<RayHit, 'collider'>;
 
 /** Static collision world made of axis-aligned boxes. Same shape the (future) Python server loads. */
 export class World {
+  /** Every collider in the level, indexed by `id` (broken ones included). */
   readonly colliders: Collider[];
+  /** Ids of breakable colliders that have been smashed. Only changes through the methods below. */
+  readonly broken = new Set<number>();
+  /** Bumped whenever `broken` changes, so views know when to refresh. */
+  brokenVersion = 0;
+  private activeList: Collider[];
   readonly spawn: Vec3;
   readonly killY: number;
   readonly waveDelay: number;
@@ -30,11 +36,14 @@ export class World {
   readonly enemySpawns: { type: string; pos: Vec3 }[];
 
   constructor(level: LevelData) {
-    this.colliders = level.colliders.map((c) => ({
+    this.colliders = level.colliders.map((c, id) => ({
+      id,
       kind: c.kind as Collider['kind'],
+      ...(c.breakable !== undefined ? { breakable: c.breakable } : {}),
       min: { x: c.min[0]!, y: c.min[1]!, z: c.min[2]! },
       max: { x: c.max[0]!, y: c.max[1]!, z: c.max[2]! },
     }));
+    this.activeList = [...this.colliders];
     this.spawn = { x: level.spawn[0]!, y: level.spawn[1]!, z: level.spawn[2]! };
     this.killY = level.killY;
     this.waveDelay = level.waveDelay ?? 5;
@@ -51,6 +60,47 @@ export class World {
     }));
   }
 
+  /** The colliders that currently block movement and rays (everything not yet broken). */
+  get active(): readonly Collider[] {
+    return this.activeList;
+  }
+
+  /** Smash a breakable collider. Returns true if it was newly broken. */
+  breakCollider(id: number): boolean {
+    const c = this.colliders[id];
+    if (!c || c.breakable === undefined || this.broken.has(id)) return false;
+    this.broken.add(id);
+    this.refreshActive();
+    return true;
+  }
+
+  /** Make the set of broken colliders exactly `ids` (used when the server's world state is authoritative). */
+  setBroken(ids: Iterable<number>): void {
+    const next = new Set<number>();
+    for (const id of ids) if (this.colliders[id]?.breakable !== undefined) next.add(id);
+    if (next.size === this.broken.size && [...next].every((id) => this.broken.has(id))) return;
+    this.broken.clear();
+    for (const id of next) this.broken.add(id);
+    this.refreshActive();
+  }
+
+  /** Add to the broken set without ever un-breaking anything (other players' breaks arriving in snapshots). */
+  unionBroken(ids: Iterable<number>): void {
+    let changed = false;
+    for (const id of ids) {
+      if (this.colliders[id]?.breakable !== undefined && !this.broken.has(id)) {
+        this.broken.add(id);
+        changed = true;
+      }
+    }
+    if (changed) this.refreshActive();
+  }
+
+  private refreshActive(): void {
+    this.activeList = this.colliders.filter((c) => !this.broken.has(c.id));
+    this.brokenVersion++;
+  }
+
   isOnBase(pos: Vec3): boolean {
     const b = this.base;
     return !!b && Math.hypot(pos.x - b.pos.x, pos.z - b.pos.z) <= b.radius && Math.abs(pos.y - b.pos.y) < 3;
@@ -62,7 +112,7 @@ export class World {
     if (len === 0) return null;
     const d = { x: dir.x / len, y: dir.y / len, z: dir.z / len };
     let best: RayHit | null = null;
-    for (const c of this.colliders) {
+    for (const c of this.activeList) {
       const hit = rayVsBox(origin, d, c.min, c.max, maxDistance);
       if (hit && (!best || hit.distance < best.distance)) best = { ...hit, collider: c };
     }

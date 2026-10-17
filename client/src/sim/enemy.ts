@@ -62,7 +62,7 @@ export function stepEnemyPhysics(e: EnemyState, def: EnemyParams, world: World, 
     e.pos,
     { x: e.vel.x * dt, y: e.vel.y * dt, z: e.vel.z * dt },
     def.move,
-    world.colliders,
+    world.active,
   );
   if (r.hitX) e.vel.x = 0;
   if (r.hitZ) e.vel.z = 0;

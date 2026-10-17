@@ -1,0 +1,40 @@
+{
+  "id": "hero.bruiser",
+  "displayName": "RAMPART",
+  "movement": {
+    "runSpeed": 7,
+    "groundAccel": 45,
+    "airAccel": 10,
+    "gravity": 30,
+    "jumpSpeed": 9,
+    "maxFallSpeed": 50,
+    "coyoteTime": 0.1,
+    "jumpBufferTime": 0.1,
+    "halfWidth": 0.5,
+    "height": 2.1,
+    "handHeight": 1.6
+  },
+  "energy": {
+    "max": 100,
+    "regenPerSecond": 9,
+    "regenDelay": 1.0
+  },
+  "health": {
+    "shield": {
+      "max": 60,
+      "regenPerSecond": 10,
+      "regenDelay": 3.5
+    },
+    "core": {
+      "max": 110,
+      "regenPerSecond": 1,
+      "regenDelay": 8
+    }
+  },
+  "respawnDelay": 3,
+  "respawnInvulnerable": 2,
+  "abilities": [
+    "ability.smash",
+    "ability.charge"
+  ]
+}

@@ -145,7 +145,7 @@ describe('tether snare', () => {
     expect(e.snaredTimer).toBeGreaterThan(0);
     expect(sim.events.some((ev) => ev.type === 'snare')).toBe(true);
     const z = e.pos.z;
-    idleTicks(sim, Math.floor((hero.snare.duration - 0.3) / DT));
+    idleTicks(sim, Math.floor((hero.snare!.duration - 0.3) / DT));
     expect(e.pos.z).toBeCloseTo(z, 2);
     expect(player.health.shield).toBe(hero.health.shield.max);
     idleTicks(sim, 30); // snare over: it moves again
@@ -166,7 +166,7 @@ describe('tether snare', () => {
     place(sim, 8);
     const before = player.energy;
     run(sim, 1, () => intent({ snarePressed: true }));
-    expect(player.energy).toBeLessThanOrEqual(before - hero.snare.cost);
+    expect(player.energy).toBeLessThanOrEqual(before - hero.snare!.cost);
     expect(player.snareCooldown).toBeGreaterThan(0);
     // A second enemy cannot be snared until the cooldown ends.
     const second = sim.spawnEnemy('enemy.thug', { x: 0, y: 0.01, z: 12 });
@@ -194,7 +194,7 @@ describe('tether snare', () => {
     expect(behind.snaredTimer).toBe(0);
 
     const { sim: sim2 } = arenaSim();
-    const far = sim2.spawnEnemy('enemy.thug', { x: 0, y: 0.01, z: hero.snare.range + 10 });
+    const far = sim2.spawnEnemy('enemy.thug', { x: 0, y: 0.01, z: hero.snare!.range + 10 });
     run(sim2, 1, () => intent({ snarePressed: true, yaw: 0, pitch: 0 }));
     expect(far.snaredTimer).toBe(0);
   });

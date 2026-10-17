@@ -17,7 +17,9 @@ export type SimEvent =
   | { type: 'respawn'; id: string }
   | { type: 'snare'; source: string; target: string }
   | { type: 'enemyAttack'; id: string; target: string }
-  | { type: 'wave'; wave: number };
+  | { type: 'wave'; wave: number }
+  | { type: 'break'; id: number; by: string }
+  | { type: 'charge'; id: string; hits: string[] };
 
 /** The authoritative-style game simulation. No rendering, DOM or engine imports. */
 export class Sim {
@@ -63,7 +65,10 @@ export class Sim {
         continue;
       }
       const intent = intents.get(id) ?? NEUTRAL_INTENT;
-      stepPlayer(player, intent, this.hero, this.world, dt);
+      for (const c of stepPlayer(player, intent, this.hero, this.world, dt)) {
+        this.events.push({ type: 'break', id: c.id, by: id });
+      }
+      this.stepCharge(id, player);
       this.stepPlayerMelee(id, player, intent, dt);
       this.stepPlayerSnare(id, player, intent, dt);
       regenHealth(player.health, this.hero.health, dt);
@@ -136,10 +141,33 @@ export class Sim {
     return this.wave;
   }
 
+  /** A charging hero bowls over each enemy it runs into, once per charge. */
+  private stepCharge(id: string, player: PlayerState): void {
+    const charge = this.hero.charge;
+    if (!charge || !player.charge) return;
+    const struck: string[] = [];
+    for (const e of this.enemies.values()) {
+      if (e.defeatedTimer !== null || player.chargeHits.includes(e.id)) continue;
+      const half = this.enemyDefs[e.typeId]!.move.halfWidth;
+      const dx = e.pos.x - player.pos.x;
+      const dz = e.pos.z - player.pos.z;
+      const ahead = dx * player.charge.dirX + dz * player.charge.dirZ > -0.5; // not behind the rusher
+      if (!ahead || Math.hypot(dx, dz) > charge.hitRadius + half || Math.abs(e.pos.y - player.pos.y) > 2) continue;
+      player.chargeHits.push(e.id);
+      struck.push(e.id);
+      e.vel.x += player.charge.dirX * charge.knockback;
+      e.vel.z += player.charge.dirZ * charge.knockback;
+      this.damageEnemy(e, charge.damage, id);
+      e.aiState = 'stagger'; // a charge always knocks the enemy off balance, poise or not
+      e.aiTimer = this.enemyDefs[e.typeId]!.staggerTime;
+    }
+    if (struck.length > 0) this.events.push({ type: 'charge', id, hits: struck });
+  }
+
   private stepPlayerSnare(id: string, player: PlayerState, intent: PlayerIntent, dt: number): void {
     player.snareCooldown = Math.max(0, player.snareCooldown - dt);
-    if (!intent.snarePressed || player.snareCooldown > 0) return;
     const p = this.hero.snare;
+    if (!p || !intent.snarePressed || player.snareCooldown > 0) return;
     const candidates = [...this.enemies.values()]
       .filter((e) => e.defeatedTimer === null)
       .map((e) => {

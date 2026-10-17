@@ -14,7 +14,7 @@ import { createPlayerState, stepPlayer } from '../src/sim/controller';
 import { NEUTRAL_INTENT, type PlayerIntent } from '../src/sim/types';
 import { toWire, wireDistance, type PlayerWire } from '../src/sim/wire';
 import { World } from '../src/sim/world';
-import { hero } from './helpers';
+import { getHero } from '../src/data';
 
 const DT = 1 / 30;
 const dir = fileURLToPath(new URL('../../shared/conformance/movement/', import.meta.url));
@@ -31,11 +31,12 @@ interface Scenario {
   start: { pos: [number, number, number] };
   checkpointEvery: number;
   segments: Segment[];
-  expected: { tick: number; state: PlayerWire }[];
+  expected: { tick: number; state: PlayerWire; broken: number[] }[];
 }
 
 function simulate(def: Omit<Scenario, 'expected'>): Scenario['expected'] {
   const world = new World(arena);
+  const hero = getHero(def.hero);
   const s = createPlayerState(world.spawn, hero);
   s.pos = { x: def.start.pos[0], y: def.start.pos[1], z: def.start.pos[2] };
   s.prevPos = { ...s.pos };
@@ -45,13 +46,13 @@ function simulate(def: Omit<Scenario, 'expected'>): Scenario['expected'] {
     const intent: PlayerIntent = { ...NEUTRAL_INTENT, ...seg.intent };
     for (let i = 0; i < seg.ticks; i++) {
       // jumpPressed / zipPressed are edge events: only the first tick of a segment carries them.
-      const tickIntent = i === 0 ? intent : { ...intent, jumpPressed: false, zipPressed: false };
+      const tickIntent = i === 0 ? intent : { ...intent, jumpPressed: false, zipPressed: false, chargePressed: false };
       stepPlayer(s, tickIntent, hero, world, def.dt);
       tick++;
-      if (tick % def.checkpointEvery === 0) out.push({ tick, state: toWire(s) });
+      if (tick % def.checkpointEvery === 0) out.push({ tick, state: toWire(s), broken: [...world.broken].sort((a, b) => a - b) });
     }
   }
-  if (tick % def.checkpointEvery !== 0) out.push({ tick, state: toWire(s) });
+  if (tick % def.checkpointEvery !== 0) out.push({ tick, state: toWire(s), broken: [...world.broken].sort((a, b) => a - b) });
   return out;
 }
 
@@ -88,6 +89,7 @@ function chaos(seed: number, ticks: number): Segment[] {
         swingHeld: swinging,
         reelHeld: rnd() < 0.2,
         zipPressed: rnd() < 0.06,
+        chargePressed: rnd() < 0.05,
       },
     });
     used += n;
@@ -174,6 +176,71 @@ function definitions(): Omit<Scenario, 'expected'>[] {
       start: at(0, 6, 12),
       segments: [settle, { ticks: 60, intent: { swingHeld: true, yaw: Math.PI / 2, pitch: 0.2 } }],
     },
+    // ---- RAMPART (hero.bruiser): the charge, breakable walls and a very different movement feel ----
+    {
+      ...base,
+      hero: 'hero.bruiser',
+      name: 'rampart_run_and_jump',
+      start: at(0, 0.01, 0),
+      segments: [
+        settle,
+        { ticks: 30, intent: { moveZ: 1 } },
+        { ticks: 20, intent: { moveZ: 1, jumpPressed: true } },
+        { ticks: 30, intent: { moveX: 1, moveZ: 1, yaw: 0.8 } },
+        { ticks: 20, intent: {} },
+      ],
+    },
+    {
+      ...base,
+      hero: 'hero.bruiser',
+      name: 'rampart_charge_smashes_weak_wall',
+      // Faces -Z (yaw PI) from the base toward the tier-1 wall in the south corridor (z -14..-12.5).
+      start: at(0, 0.01, -2),
+      segments: [settle, { ticks: 1, intent: { chargePressed: true, yaw: Math.PI } }, { ticks: 40, intent: { yaw: Math.PI } }],
+    },
+    {
+      ...base,
+      hero: 'hero.bruiser',
+      name: 'rampart_charge_stopped_by_reinforced_wall',
+      // Start between the weak wall (z -14..-12.5) and the reinforced one (z -20..-18.5), which it cannot break.
+      start: at(0, 0.01, -16),
+      segments: [settle, { ticks: 1, intent: { chargePressed: true, yaw: Math.PI } }, { ticks: 40, intent: { yaw: Math.PI } }],
+    },
+    {
+      ...base,
+      hero: 'hero.bruiser',
+      name: 'rampart_charge_into_building_and_cooldown',
+      start: at(0, 0.01, 12),
+      segments: [
+        settle,
+        { ticks: 1, intent: { chargePressed: true, yaw: Math.PI / 2 } },
+        { ticks: 30, intent: { yaw: Math.PI / 2 } },
+        { ticks: 1, intent: { chargePressed: true, yaw: Math.PI / 2 } }, // still on cooldown / low energy
+        { ticks: 60, intent: { yaw: Math.PI / 2 } },
+        { ticks: 1, intent: { chargePressed: true, yaw: 0 } },
+        { ticks: 40, intent: { yaw: 0, moveZ: 0.5 } },
+      ],
+    },
+    {
+      ...base,
+      hero: 'hero.bruiser',
+      name: 'rampart_two_charges_through_west_wall',
+      start: at(-5, 0.01, 0),
+      segments: [
+        settle,
+        { ticks: 1, intent: { chargePressed: true, yaw: -Math.PI / 2 } },
+        { ticks: 60, intent: { yaw: -Math.PI / 2 } },
+        { ticks: 1, intent: { chargePressed: true, yaw: -Math.PI / 2 } },
+        { ticks: 30, intent: { yaw: -Math.PI / 2 } },
+      ],
+    },
+    ...[707, 808, 909].map((seed, i) => ({
+      ...base,
+      hero: 'hero.bruiser',
+      name: `rampart_chaos_seed_${seed}`,
+      start: at([0, -4, 3][i]!, 0.01, [-6, 2, -10][i]!),
+      segments: [settle, ...chaos(seed, 900)],
+    })),
     ...[101, 202, 303, 404, 505, 606].map((seed, i) => ({
       ...base,
       name: `chaos_seed_${seed}`,
@@ -205,6 +272,7 @@ if (UPDATE) {
         let worst = 0;
         for (let i = 0; i < got.length; i++) {
           worst = Math.max(worst, wireDistance(got[i]!.state, sc.expected[i]!.state));
+          expect(got[i]!.broken, `${f} tick ${got[i]!.tick}`).toEqual(sc.expected[i]!.broken);
         }
         expect(worst).toBeLessThan(1e-9);
       });

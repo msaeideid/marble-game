@@ -7,7 +7,8 @@ See [PLAN.md](PLAN.md) for the plan and [docs/](docs/) for short per-system docs
 **Status:** the Phase 1 vertical slice is built and passed its playtest (Gate 1): third-person controller, tether swing
 and zip-pull, energy, shield-over-core health, melee combo, tether-snare, thug AI with waves, base pad and respawn, hit
 feedback and synthesized sound. Phase 2 has started with a **multiplayer spike** ([docs/netcode.md](docs/netcode.md)):
-several players can swing around together on a Python server. Next: the hero framework and RAMPART.
+several players can swing around together on a Python server. Heroes are data ([docs/heroes.md](docs/heroes.md)): ZIPLASH and the powerhouse RAMPART (charge through breakable walls) are playable.
+Next: props to lift and throw, then METALHEAD and VOLTAGE.
 
 ## Run it
 ```bash
@@ -28,13 +29,15 @@ npm run dev                                                          # terminal 
 |---|---|
 | WASD / Space | move / jump |
 | Mouse | look (click to capture, or hold the button and drag) |
-| E or right-mouse (hold) | swing from the green aim marker; Shift to reel in |
-| F | zip-pull (aim just under a roof edge to climb up) |
+| *Pick a hero on the start screen* | ZIPLASH (wall-slinger) or RAMPART (powerhouse) |
+| E or right-mouse (hold) | ZIPLASH: swing from the green aim marker; Shift to reel in |
+| F | ZIPLASH: zip-pull (aim just under a roof edge to climb up) |
 | J or left-click | strike (tap in rhythm for a 3-hit combo) |
-| Q | snare a thug in your sights |
+| Q | ZIPLASH: snare a thug in your sights |
+| Shift / C | RAMPART: charge - bulldoze enemies and smash weak (orange) walls |
 | P / Esc, M | pause, mute |
 
-Gamepad: left stick move, right stick look, A jump, X strike, Y zip, B snare, RT swing, LT reel.
+Gamepad: left stick move, right stick look, A jump, X strike, Y zip, B snare, RT swing, LT reel / charge.
 
 ## Test
 ```bash

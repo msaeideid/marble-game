@@ -3,7 +3,6 @@
   "kind": "swing",
   "displayName": "Tether Swing",
   "swing": {
-    "handHeight": 1.4,
     "maxRange": 55,
     "minLength": 3,
     "attachCost": 5,
