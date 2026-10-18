@@ -416,6 +416,24 @@ class TestFlight:
         assert peer.state.flying is False
         assert peer.state.energy < 15
 
+    def test_voltage_glides_slower_and_cheaper_than_metalhead(self, room: Room) -> None:
+        metal, volt = load_hero("hero.flyer"), load_hero("hero.storm")
+        assert volt.flight.speed < metal.flight.speed
+        assert volt.flight.hoverDrainPerSecond < metal.flight.hoverDrainPerSecond
+        peer = room.add_peer("v", volt)
+        for seq, intent in enumerate(
+            [Intent()] * 6
+            + [Intent(jumpPressed=True, jumpHeld=True)]
+            + [Intent()] * 8
+            + [Intent(jumpPressed=True, jumpHeld=True)]
+            + [Intent(jumpHeld=True)] * 20,
+            start=1,
+        ):
+            room.enqueue_input(peer, seq, intent)
+            room.step()
+        assert peer.state.flying is True
+        assert room.snapshot()["players"][peer.id]["hero"] == "hero.storm"
+
     def test_other_heroes_cannot_fly(self, room: Room) -> None:
         peer = room.add_peer("z", load_hero("hero.swinger"))
         for seq, edge in enumerate([True] + [False] * 8 + [True], start=1):

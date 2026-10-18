@@ -1,0 +1,15 @@
+{
+  "id": "ability.tempest",
+  "kind": "tempest",
+  "displayName": "Storm strike",
+  "tempest": {
+    "cost": 30,
+    "cooldown": 8,
+    "range": 35,
+    "delay": 0.9,
+    "radius": 2.5,
+    "damage": 28,
+    "stunTime": 1.5,
+    "knockback": 4
+  }
+}

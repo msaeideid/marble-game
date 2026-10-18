@@ -1,0 +1,16 @@
+{
+  "id": "ability.chain",
+  "kind": "chain",
+  "displayName": "Chain lightning",
+  "chain": {
+    "cost": 16,
+    "cooldown": 1.8,
+    "range": 30,
+    "lockAngleDegrees": 20,
+    "jumpRadius": 5,
+    "maxTargets": 4,
+    "damage": 10,
+    "damageFalloff": 0.8,
+    "stunTime": 0.8
+  }
+}

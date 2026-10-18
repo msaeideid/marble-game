@@ -8,7 +8,17 @@ import { carryScales, PropSystem, type PropEvent, type PropWire } from './props'
 import { applyDamage, regenHealth } from './health';
 import type { EnemyParams, HeroParams, PropParams } from './params';
 import { NEUTRAL_INTENT, type PlayerIntent, type Vec3 } from './types';
-import { pickRocketTarget, RocketSystem, traceLaser, type RocketEvent, type Target } from './weapons';
+import {
+  pickLockTarget,
+  RocketSystem,
+  StrikeSystem,
+  strikePoint,
+  traceChain,
+  traceLaser,
+  type RocketEvent,
+  type StrikeEvent,
+  type Target,
+} from './weapons';
 import type { World } from './world';
 
 /** Things that happened this tick. Views use them for effects; netcode will broadcast them. */
@@ -24,6 +34,8 @@ export type SimEvent =
   | { type: 'charge'; id: string; hits: string[] }
   | { type: 'laser'; owner: string; from: Vec3; to: Vec3; hit: string | null }
   | RocketEvent
+  | StrikeEvent
+  | { type: 'chain'; owner: string; points: Vec3[]; hits: string[] }
   | PropEvent;
 
 /** The authoritative-style game simulation. No rendering, DOM or engine imports. */
@@ -41,6 +53,8 @@ export class Sim {
   private readonly propDefs: Record<string, PropParams>;
   /** Homing rockets in flight; null for heroes without the rocket kit. */
   readonly rocketSystem: RocketSystem | null;
+  /** Storm strikes waiting to land; null for heroes without the storm kit. */
+  readonly strikeSystem: StrikeSystem | null;
 
   /** With `waves` on, the level's enemy spawns are (re)populated whenever the arena is cleared. */
   constructor(
@@ -51,6 +65,7 @@ export class Sim {
   ) {
     this.propDefs = opts.propDefs ?? {};
     this.rocketSystem = hero.rockets ? new RocketSystem(world, hero.rockets) : null;
+    this.strikeSystem = hero.tempest ? new StrikeSystem(hero.tempest) : null;
     this.propSystem =
       opts.props !== false && world.propSpawns.length > 0 && opts.propDefs ? new PropSystem(world, this.propDefs) : null;
   }
@@ -93,6 +108,8 @@ export class Sim {
       this.stepPlayerSnare(id, player, intent, dt);
       this.stepPlayerLaser(id, player, intent, dt);
       this.stepPlayerRockets(id, player, intent, dt);
+      this.stepPlayerChain(id, player, intent, dt);
+      this.stepPlayerStorm(id, player, intent, dt);
       regenHealth(player.health, this.hero.health, dt);
       player.invulnerable = Math.max(0, player.invulnerable - dt);
       this.applyBaseRegen(player, dt);
@@ -119,6 +136,7 @@ export class Sim {
     this.stepWaves(dt);
     this.stepProps(dt);
     this.stepRockets(dt);
+    this.stepStrikes(dt);
     this.tick++;
   }
 
@@ -249,9 +267,64 @@ export class Sim {
     player.rocketCooldown = p.cooldown;
     const hand = handPos(player, this.hero);
     const dir = aimDir(intent.yaw, intent.pitch);
-    const lock = pickRocketTarget(this.world, hand, dir, p, this.liveTargets());
+    const lock = pickLockTarget(this.world, hand, dir, p, this.liveTargets());
     const muzzle = { x: hand.x + dir.x * 0.8, y: hand.y + dir.y * 0.8, z: hand.z + dir.z * 0.8 };
     this.events.push(this.rocketSystem.launch(id, muzzle, dir, lock?.id ?? null));
+  }
+
+  /** Chain lightning: shock the enemy under the crosshair and the ones near it. No target, no cost. */
+  private stepPlayerChain(id: string, player: PlayerState, intent: PlayerIntent, dt: number): void {
+    player.chainCooldown = Math.max(0, player.chainCooldown - dt);
+    const p = this.hero.chain;
+    if (!p || !intent.chainPressed || player.chainCooldown > 0 || player.carrying) return;
+    const hand = handPos(player, this.hero);
+    const { hits } = traceChain(this.world, hand, aimDir(intent.yaw, intent.pitch), p, this.liveTargets());
+    if (hits.length === 0 || !trySpend(player, p.cost, this.hero.energy)) return;
+    player.chainCooldown = p.cooldown;
+    const points: Vec3[] = [hand];
+    hits.forEach((t, i) => {
+      points.push({ x: t.pos.x, y: t.pos.y + t.height / 2, z: t.pos.z });
+      const e = this.enemies.get(t.id);
+      if (!e) return;
+      this.damageEnemy(e, p.damage * p.damageFalloff ** i, id, { stagger: false });
+      this.stun(e, p.stunTime);
+    });
+    this.events.push({ type: 'chain', owner: id, points, hits: hits.map((t) => t.id) });
+  }
+
+  /** Storm strike: call lightning down on the spot you aim at (the sky does nothing). */
+  private stepPlayerStorm(id: string, player: PlayerState, intent: PlayerIntent, dt: number): void {
+    player.stormCooldown = Math.max(0, player.stormCooldown - dt);
+    const p = this.hero.tempest;
+    if (!p || !this.strikeSystem || !intent.stormPressed || player.stormCooldown > 0 || player.carrying) return;
+    const at = strikePoint(this.world, handPos(player, this.hero), aimDir(intent.yaw, intent.pitch), p);
+    if (!at || !trySpend(player, p.cost, this.hero.energy)) return;
+    player.stormCooldown = p.cooldown;
+    this.events.push(this.strikeSystem.call(id, at));
+  }
+
+  private stepStrikes(dt: number): void {
+    if (!this.strikeSystem) return;
+    this.events.push(
+      ...this.strikeSystem.step(dt, {
+        targets: () => this.liveTargets(),
+        shock: (eid, damage, stunTime, dirX, dirZ, knockback) => {
+          const e = this.enemies.get(eid);
+          if (!e) return;
+          e.vel.x += dirX * knockback;
+          e.vel.z += dirZ * knockback;
+          this.damageEnemy(e, damage, 'storm', { stagger: false });
+          this.stun(e, stunTime);
+        },
+      }),
+    );
+  }
+
+  /** Shock an enemy still: it cannot move or attack for `seconds`, even if it had poise. */
+  private stun(e: EnemyState, seconds: number): void {
+    if (e.defeatedTimer !== null) return;
+    e.aiTimer = e.aiState === 'stagger' ? Math.max(e.aiTimer, seconds) : seconds;
+    e.aiState = 'stagger';
   }
 
   private stepRockets(dt: number): void {

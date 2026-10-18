@@ -10,6 +10,8 @@ export class Hud {
   private readonly flightChip = document.getElementById('flight-chip') as HTMLElement;
   private readonly laserChip = document.getElementById('laser-chip') as HTMLElement;
   private readonly rocketChip = document.getElementById('rocket-chip') as HTMLElement;
+  private readonly chainChip = document.getElementById('chain-chip') as HTMLElement;
+  private readonly stormChip = document.getElementById('storm-chip') as HTMLElement;
   private readonly carryChip = document.getElementById('carry-chip') as HTMLElement;
   private readonly hurt = document.getElementById('hurt') as HTMLElement;
   private hurtTimer = 0;
@@ -51,6 +53,14 @@ export class Hud {
     this.laserChip.style.display = has.laser ? '' : 'none';
     this.rocketChip.style.display = has.rockets ? '' : 'none';
     this.rocketChip.classList.toggle('cooling', !rocketReady);
+  }
+
+  /** VOLTAGE's chips: chain lightning and storm strike, dim while they recharge. */
+  setStorm(has: { chain: boolean; tempest: boolean }, chainReady: boolean, stormReady: boolean): void {
+    this.chainChip.style.display = has.chain ? '' : 'none';
+    this.chainChip.classList.toggle('cooling', !chainReady);
+    this.stormChip.style.display = has.tempest ? '' : 'none';
+    this.stormChip.classList.toggle('cooling', !stormReady);
   }
 
   /** "Carrying: Car (E to throw)" while holding a prop; hidden otherwise. */

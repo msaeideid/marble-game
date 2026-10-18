@@ -1,0 +1,20 @@
+{
+  "id": "ability.gauntlets",
+  "kind": "melee",
+  "displayName": "Conductor gauntlets",
+  "melee": {
+    "cost": 0,
+    "range": 2.4,
+    "arcDegrees": 120,
+    "verticalReach": 2.4,
+    "windup": 0.14,
+    "recovery": 0.24,
+    "comboWindow": 0.65,
+    "inputBuffer": 0.25,
+    "steps": [
+      { "damage": 10, "knockback": 5 },
+      { "damage": 10, "knockback": 5 },
+      { "damage": 18, "knockback": 10 }
+    ]
+  }
+}

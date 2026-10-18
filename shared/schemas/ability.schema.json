@@ -22,7 +22,9 @@
         "lift",
         "flight",
         "laser",
-        "rockets"
+        "rockets",
+        "chain",
+        "tempest"
       ]
     },
     "displayName": {
@@ -55,6 +57,12 @@
     },
     "rockets": {
       "$ref": "#/definitions/rockets"
+    },
+    "chain": {
+      "$ref": "#/definitions/chain"
+    },
+    "tempest": {
+      "$ref": "#/definitions/tempest"
     }
   },
   "allOf": [
@@ -110,6 +118,16 @@
             {
               "required": [
                 "rockets"
+              ]
+            },
+            {
+              "required": [
+                "chain"
+              ]
+            },
+            {
+              "required": [
+                "tempest"
               ]
             }
           ]
@@ -169,6 +187,16 @@
               "required": [
                 "rockets"
               ]
+            },
+            {
+              "required": [
+                "chain"
+              ]
+            },
+            {
+              "required": [
+                "tempest"
+              ]
             }
           ]
         }
@@ -226,6 +254,16 @@
             {
               "required": [
                 "rockets"
+              ]
+            },
+            {
+              "required": [
+                "chain"
+              ]
+            },
+            {
+              "required": [
+                "tempest"
               ]
             }
           ]
@@ -285,6 +323,16 @@
               "required": [
                 "rockets"
               ]
+            },
+            {
+              "required": [
+                "chain"
+              ]
+            },
+            {
+              "required": [
+                "tempest"
+              ]
             }
           ]
         }
@@ -342,6 +390,16 @@
             {
               "required": [
                 "rockets"
+              ]
+            },
+            {
+              "required": [
+                "chain"
+              ]
+            },
+            {
+              "required": [
+                "tempest"
               ]
             }
           ]
@@ -401,6 +459,16 @@
               "required": [
                 "rockets"
               ]
+            },
+            {
+              "required": [
+                "chain"
+              ]
+            },
+            {
+              "required": [
+                "tempest"
+              ]
             }
           ]
         }
@@ -458,6 +526,16 @@
             {
               "required": [
                 "rockets"
+              ]
+            },
+            {
+              "required": [
+                "chain"
+              ]
+            },
+            {
+              "required": [
+                "tempest"
               ]
             }
           ]
@@ -517,6 +595,16 @@
               "required": [
                 "rockets"
               ]
+            },
+            {
+              "required": [
+                "chain"
+              ]
+            },
+            {
+              "required": [
+                "tempest"
+              ]
             }
           ]
         }
@@ -574,6 +662,152 @@
             {
               "required": [
                 "laser"
+              ]
+            },
+            {
+              "required": [
+                "chain"
+              ]
+            },
+            {
+              "required": [
+                "tempest"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "chain"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "chain"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "swing"
+              ]
+            },
+            {
+              "required": [
+                "zip"
+              ]
+            },
+            {
+              "required": [
+                "melee"
+              ]
+            },
+            {
+              "required": [
+                "snare"
+              ]
+            },
+            {
+              "required": [
+                "charge"
+              ]
+            },
+            {
+              "required": [
+                "lift"
+              ]
+            },
+            {
+              "required": [
+                "flight"
+              ]
+            },
+            {
+              "required": [
+                "laser"
+              ]
+            },
+            {
+              "required": [
+                "rockets"
+              ]
+            },
+            {
+              "required": [
+                "tempest"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "tempest"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "tempest"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "swing"
+              ]
+            },
+            {
+              "required": [
+                "zip"
+              ]
+            },
+            {
+              "required": [
+                "melee"
+              ]
+            },
+            {
+              "required": [
+                "snare"
+              ]
+            },
+            {
+              "required": [
+                "charge"
+              ]
+            },
+            {
+              "required": [
+                "lift"
+              ]
+            },
+            {
+              "required": [
+                "flight"
+              ]
+            },
+            {
+              "required": [
+                "laser"
+              ]
+            },
+            {
+              "required": [
+                "rockets"
+              ]
+            },
+            {
+              "required": [
+                "chain"
               ]
             }
           ]
@@ -952,6 +1186,93 @@
           "type": "number",
           "minimum": 0,
           "maximum": 1
+        },
+        "knockback": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        }
+      }
+    },
+    "chain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cost",
+        "cooldown",
+        "range",
+        "lockAngleDegrees",
+        "jumpRadius",
+        "maxTargets",
+        "damage",
+        "damageFalloff",
+        "stunTime"
+      ],
+      "properties": {
+        "cost": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "cooldown": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "range": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "lockAngleDegrees": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "jumpRadius": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "maxTargets": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "damage": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "damageFalloff": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "stunTime": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        }
+      }
+    },
+    "tempest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cost",
+        "cooldown",
+        "range",
+        "delay",
+        "radius",
+        "damage",
+        "stunTime",
+        "knockback"
+      ],
+      "properties": {
+        "cost": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "cooldown": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "range": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "delay": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "radius": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "damage": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "stunTime": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
         },
         "knockback": {
           "$ref": "common.schema.json#/$defs/nonNegative"

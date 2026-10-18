@@ -1,0 +1,14 @@
+{
+  "id": "ability.stormflight",
+  "kind": "flight",
+  "displayName": "Storm glide",
+  "flight": {
+    "startCost": 5,
+    "hoverDrainPerSecond": 4,
+    "climbDrainPerSecond": 5,
+    "speed": 8.5,
+    "accel": 12,
+    "climbSpeed": 5.5,
+    "descendSpeed": 9
+  }
+}

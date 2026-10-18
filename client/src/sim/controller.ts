@@ -63,6 +63,10 @@ export interface PlayerState {
   laserCooldown: number;
   /** Seconds until the next rocket. */
   rocketCooldown: number;
+  /** Seconds until the next chain lightning. */
+  chainCooldown: number;
+  /** Seconds until the next storm strike. */
+  stormCooldown: number;
   health: HealthState;
   /** Seconds until respawn while defeated, otherwise null. */
   defeatedTimer: number | null;
@@ -95,6 +99,8 @@ export function createPlayerState(spawn: Vec3, hero: HeroParams): PlayerState {
     flying: false,
     laserCooldown: 0,
     rocketCooldown: 0,
+    chainCooldown: 0,
+    stormCooldown: 0,
     health: createHealth(hero.health),
     defeatedTimer: null,
     melee: createMelee(),

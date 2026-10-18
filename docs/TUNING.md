@@ -29,6 +29,9 @@ schemas, so a typo is caught immediately.
 | METALHEAD laser | `abilities/laser.json` -> `damage`, `fireInterval`, `shotCost`, `aimAssist` | dps = damage / fireInterval; never staggers |
 | METALHEAD rockets | `abilities/rockets.json` -> `damage`, `splashRadius`, `turnRate`, `lockAngleDegrees`, `cost`, `cooldown` | wider lock cone = more forgiving |
 | METALHEAD fragility | `heroes/flyer.json` -> `health`, `energy` | the design rule: fragile, weak melee, shared energy |
+| VOLTAGE chain lightning | `abilities/chain.json` -> `stunTime`, `jumpRadius`, `maxTargets`, `damage`, `cooldown`, `cost` | stun is the effect; damage stays low |
+| VOLTAGE storm strike | `abilities/tempest.json` -> `radius`, `delay`, `damage`, `stunTime`, `cooldown`, `cost` | longer `delay` = easier to dodge |
+| VOLTAGE glide | `abilities/stormflight.json` | same fields as METALHEAD's `flight.json` |
 | Prop weight / throw | `props/<type>.json` -> `carrySlow`, `throwSpeed`, `throwDamage`, `throwKnockback`, `breakPower`, `hp`, `respawnTime` | `carrySlow` 1 = no slowdown |
 | Lift reach / cooldown | `abilities/lift.json` -> `liftRange`, `cooldown`, `strength` | `strength` scales every throw speed |
 | Where props are | `levels/arena.json` -> `props` | type + position; they respawn there |

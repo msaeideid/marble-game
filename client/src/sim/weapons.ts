@@ -1,4 +1,4 @@
-import type { LaserParams, RocketParams } from './params';
+import type { ChainParams, LaserParams, RocketParams, TempestParams } from './params';
 import type { Vec3 } from './types';
 import type { World } from './world';
 
@@ -49,14 +49,14 @@ export function traceLaser(
 }
 
 /**
- * The enemy a rocket fired now would chase: the one closest to the crosshair direction, within the lock angle and
+ * The enemy a lock-on weapon (rockets, chain lightning) fired now would pick: the one closest to the crosshair direction, within the lock angle and
  * range, with a clear line of sight. `dir` must be a unit vector.
  */
-export function pickRocketTarget<T extends Target>(
+export function pickLockTarget<T extends Target>(
   world: World,
   origin: Vec3,
   dir: Vec3,
-  p: RocketParams,
+  p: { lockRange: number; lockAngleDegrees: number },
   targets: Iterable<T>,
 ): T | null {
   const minCos = Math.cos((p.lockAngleDegrees * Math.PI) / 180);
@@ -232,4 +232,108 @@ function touches(t: Target, x: number, y: number, z: number, radius: number): bo
     y >= t.pos.y - radius &&
     y <= t.pos.y + t.height + radius
   );
+}
+
+export interface ChainResult {
+  /** Enemies struck, in order: the locked one first, then each jump. */
+  hits: Target[];
+}
+
+/**
+ * Chain lightning: the enemy nearest the crosshair (see `pickLockTarget`), then up to `maxTargets - 1` jumps, each to
+ * the nearest not-yet-hit enemy within `jumpRadius` of the last one that is not behind a wall.
+ */
+export function traceChain(
+  world: World,
+  origin: Vec3,
+  dir: Vec3,
+  p: ChainParams,
+  targets: readonly Target[],
+): ChainResult {
+  const first = pickLockTarget(world, origin, dir, { lockRange: p.range, lockAngleDegrees: p.lockAngleDegrees }, targets);
+  if (!first) return { hits: [] };
+  const hits: Target[] = [first];
+  while (hits.length < p.maxTargets) {
+    const from = centre(hits[hits.length - 1]!);
+    let best: Target | null = null;
+    let bestD = p.jumpRadius;
+    for (const t of targets) {
+      if (hits.includes(t)) continue;
+      const m = centre(t);
+      const d = Math.hypot(m.x - from.x, m.y - from.y, m.z - from.z);
+      if (d >= bestD) continue;
+      const wall = world.raycast(from, { x: (m.x - from.x) / d, y: (m.y - from.y) / d, z: (m.z - from.z) / d }, d);
+      if (wall && wall.distance < d - 0.3) continue;
+      best = t;
+      bestD = d;
+    }
+    if (!best) break;
+    hits.push(best);
+  }
+  return { hits };
+}
+
+export interface StrikeState {
+  id: number;
+  owner: string;
+  pos: Vec3;
+  /** Seconds until it lands. */
+  timer: number;
+}
+
+export type StrikeEvent =
+  | { type: 'strikeStart'; id: number; owner: string; pos: Vec3; radius: number; delay: number }
+  | { type: 'strikeHit'; id: number; owner: string; pos: Vec3; radius: number; hits: string[] };
+
+export interface StrikeHooks {
+  targets(): Iterable<Target>;
+  /** Apply damage, a stun and a shove (horizontal direction and strength) to one enemy. */
+  shock(id: string, damage: number, stunTime: number, dirX: number, dirZ: number, knockback: number): void;
+}
+
+/** Where a storm strike aimed along `dir` from `origin` would land: the first surface hit within range, or null (sky). */
+export function strikePoint(world: World, origin: Vec3, dir: Vec3, p: TempestParams): Vec3 | null {
+  const hit = world.raycast(origin, dir, p.range);
+  return hit ? { ...hit.point } : null;
+}
+
+/** Storm strikes that have been called and are waiting to land. */
+export class StrikeSystem {
+  readonly strikes: StrikeState[] = [];
+  private nextId = 1;
+
+  constructor(readonly params: TempestParams) {}
+
+  call(owner: string, pos: Vec3): StrikeEvent {
+    const s: StrikeState = { id: this.nextId++, owner, pos: { ...pos }, timer: this.params.delay };
+    this.strikes.push(s);
+    return { type: 'strikeStart', id: s.id, owner, pos: { ...pos }, radius: this.params.radius, delay: this.params.delay };
+  }
+
+  step(dt: number, hooks: StrikeHooks): StrikeEvent[] {
+    const events: StrikeEvent[] = [];
+    const p = this.params;
+    const targets = [...hooks.targets()];
+    const waiting: StrikeState[] = [];
+    for (const s of this.strikes) {
+      s.timer -= dt;
+      if (s.timer > 0) {
+        waiting.push(s);
+        continue;
+      }
+      const hits: string[] = [];
+      for (const t of targets) {
+        const dx = t.pos.x - s.pos.x;
+        const dz = t.pos.z - s.pos.z;
+        const flat = Math.hypot(dx, dz);
+        if (flat > p.radius + t.halfWidth || t.pos.y < s.pos.y - 1.2 || t.pos.y > s.pos.y + 3) continue;
+        hits.push(t.id);
+        hooks.shock(t.id, p.damage, p.stunTime, flat > 1e-6 ? dx / flat : 0, flat > 1e-6 ? dz / flat : 1, p.knockback);
+      }
+      events.push({ type: 'strikeHit', id: s.id, owner: s.owner, pos: s.pos, radius: p.radius, hits });
+    }
+    this.strikes.length = 0;
+    this.strikes.push(...waiting);
+    return events;
+  }
 }

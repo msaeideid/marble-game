@@ -131,6 +131,37 @@ export interface RocketParams {
   knockback: number;
 }
 
+/** Chain lightning: a bolt to the enemy nearest the crosshair that jumps to nearby enemies, shocking each (crowd control). */
+export interface ChainParams {
+  cost: number;
+  cooldown: number;
+  range: number;
+  /** An enemy this close to the crosshair direction (degrees) can be the first target. */
+  lockAngleDegrees: number;
+  /** How far (m) the bolt can jump from one enemy to the next. */
+  jumpRadius: number;
+  /** Most enemies one bolt can hit. */
+  maxTargets: number;
+  /** Damage to the first enemy; each jump multiplies it by `damageFalloff`. */
+  damage: number;
+  damageFalloff: number;
+  /** Seconds each shocked enemy is stunned (cannot move or attack). */
+  stunTime: number;
+}
+
+/** A storm strike: lightning called down on the ground where you aim, after a visible delay. */
+export interface TempestParams {
+  cost: number;
+  cooldown: number;
+  range: number;
+  /** Seconds between calling the strike and it landing (a warning ring shows where). */
+  delay: number;
+  radius: number;
+  damage: number;
+  stunTime: number;
+  knockback: number;
+}
+
 /** A liftable, throwable world object (car, crate, dumpster). Loaded from shared/data/props. */
 export interface PropParams {
   id: string;
@@ -228,4 +259,6 @@ export interface HeroParams {
   flight?: FlightParams;
   laser?: LaserParams;
   rockets?: RocketParams;
+  chain?: ChainParams;
+  tempest?: TempestParams;
 }

@@ -36,10 +36,11 @@ interface VanguardHook {
     >;
     enemies: Map<
       string,
-      { id: string; pos: { x: number; z: number }; defeatedTimer: number | null; snaredTimer: number; health: { core: number; shield: number } }
+      { id: string; pos: { x: number; z: number }; defeatedTimer: number | null; snaredTimer: number; aiState: string; health: { core: number; shield: number } }
     >;
-    spawnEnemy(type: string, pos: { x: number; y: number; z: number }): { id: string; snaredTimer: number; health: { core: number; shield: number }; defeatedTimer: number | null };
+    spawnEnemy(type: string, pos: { x: number; y: number; z: number }): { id: string; snaredTimer: number; aiState: string; health: { core: number; shield: number }; defeatedTimer: number | null };
     rocketSystem: { rockets: { id: number }[] } | null;
+    strikeSystem: { strikes: { id: number }[] } | null;
   };
   view: {
     engine: { getRenderingCanvas(): HTMLCanvasElement };

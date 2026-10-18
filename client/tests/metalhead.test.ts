@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { getHero } from '../src/data';
 import type { Sim, SimEvent } from '../src/sim/sim';
 import { Sim as SimClass } from '../src/sim/sim';
-import { pickRocketTarget, traceLaser } from '../src/sim/weapons';
+import { pickLockTarget, traceLaser } from '../src/sim/weapons';
 import { World, type LevelData } from '../src/sim/world';
 import { content, DT, hero as ziplash, intent, run } from './helpers';
 
@@ -338,8 +338,8 @@ describe('homing rockets', () => {
     const b = { id: 'b', pos: { x: -4, y: 0, z: 15 }, halfWidth: 0.4, height: 1.8 };
     const origin = { x: 0, y: 1.5, z: 0 };
     const dir = { x: 0, y: 0, z: 1 };
-    expect(pickRocketTarget(open, origin, dir, rockets, [b, a])?.id).toBe('a');
-    expect(pickRocketTarget(walled, origin, dir, rockets, [a, b])).toBeNull();
-    expect(pickRocketTarget(open, origin, { x: 1, y: 0, z: 0 }, rockets, [a, b])).toBeNull();
+    expect(pickLockTarget(open, origin, dir, rockets, [b, a])?.id).toBe('a');
+    expect(pickLockTarget(walled, origin, dir, rockets, [a, b])).toBeNull();
+    expect(pickLockTarget(open, origin, { x: 1, y: 0, z: 0 }, rockets, [a, b])).toBeNull();
   });
 });

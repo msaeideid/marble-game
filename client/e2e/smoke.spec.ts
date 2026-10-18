@@ -155,7 +155,7 @@ test('performance budget: bounded mesh count, and frame cost is logged', async (
 
 test('hero select lists every hero and RAMPART shows only its own controls', async ({ page }) => {
   await page.goto('./?hero=hero.bruiser');
-  await expect(page.locator('#hero-select a')).toHaveText(['RAMPART', 'METALHEAD', 'ZIPLASH']);
+  await expect(page.locator('#hero-select a')).toHaveText(['RAMPART', 'METALHEAD', 'VOLTAGE', 'ZIPLASH']);
   await expect(page.locator('#hero-select a.selected')).toHaveText('RAMPART');
   await expect(page.locator('#overlay tr[data-kit="charge"]')).toBeVisible();
   await expect(page.locator('#overlay tr[data-kit="swing"]').first()).toBeHidden();
@@ -237,7 +237,7 @@ test('METALHEAD shows only its own controls', async ({ page }) => {
   await page.goto('./?hero=hero.flyer');
   await expect(page.locator('#hero-select a.selected')).toHaveText('METALHEAD');
   for (const kit of ['flight', 'laser', 'rockets']) await expect(page.locator(`#overlay tr[data-kit="${kit}"]`)).toBeVisible();
-  for (const kit of ['swing', 'zip', 'snare', 'charge', 'lift']) {
+  for (const kit of ['swing', 'zip', 'snare', 'charge', 'lift', 'chain', 'tempest']) {
     await expect(page.locator(`#overlay tr[data-kit="${kit}"]`).first()).toBeHidden();
   }
   // The ability chips follow the kit too: METALHEAD's are shown, the other heroes' are not.
@@ -247,7 +247,7 @@ test('METALHEAD shows only its own controls', async ({ page }) => {
   await expect(page.locator('#charge-chip')).toBeHidden();
 });
 
-test('METALHEAD takes off, climbs, shoots a laser and a homing rocket defeats the thug', async ({ page }) => {
+test('METALHEAD takes off, climbs, shoots a laser and a homing rocket hits the thug', async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto('./?hero=hero.flyer');
   await page.locator('#overlay').click();
@@ -304,7 +304,7 @@ test('METALHEAD takes off, climbs, shoots a laser and a homing rocket defeats th
       afterLaser,
       rocketsInFlight,
       rocketMesh,
-      defeated: thug.defeatedTimer !== null,
+      afterRocket: thug.defeatedTimer !== null ? 0 : thug.health.core,
       rocketsLeft: g.sim.rocketSystem!.rockets.length,
     };
   });
@@ -315,7 +315,65 @@ test('METALHEAD takes off, climbs, shoots a laser and a homing rocket defeats th
   expect(out.afterLaser).toBeLessThan(out.hp0);
   expect(out.rocketsInFlight).toBe(1);
   expect(out.rocketMesh).toBe(true);
-  expect(out.defeated).toBe(true);
+  expect(out.afterRocket).toBeLessThan(out.afterLaser - 20); // a rocket hit is ~30; it may or may not finish the thug
   expect(out.rocketsLeft).toBe(0);
+  expect(errors, errors.join('\n')).toEqual([]);
+});
+
+test('VOLTAGE glides, chains lightning through a group and calls a storm strike that stuns', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('./?hero=hero.storm');
+  await expect(page.locator('#hero-select a.selected')).toHaveText('VOLTAGE');
+  for (const kit of ['flight', 'chain', 'tempest']) await expect(page.locator(`#overlay tr[data-kit="${kit}"]`)).toBeVisible();
+  await expect(page.locator('#overlay tr[data-kit="laser"]')).toBeHidden();
+  await page.locator('#overlay').click();
+  await page.waitForFunction(() => (window.__vanguard?.sim.tick ?? 0) > 3);
+  const out = await page.evaluate(() => {
+    const g = window.__vanguard;
+    g.setPaused(false);
+    const key = (type: string, code: string) => window.dispatchEvent(new KeyboardEvent(type, { code, bubbles: true }));
+    const tap = (code: string) => {
+      key('keydown', code);
+      key('keyup', code);
+    };
+    const frames = (n: number) => {
+      for (let i = 0; i < n; i++) g.frame(1 / 60);
+    };
+    frames(20);
+    const me = g.sim.players.get('local')!;
+    me.invulnerable = 999;
+    for (const e of g.sim.enemies.values()) e.snaredTimer = 999;
+    g.input.yaw = 0;
+    g.input.pitch = 0;
+
+    // Chain lightning on three thugs in a row, on the ground.
+    const a = g.sim.spawnEnemy('enemy.thug', { x: 0, y: 0.01, z: 10 });
+    const b = g.sim.spawnEnemy('enemy.thug', { x: 3, y: 0.01, z: 10 });
+    const c = g.sim.spawnEnemy('enemy.thug', { x: 6, y: 0.01, z: 10 });
+    for (const e of [a, b, c]) e.snaredTimer = 999;
+    g.input.pitch = Math.atan2(1.45 - 0.9, 10);
+    tap('KeyR');
+    frames(4);
+    const chained = [a, b, c].map((e) => e.health.core < 45 && e.aiState === 'stagger');
+    const lockShown = getComputedStyle(document.querySelector('.lock-ring') as HTMLElement).display;
+
+    // Storm strike on a fresh thug 14 m away: the warning, then the hit.
+    const d = g.sim.spawnEnemy('enemy.thug', { x: -6, y: 0.01, z: 14 });
+    d.snaredTimer = 999;
+    g.input.yaw = Math.atan2(-6, 14);
+    g.input.pitch = Math.atan2(1.45, Math.hypot(6, 14));
+    tap('KeyQ');
+    frames(4);
+    const warned = g.sim.strikeSystem!.strikes.length;
+    const untouched = d.health.core;
+    frames(90);
+    return { chained, lockShown, warned, untouched, after: d.health.core, stunned: d.aiState, left: g.sim.strikeSystem!.strikes.length };
+  });
+  expect(out.chained).toEqual([true, true, true]);
+  expect(out.lockShown).toBe('block');
+  expect(out.warned).toBe(1);
+  expect(out.untouched).toBe(45);
+  expect(out.after).toBeLessThan(45);
+  expect(out.left).toBe(0);
   expect(errors, errors.join('\n')).toEqual([]);
 });

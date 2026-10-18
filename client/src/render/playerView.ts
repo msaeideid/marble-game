@@ -36,10 +36,11 @@ export class PlayerView {
     halfWidth: number,
     private readonly handHeight: number,
     color?: Color3,
-    style = 'default',
+    private readonly style = 'default',
   ) {
     const flyer = style === 'hero.flyer';
-    color ??= flyer ? new Color3(0.62, 0.7, 0.82) : new Color3(0.2, 0.75, 0.9);
+    const storm = style === 'hero.storm';
+    color ??= flyer ? new Color3(0.62, 0.7, 0.82) : storm ? new Color3(0.5, 0.35, 0.85) : new Color3(0.2, 0.75, 0.9);
     this.body = CreateCapsule('hero-body', { height, radius: halfWidth }, scene);
     this.body.material = flat(scene, 'hero', color);
 
@@ -48,6 +49,30 @@ export class PlayerView {
     nose.parent = this.body;
     nose.position.set(0, this.height * 0.2, halfWidth + 0.1);
 
+    if (storm) {
+      // Conductor gauntlets: glowing yellow fists, a bright chest bolt, and a hover glow while gliding.
+      const glowMat = flat(scene, 'hero-gauntlet', new Color3(1, 0.9, 0.3));
+      glowMat.emissiveColor = new Color3(1, 0.9, 0.3);
+      for (const dx of [-1, 1]) {
+        const fist = CreateSphere('hero-gauntlet', { diameter: 0.42, segments: 6 }, scene);
+        fist.material = glowMat;
+        fist.parent = this.body;
+        fist.position.set(dx * (halfWidth + 0.18), this.height * 0.02, 0.12);
+      }
+      const bolt = CreateBox('hero-emblem', { width: 0.22, height: 0.4, depth: 0.06 }, scene);
+      bolt.material = glowMat;
+      bolt.parent = this.body;
+      bolt.position.set(0, this.height * 0.08, halfWidth + 0.02);
+      const halo = CreateCylinder('hero-halo', { height: 0.05, diameter: 1.5, tessellation: 20 }, scene);
+      const haloMat = flat(scene, 'hero-halo', new Color3(0.9, 0.95, 0.4));
+      haloMat.emissiveColor = new Color3(0.9, 0.95, 0.4);
+      haloMat.alpha = 0.5;
+      halo.material = haloMat;
+      halo.parent = this.body;
+      halo.position.set(0, -this.height / 2 + 0.02, 0);
+      halo.isVisible = false;
+      this.flames.push(halo);
+    }
     if (flyer) {
       const visor = CreateBox('hero-visor', { width: 0.52, height: 0.14, depth: 0.12 }, scene);
       visor.material = flat(scene, 'hero-visor', new Color3(0.08, 0.12, 0.25));
@@ -94,7 +119,8 @@ export class PlayerView {
       this.body.rotation.x += (lean - this.body.rotation.x) * 0.25;
       for (const [i, f] of this.flames.entries()) {
         f.isVisible = state.flying;
-        f.scaling.y = 0.8 + 0.4 * Math.abs(Math.sin(clock * 38 + i * 1.7));
+        if (this.style === 'hero.storm') f.scaling.setAll(0.9 + 0.15 * Math.sin(clock * 14));
+        else f.scaling.y = 0.8 + 0.4 * Math.abs(Math.sin(clock * 38 + i * 1.7));
       }
     }
     // Blink while spawn-protected; hide while down.

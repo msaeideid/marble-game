@@ -419,6 +419,31 @@ function definitions(): Omit<Scenario, 'expected'>[] {
         { ticks: 20, intent: { moveZ: 1 } },
       ],
     },
+    // ---- VOLTAGE (hero.storm): the same flight kit with slower, cheaper numbers ----
+    {
+      ...base,
+      hero: 'hero.storm',
+      name: 'voltage_glide_takeoff_hover_cruise_and_land',
+      start: at(0, 0.01, 0),
+      segments: [
+        settle,
+        { ticks: 1, intent: { jumpPressed: true, jumpHeld: true } },
+        { ticks: 6, intent: {} },
+        { ticks: 1, intent: { jumpPressed: true, jumpHeld: true } },
+        { ticks: 40, intent: { jumpHeld: true } },
+        { ticks: 40, intent: {} },
+        { ticks: 80, intent: { moveZ: 1, yaw: 0.6 } },
+        { ticks: 120, intent: { descendHeld: true } },
+        { ticks: 40, intent: { moveZ: 1 } },
+      ],
+    },
+    ...[1616, 1717].map((seed, i) => ({
+      ...base,
+      hero: 'hero.storm',
+      name: `voltage_chaos_seed_${seed}`,
+      start: at([4, -3][i]!, 0.01, [-5, 7][i]!),
+      segments: [settle, ...flyerChaos(seed, 900)],
+    })),
     ...[1212, 1313, 1414, 1515].map((seed, i) => ({
       ...base,
       hero: 'hero.flyer',

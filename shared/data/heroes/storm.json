@@ -1,0 +1,25 @@
+{
+  "id": "hero.storm",
+  "displayName": "VOLTAGE",
+  "movement": {
+    "runSpeed": 8,
+    "groundAccel": 50,
+    "airAccel": 16,
+    "gravity": 28,
+    "jumpSpeed": 9.5,
+    "maxFallSpeed": 50,
+    "coyoteTime": 0.1,
+    "jumpBufferTime": 0.1,
+    "halfWidth": 0.4,
+    "height": 1.85,
+    "handHeight": 1.45
+  },
+  "energy": { "max": 100, "regenPerSecond": 11, "regenDelay": 1.2 },
+  "health": {
+    "shield": { "max": 40, "regenPerSecond": 12, "regenDelay": 3 },
+    "core": { "max": 70, "regenPerSecond": 1, "regenDelay": 8 }
+  },
+  "respawnDelay": 3,
+  "respawnInvulnerable": 2,
+  "abilities": ["ability.gauntlets", "ability.stormflight", "ability.chain", "ability.tempest"]
+}

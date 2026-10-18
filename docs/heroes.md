@@ -1,4 +1,4 @@
-# Heroes, ability kits, RAMPART, METALHEAD, charge, flight and breakable walls
+# Heroes, ability kits, RAMPART, METALHEAD, VOLTAGE, charge, flight and breakable walls
 
 ## Hero framework
 A hero is data, not code: `shared/data/heroes/<hero>.json` lists movement, energy, health and **which abilities it has**
@@ -14,6 +14,8 @@ A hero is data, not code: `shared/data/heroes/<hero>.json` lists movement, energ
 | `flight` | jet flight: no gravity, climb and descend with buttons, drains energy | METALHEAD |
 | `laser` | hold to fire hitscan bolts, each costing a little energy | METALHEAD |
 | `rockets` | homing rocket that locks the enemy nearest the crosshair and bursts | METALHEAD |
+| `chain` | lightning to the enemy under the crosshair that jumps to nearby enemies, shocking each | VOLTAGE |
+| `tempest` | storm strike: lightning lands on the spot you aim at after a visible delay | VOLTAGE |
 
 `resolveHero()` (TS) and `load_hero()` (Python) flatten a hero plus its abilities into one params object. Kits a hero
 does not have are simply absent, and the sim skips them: pressing swing as RAMPART does nothing and costs nothing, and
@@ -23,7 +25,7 @@ ZIPLASH ignores the charge button. Adding a hero is mostly a new JSON file plus 
 the rows that hero has. Online, the page's hero is sent to the server (`&hero=` on the WebSocket URL) and each player is
 drawn with their own hero.
 
-Display names (ZIPLASH, RAMPART, METALHEAD) live in the hero files; internal ids (`hero.swinger`, `hero.bruiser`) never change.
+Display names (ZIPLASH, RAMPART, METALHEAD, VOLTAGE) live in the hero files; internal ids (`hero.swinger`, `hero.bruiser`) never change.
 
 ## RAMPART (`hero.bruiser`) - the powerhouse
 Standout strength: toughness and force. Weakness: slow, short jump, no flight or swing, so ranged enemies and tall
@@ -115,6 +117,39 @@ fire. Rockets do not break walls (that stays RAMPART's job).
 Weapons are in `client/src/sim/weapons.ts` (`traceLaser`, `pickRocketTarget`, `RocketSystem`) and the Sim wires them up
 next to melee and snare.
 
+## VOLTAGE (`hero.storm`) - the storm-caller
+Standout strength: **crowd control**. Weakness: almost no single-target damage, and a slower, shorter glide than
+METALHEAD. It makes a group easy for the team to finish rather than finishing it itself.
+
+| | ZIPLASH | RAMPART | METALHEAD | VOLTAGE |
+|---|---|---|---|---|
+| Run speed | 9 | 7 | 7.5 | 8 |
+| Shield + core | 40 + 60 | 60 + 110 | 30 + 50 | 40 + 70 |
+| Melee combo | 36 | 60 | 30 | 38 (conductor gauntlets) |
+| Flight | none | none | 11 m/s, climbs 7, hovers 7 energy/s | **8.5 m/s, climbs 5.5, hovers 4 energy/s** |
+| Special | swing, zip, snare | charge, lift | laser, rockets | **chain lightning, storm strike** |
+
+It uses the same `flight` kit as METALHEAD with different numbers (`abilities/stormflight.json`), which is the point of
+the data-driven kits: a new flyer is a JSON file.
+
+### Chain lightning (`ability.chain`, `R` or right-mouse, gamepad Y)
+Picks the enemy closest to the crosshair (red lock ring, within 20 degrees and 30 m, clear line of sight), then jumps to
+the nearest unhit enemy within 5 m of the last, up to 4 in all, never through walls. Each is hit for 10 damage, then x0.8
+per jump, and **stunned for 0.8 s** (cannot move or attack, poise does not help). 16 energy, 1.8 s cooldown. With no
+target it does nothing and costs nothing.
+
+### Storm strike (`ability.tempest`, `Q`, gamepad B)
+A yellow ring on the ground shows where it would land (dimmer while it is recharging). Pressing Q calls it: after a
+**0.9 s warning** (the ring fills up) lightning hits everything within 2.5 m: 28 damage and a **1.5 s stun**. Enemies
+can walk out of the ring during the warning. 30 energy, 8 s cooldown. Aimed at the sky it does nothing.
+
+Neither power staggers through damage: the stun is the effect. A thug (45) survives any one of them, and a stunned thug
+is free damage for a teammate (RAMPART's combo, METALHEAD's laser). Solo, VOLTAGE is slower going and has to use the
+melee gauntlets.
+
+Code: `traceChain`, `StrikeSystem` and `strikePoint` in `client/src/sim/weapons.ts`; the Sim wires them up next to the
+other combat. They are solo-only like all combat (`chainPressed` and `stormPressed` are not sent online).
+
 ## Networking
 Charging changes movement and the world, so it follows the project rule (decision D1): **any mechanic that changes the
 authoritative state is ported to Python with conformance scenarios**.
@@ -135,7 +170,9 @@ authoritative state is ported to Python with conformance scenarios**.
   running out of fuel, flying into a tower, 4 random runs) agree between TypeScript and Python. Other players see the
   jet flames from the `flying` flag. The laser and rockets are weapons, so like all combat they are **offline-only until
   combat is networked** (`fireHeld` and `rocketPressed` are not sent).
-- Combat (melee, snare, laser, rockets, enemy hits, a charge's or a thrown prop's damage to enemies) is still solo-only. When it is networked, those get
+- VOLTAGE's glide uses the same ported flight kit; 3 more scenarios cover it (40 in total). Its lightning is combat and
+  stays offline for now.
+- Combat (melee, snare, laser, rockets, chain lightning, storm strike, enemy hits, a charge's or a thrown prop's damage to enemies) is still solo-only. When it is networked, those get
   their Python ports too.
 
 ## Tuning (`abilities/charge.json`, `heroes/bruiser.json`, `abilities/smash.json`, and for METALHEAD `heroes/flyer.json`, `abilities/flight.json`, `laser.json`, `rockets.json`)
@@ -152,3 +189,8 @@ authoritative state is ported to Python with conformance scenarios**.
 | Laser dps / energy | `laser.damage`, `fireInterval`, `shotCost`, `aimAssist` (dps = damage / fireInterval) |
 | Rocket power | `rockets.damage`, `splashRadius`, `edgeFalloff`, `knockback`, `cost`, `cooldown` |
 | Rocket homing | `rockets.turnRate`, `lockAngleDegrees` (a bigger cone is more forgiving), `lockRange`, `speed` |
+| Chain reach / size | `chain.jumpRadius`, `maxTargets`, `lockAngleDegrees`, `range` |
+| Chain stun / damage | `chain.stunTime`, `damage`, `damageFalloff` |
+| Storm strike power | `tempest.radius`, `damage`, `stunTime`, `cooldown`, `cost` |
+| Storm strike warning | `tempest.delay` (longer = easier to dodge) |
+| VOLTAGE glide | `abilities/stormflight.json` (same fields as METALHEAD's flight) |

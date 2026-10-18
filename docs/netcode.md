@@ -72,7 +72,8 @@ thing (28 scenarios, props included). Each lift and throw causes one small corre
 ## Update: METALHEAD's flight
 Jet flight is movement, so it follows the rule: `flying` is in `PlayerWire`, the climb/descend buttons (`jumpHeld`,
 `descendHeld`) are in the networked intent and the server's input sanitiser, and 9 METALHEAD scenarios (37 in total)
-agree between TypeScript and Python. The laser and rockets are weapons and stay solo-only until combat is networked.
+agree between TypeScript and Python (3 more for VOLTAGE's glide: 40 in total). The laser, rockets and lightning are weapons and stay
+solo-only until combat is networked.
 
 ## Known limits / next steps
 - Movement only. Combat, enemies, health and waves are solo-only for now.

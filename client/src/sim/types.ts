@@ -58,6 +58,10 @@ export interface PlayerIntent {
   fireHeld: boolean;
   /** True only on the tick the rocket button went down. */
   rocketPressed: boolean;
+  /** True only on the tick the chain lightning button went down. */
+  chainPressed: boolean;
+  /** True only on the tick the storm strike button went down. */
+  stormPressed: boolean;
 }
 
 export const NEUTRAL_INTENT: PlayerIntent = {
@@ -77,6 +81,8 @@ export const NEUTRAL_INTENT: PlayerIntent = {
   descendHeld: false,
   fireHeld: false,
   rocketPressed: false,
+  chainPressed: false,
+  stormPressed: false,
 };
 
 export const vec3 = (x = 0, y = 0, z = 0): Vec3 => ({ x, y, z });

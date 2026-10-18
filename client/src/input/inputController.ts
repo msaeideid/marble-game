@@ -19,6 +19,8 @@ export interface MoveInput {
   descendHeld: boolean;
   fireHeld: boolean;
   rocketPressed: boolean;
+  chainPressed: boolean;
+  stormPressed: boolean;
 }
 
 function deadzone(v: number): number {
@@ -42,6 +44,8 @@ export class InputController {
   private chargeLatch = false;
   private grabLatch = false;
   private rocketLatch = false;
+  private chainLatch = false;
+  private stormLatch = false;
   private lmbHeld = false;
   private padChargeHeld = false;
   private padSnareHeld = false;
@@ -67,10 +71,16 @@ export class InputController {
         this.grabLatch = true;
       }
       if (e.code === 'KeyG') this.grabLatch = true;
-      if (e.code === 'KeyR') this.rocketLatch = true;
+      if (e.code === 'KeyR') {
+        this.rocketLatch = true;
+        this.chainLatch = true;
+      }
       if (e.code === 'KeyF') this.zipLatch = true;
       if (e.code === 'KeyJ') this.attackLatch = true;
-      if (e.code === 'KeyQ') this.snareLatch = true;
+      if (e.code === 'KeyQ') {
+        this.snareLatch = true;
+        this.stormLatch = true;
+      }
       if (e.code === 'KeyC' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.chargeLatch = true;
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
@@ -95,7 +105,8 @@ export class InputController {
         this.rmbHeld = true;
         this.swingLatch = true;
         this.grabLatch = true;
-        this.rocketLatch = true; // right-mouse: swing / lift / rockets, depending on the hero
+        this.rocketLatch = true; // right-mouse: swing / lift / rockets / chain lightning, depending on the hero
+        this.chainLatch = true;
         return;
       }
       if (document.pointerLockElement === canvas) {
@@ -151,7 +162,8 @@ export class InputController {
     const zipDown = pad.buttons[3]?.pressed ?? false;
     if (zipDown && !this.padZipHeld) {
       this.zipLatch = true;
-      this.rocketLatch = true; // Y: zip for ZIPLASH, rockets for METALHEAD
+      this.rocketLatch = true; // Y: zip for ZIPLASH, rockets for METALHEAD, chain lightning for VOLTAGE
+      this.chainLatch = true;
     }
     this.padZipHeld = zipDown;
     const attackDown = pad.buttons[2]?.pressed ?? false;
@@ -159,7 +171,10 @@ export class InputController {
     this.padAttackHeld = attackDown;
     const snareDown = pad.buttons[1]?.pressed ?? false;
     if (snareDown && !this.padSnareHeld) this.snareLatch = true;
-    if (snareDown && !this.padSnareHeld) this.grabLatch = true; // B: snare for ZIPLASH, lift/throw for RAMPART
+    if (snareDown && !this.padSnareHeld) {
+      this.grabLatch = true; // B: snare for ZIPLASH, lift/throw for RAMPART, storm strike for VOLTAGE
+      this.stormLatch = true;
+    }
     this.padSnareHeld = snareDown;
     const chargeDown = (pad.buttons[4]?.pressed || pad.buttons[6]?.pressed) ?? false;
     if (chargeDown && !this.padChargeHeld) this.chargeLatch = true;
@@ -198,6 +213,10 @@ export class InputController {
     this.grabLatch = false;
     const rocketPressed = this.rocketLatch;
     this.rocketLatch = false;
+    const chainPressed = this.chainLatch;
+    this.chainLatch = false;
+    const stormPressed = this.stormLatch;
+    this.stormLatch = false;
     this.snareLatch = false;
     this.attackLatch = false;
     this.jumpLatch = false;
@@ -218,6 +237,8 @@ export class InputController {
       descendHeld,
       fireHeld,
       rocketPressed,
+      chainPressed,
+      stormPressed,
     };
   }
 }

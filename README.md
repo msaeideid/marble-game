@@ -7,8 +7,8 @@ See [PLAN.md](PLAN.md) for the plan and [docs/](docs/) for short per-system docs
 **Status:** the Phase 1 vertical slice is built and passed its playtest (Gate 1): third-person controller, tether swing
 and zip-pull, energy, shield-over-core health, melee combo, tether-snare, thug AI with waves, base pad and respawn, hit
 feedback and synthesized sound. Phase 2 has started with a **multiplayer spike** ([docs/netcode.md](docs/netcode.md)):
-several players can swing around together on a Python server. Heroes are data ([docs/heroes.md](docs/heroes.md)): ZIPLASH, the powerhouse RAMPART (charge through breakable walls) and the flyer METALHEAD (jets, laser, homing rockets) are playable.
-RAMPART can lift and throw props, METALHEAD flies and shoots. Next: VOLTAGE, then the team-up combo (throw a car, detonate it mid-air).
+several players can swing around together on a Python server. Heroes are data ([docs/heroes.md](docs/heroes.md)): ZIPLASH, the powerhouse RAMPART (charge through breakable walls) the flyer METALHEAD (jets, laser, homing rockets) and the storm-caller VOLTAGE (chain lightning, storm strike) are playable.
+RAMPART can lift and throw props, METALHEAD flies and shoots, VOLTAGE stuns crowds. Next: the team-up combo (throw a car, detonate it mid-air).
 
 ## Run it
 ```bash
@@ -29,7 +29,7 @@ npm run dev                                                          # terminal 
 |---|---|
 | WASD / Space | move / jump |
 | Mouse | look (click to capture, or hold the button and drag) |
-| *Pick a hero on the start screen* | ZIPLASH (wall-slinger), RAMPART (powerhouse) or METALHEAD (flyer) |
+| *Pick a hero on the start screen* | ZIPLASH (wall-slinger), RAMPART (powerhouse), METALHEAD (flyer) or VOLTAGE (storm-caller) |
 | E or right-mouse (hold) | ZIPLASH: swing from the green aim marker; Shift to reel in |
 | F | ZIPLASH: zip-pull (aim just under a roof edge to climb up) |
 | J or left-click | strike (tap in rhythm for a 3-hit combo) |
@@ -39,9 +39,11 @@ npm run dev                                                          # terminal 
 | Space, then Space again in the air | METALHEAD: light the jets; hold Space to climb, Shift / C to descend, touch down to land |
 | K or hold left-click | METALHEAD: pulse laser (hold) |
 | R or right-mouse | METALHEAD: homing rocket at the enemy under the red lock ring |
+| R or right-mouse | VOLTAGE: chain lightning (stuns the enemy under the red ring and its neighbours) |
+| Q | VOLTAGE: storm strike where the yellow ring is (warning, then a stunning blast) |
 | P / Esc, M | pause, mute |
 
-Gamepad: left stick move, right stick look, A jump (hold to climb), X strike, Y zip / rockets, B snare / lift, RT swing / laser, LT reel / charge / descend.
+Gamepad: left stick move, right stick look, A jump (hold to climb), X strike, Y zip / rockets / chain, B snare / lift / storm, RT swing / laser, LT reel / charge / descend.
 
 ## Test
 ```bash

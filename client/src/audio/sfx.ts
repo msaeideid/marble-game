@@ -122,6 +122,15 @@ export class Sfx {
     this.tone(110, 30, 0.5, 'sawtooth', 0.35 * volume);
     this.noise(0.25, 0.3 * volume, 1500, 1, 0.04);
   }
+  /** Lightning crack. */
+  zap(volume = 1): void {
+    this.noise(0.18, 0.45 * volume, 3500, 1.2);
+    this.tone(900, 120, 0.2, 'sawtooth', 0.16 * volume);
+  }
+  /** The charging hum of a storm strike's warning. */
+  strikeCharge(): void {
+    this.tone(120, 700, 0.9, 'triangle', 0.1);
+  }
   /** Jets lighting: a rising whoosh. */
   jets(): void {
     this.noise(0.45, 0.25, 900, 0.5);

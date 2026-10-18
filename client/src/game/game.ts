@@ -20,7 +20,7 @@ import { FixedStepper, SIM_DT } from '../sim/fixedStep';
 import type { HeroParams } from '../sim/params';
 import { Sim, type SimEvent } from '../sim/sim';
 import { pickSwingAnchor } from '../sim/swing';
-import { pickRocketTarget } from '../sim/weapons';
+import { pickLockTarget, strikePoint } from '../sim/weapons';
 import type { PlayerIntent } from '../sim/types';
 import { applyWire } from '../sim/wire';
 import { World } from '../sim/world';
@@ -121,6 +121,8 @@ export class Game {
     if (this.hero.flight) kits.add('flight');
     if (this.hero.laser) kits.add('laser');
     if (this.hero.rockets) kits.add('rockets');
+    if (this.hero.chain) kits.add('chain');
+    if (this.hero.tempest) kits.add('tempest');
     document.querySelectorAll<HTMLElement>('#overlay tr[data-kit]').forEach((row) => {
       row.style.display = kits.has(row.dataset.kit ?? '') ? '' : 'none';
     });
@@ -179,6 +181,8 @@ export class Game {
         intent.snarePressed = false;
         intent.fireHeld = false;
         intent.rocketPressed = false;
+        intent.chainPressed = false;
+        intent.stormPressed = false;
       }
       this.sim.step(stepDt, new Map([[LOCAL_ID, intent]]));
       this.online?.onLocalStep(intent);
@@ -298,7 +302,20 @@ export class Game {
       me.flying,
       me.rocketCooldown <= 0 && me.energy >= (this.hero.rockets?.cost ?? 0),
     );
+    this.hud.setStorm(
+      { chain: !!this.hero.chain, tempest: !!this.hero.tempest },
+      me.chainCooldown <= 0 && me.energy >= (this.hero.chain?.cost ?? 0),
+      me.stormCooldown <= 0 && me.energy >= (this.hero.tempest?.cost ?? 0),
+    );
     this.labels.setLock(this.paused ? null : this.rocketLock(me));
+    const storm = this.hero.tempest;
+    this.effects.setStormAim(
+      storm && !this.paused && me.defeatedTimer === null
+        ? strikePoint(this.sim.world, handPos(me, this.hero), aimDir(this.input.yaw, this.input.pitch), storm)
+        : null,
+      storm?.radius ?? 1,
+      me.stormCooldown <= 0 && me.energy >= (storm?.cost ?? 0),
+    );
     this.hud.tick(dt);
     this.bannerTimer = Math.max(0, this.bannerTimer - dt);
     const net = this.online;
@@ -385,6 +402,23 @@ export class Game {
           if (ev.hits.length > 0) this.hitStop = HITSTOP_LIGHT;
           break;
         }
+        case 'chain':
+          this.effects.lightning(ev.points);
+          this.sfx.zap();
+          this.cam.shake(0.06);
+          break;
+        case 'strikeStart':
+          this.effects.strikeWarning(ev.pos, ev.radius, ev.delay);
+          if (ev.owner === LOCAL_ID) this.sfx.strikeCharge();
+          break;
+        case 'strikeHit': {
+          this.effects.strikeBolt(ev.pos, ev.radius);
+          const d = Math.hypot(ev.pos.x - me.pos.x, ev.pos.z - me.pos.z);
+          this.sfx.zap(Math.max(0.3, 1 - d / 40));
+          this.cam.shake(Math.max(0.05, 0.25 - d * 0.01));
+          if (ev.hits.length > 0) this.hitStop = HITSTOP_LIGHT;
+          break;
+        }
         case 'snare':
           if (ev.source === LOCAL_ID) this.sfx.snare();
           break;
@@ -453,9 +487,9 @@ export class Game {
 
   /** The point to draw the rocket lock ring at: the enemy a rocket fired right now would chase, or null. */
   private rocketLock(me: ReturnType<Sim['players']['get']> & object): { x: number; y: number; z: number } | null {
-    const p = this.hero.rockets;
+    const p = this.hero.rockets ?? (this.hero.chain && { lockRange: this.hero.chain.range, lockAngleDegrees: this.hero.chain.lockAngleDegrees });
     if (!p || me.defeatedTimer !== null) return null;
-    const t = pickRocketTarget(
+    const t = pickLockTarget(
       this.sim.world,
       handPos(me, this.hero),
       aimDir(this.input.yaw, this.input.pitch),
