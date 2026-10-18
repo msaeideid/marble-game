@@ -106,10 +106,10 @@ staggers**: a steady beam wears enemies down while they keep coming, so a flyer 
 under two seconds of fire.
 
 ### Homing rockets (`ability.rockets`, `R` or right-mouse, gamepad Y)
-Fires a rocket (18 energy, 0.8 s cooldown) at the enemy closest to the crosshair, within 18 degrees and 45 m with a clear
+Fires a rocket (22 energy, 3.5 s recharge) at the enemy closest to the crosshair, within 18 degrees and 45 m with a clear
 line of sight. **A red ring shows the current lock.** The rocket flies at 20 m/s and turns up to 3.2 rad/s toward its
 target; with no lock it flies straight. It bursts on an enemy, a wall, the ground or after 3 s: 35 damage at the centre
-falling to 40% at the 3.2 m edge, a shove away from the blast, and survivors are always staggered. There is no friendly
+falling to 30% at the 1.8 m edge, a shove away from the blast, and survivors are always staggered. There is no friendly
 fire. Rockets do not break walls (that stays RAMPART's job).
 
 Weapons are in `client/src/sim/weapons.ts` (`traceLaser`, `pickRocketTarget`, `RocketSystem`) and the Sim wires them up
