@@ -1,8 +1,11 @@
 import { SIM_DT } from '../sim/fixedStep';
 import type { Sim } from '../sim/sim';
 import type { PlayerIntent, Vec3 } from '../sim/types';
+import type { EnemyWire } from '../sim/enemy';
 import type { PropWire } from '../sim/props';
-import { applyWire, toWire, wireDistance, type PlayerWire } from '../sim/wire';
+import type { SimEvent } from '../sim/sim';
+import type { RocketWire, StrikeWire } from '../sim/weapons';
+import { applyWire, toWire, wireDistance, type CombatWire, type PlayerWire } from '../sim/wire';
 
 /** One message from the server (15 Hz). `ack` is the last input of ours the server has simulated. */
 export interface ServerSnapshot {
@@ -12,10 +15,17 @@ export interface ServerSnapshot {
   broken?: number[];
   /** Every lift-and-throw prop's state (server-authoritative; clients just draw them). */
   props?: PropWire[];
-  players: Record<string, { name: string; hero?: string; ack: number; state: PlayerWire }>;
+  /** Every enemy, rocket in flight and pending storm strike (server-authoritative; clients just draw them). */
+  enemies?: EnemyWire[];
+  rockets?: RocketWire[];
+  strikes?: StrikeWire[];
+  wave?: number;
+  /** What happened since the previous snapshot (hits, shots, blasts...), in order. */
+  events?: SimEvent[];
+  players: Record<string, { name: string; hero?: string; ack: number; state: PlayerWire; combat?: CombatWire }>;
 }
 
-/** Fields the server reads from an intent. Combat inputs are not part of the movement spike. */
+/** Every field the server reads from an intent: movement, and the buttons for all abilities. */
 export function wireIntent(i: PlayerIntent) {
   return {
     moveX: i.moveX,
@@ -30,6 +40,12 @@ export function wireIntent(i: PlayerIntent) {
     grabPressed: i.grabPressed,
     jumpHeld: i.jumpHeld,
     descendHeld: i.descendHeld,
+    attackPressed: i.attackPressed,
+    snarePressed: i.snarePressed,
+    fireHeld: i.fireHeld,
+    rocketPressed: i.rocketPressed,
+    chainPressed: i.chainPressed,
+    stormPressed: i.stormPressed,
   };
 }
 

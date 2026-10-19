@@ -29,6 +29,7 @@ interface VanguardHook {
         energy: number;
         carrying: { id: number; def: string } | null;
         flying: boolean;
+        defeatedTimer: number | null;
         invulnerable: number;
         vel: { x: number; y: number; z: number };
         health: { shield: number; core: number };

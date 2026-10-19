@@ -40,7 +40,7 @@ export function traceLaser(
     const t = cx * dir.x + cy * dir.y + cz * dir.z;
     if (t < 0 || t > reach) continue;
     const off2 = cx * cx + cy * cy + cz * cz - t * t;
-    const r = c.halfWidth + p.aimAssist;
+    const r = c.halfWidth + (c.id.startsWith('prop:') ? p.propAssist : p.aimAssist);
     if (off2 > r * r) continue;
     hit = c;
     reach = t;

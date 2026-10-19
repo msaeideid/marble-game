@@ -47,6 +47,11 @@ export class Sim {
   /** Events from the most recent `step`. */
   events: SimEvent[] = [];
   private nextEnemyId = 1;
+  /**
+   * False for an online client: enemies, damage, weapons, waves and props belong to the server, which streams them in
+   * snapshots, so the local sim only predicts the local player's movement.
+   */
+  private readonly combat: boolean;
   private wave = 0;
   private waveTimer = 0;
   /** Lift-and-throw props; null when the level has none or props are turned off (online clients draw the server's). */
@@ -64,8 +69,9 @@ export class Sim {
     readonly world: World,
     readonly hero: HeroParams,
     readonly enemyDefs: Record<string, EnemyParams> = {},
-    private readonly opts: { waves?: boolean; props?: boolean; propDefs?: Record<string, PropParams> } = {},
+    private readonly opts: { waves?: boolean; props?: boolean; combat?: boolean; propDefs?: Record<string, PropParams> } = {},
   ) {
+    this.combat = opts.combat !== false;
     this.propDefs = opts.propDefs ?? {};
     this.ensureSystems(hero);
     this.propSystem =
@@ -105,8 +111,10 @@ export class Sim {
     this.events = [];
     for (const [id, player] of this.players) {
       if (player.defeatedTimer !== null) {
-        player.defeatedTimer -= dt;
-        if (player.defeatedTimer <= 0) this.respawn(id);
+        if (this.combat) {
+          player.defeatedTimer -= dt;
+          if (player.defeatedTimer <= 0) this.respawn(id);
+        } // online: the server decides when they are back
         continue;
       }
       const hero = this.heroOf(id);
@@ -115,23 +123,29 @@ export class Sim {
       for (const c of stepPlayer(player, intent, hero, this.world, dt, carry)) {
         this.events.push({ type: 'break', id: c.id, by: id });
       }
-      this.stepCharge(id, player);
-      if (this.propSystem && intent.grabPressed) {
-        this.events.push(...this.propSystem.handleGrab(id, player, hero, intent.yaw, intent.pitch));
+      if (this.combat) {
+        this.stepCharge(id, player);
+        if (this.propSystem && intent.grabPressed) {
+          this.events.push(...this.propSystem.handleGrab(id, player, hero, intent.yaw, intent.pitch));
+        }
+        // Hands are full: no striking while carrying.
+        this.stepPlayerMelee(id, player, player.carrying ? { ...intent, attackPressed: false } : intent, dt);
+        this.stepPlayerSnare(id, player, intent, dt);
+        this.stepPlayerLaser(id, player, intent, dt);
+        this.stepPlayerRockets(id, player, intent, dt);
+        this.stepPlayerChain(id, player, intent, dt);
+        this.stepPlayerStorm(id, player, intent, dt);
+        regenHealth(player.health, hero.health, dt);
+        player.invulnerable = Math.max(0, player.invulnerable - dt);
       }
-      // Hands are full: no striking while carrying.
-      this.stepPlayerMelee(id, player, player.carrying ? { ...intent, attackPressed: false } : intent, dt);
-      this.stepPlayerSnare(id, player, intent, dt);
-      this.stepPlayerLaser(id, player, intent, dt);
-      this.stepPlayerRockets(id, player, intent, dt);
-      this.stepPlayerChain(id, player, intent, dt);
-      this.stepPlayerStorm(id, player, intent, dt);
-      regenHealth(player.health, hero.health, dt);
-      player.invulnerable = Math.max(0, player.invulnerable - dt);
       this.applyBaseRegen(id, player, dt);
       if (player.pos.y < this.world.killY) this.respawn(id);
     }
 
+    if (!this.combat) {
+      this.tick++;
+      return;
+    }
     const targets = [...this.players]
       .filter(([, p]) => p.defeatedTimer === null)
       .map(([pid, p]) => ({ id: pid, pos: p.pos }));

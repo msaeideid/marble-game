@@ -45,7 +45,7 @@ def trace_laser(world: World, origin: Vec3, d: Vec3, p: SimpleNamespace, targets
         if t < 0 or t > reach:
             continue
         off2 = cx * cx + cy * cy + cz * cz - t * t
-        r = c.half_width + p.aimAssist
+        r = c.half_width + (p.propAssist if c.id.startswith("prop:") else p.aimAssist)
         if off2 > r * r:
             continue
         hit = c

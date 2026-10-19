@@ -300,13 +300,14 @@ describe('breakable walls over the network', () => {
     expect(wireIntent(intent({ chargePressed: true })).chargePressed).toBe(true);
   });
 
-  it('sends the flight buttons (climb and descend) but not the weapons, which are not networked yet', async () => {
+  it('sends the flight buttons and every combat button to the server', async () => {
     const { wireIntent } = await import('../src/net/session');
-    const sent = wireIntent(intent({ jumpHeld: true, descendHeld: true, fireHeld: true, rocketPressed: true }));
-    expect(sent.jumpHeld).toBe(true);
-    expect(sent.descendHeld).toBe(true);
-    expect(Object.keys(sent)).not.toContain('fireHeld');
-    expect(Object.keys(sent)).not.toContain('rocketPressed');
+    const sent = wireIntent(
+      intent({ jumpHeld: true, descendHeld: true, attackPressed: true, snarePressed: true, fireHeld: true, rocketPressed: true, chainPressed: true, stormPressed: true }),
+    );
+    for (const k of ['jumpHeld', 'descendHeld', 'attackPressed', 'snarePressed', 'fireHeld', 'rocketPressed', 'chainPressed', 'stormPressed'] as const) {
+      expect(sent[k], k).toBe(true);
+    }
   });
 });
 

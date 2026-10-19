@@ -69,6 +69,7 @@ export class Game {
   private hadZip = false;
   private hadCharge = false;
   private hadFlying = false;
+  private readonly shownBreaks = new Set<number>();
   private wasLocked = false;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
@@ -76,11 +77,12 @@ export class Game {
     this.hero = getHero(heroId in content.heroes ? heroId : DEFAULT_HERO);
     const world = new World(arena);
     const onlineOpts = onlineOptionsFromUrl(window.location.search);
-    // Online play is movement-only for now: no enemies or waves, just players swinging around together.
-    // Online play is server-authoritative for props too: the client only draws the server's props.
+    // Online play is server-authoritative: enemies, waves, props and every ability run on the server. The local sim
+    // only predicts the local player's movement, and the client draws what the server streams.
     this.sim = new Sim(world, this.hero, content.enemies, {
       waves: !onlineOpts,
       props: !onlineOpts,
+      combat: !onlineOpts,
       propDefs: content.props,
     });
     this.sim.addPlayer(LOCAL_ID);
@@ -210,14 +212,6 @@ export class Game {
       const intent: PlayerIntent = { ...m, yaw: this.input.yaw, pitch: this.input.pitch };
       intent.chargePressed = m.chargePressed;
       intent.grabPressed = m.grabPressed;
-      if (this.online) {
-        intent.attackPressed = false; // combat is not networked yet
-        intent.snarePressed = false;
-        intent.fireHeld = false;
-        intent.rocketPressed = false;
-        intent.chainPressed = false;
-        intent.stormPressed = false;
-      }
       const intents = new Map<string, PlayerIntent>([[LOCAL_ID, intent]]);
       if (this.buddy) intents.set(BUDDY_ID, this.buddy.brain.think(this.sim));
       this.sim.step(stepDt, intents);
@@ -226,6 +220,11 @@ export class Game {
     });
 
     const me = this.sim.players.get(LOCAL_ID)!;
+    if (this.online) {
+      // Enemies, rockets and what happened come from the server.
+      this.online.mirrorEnemies(content.enemies);
+      events.push(...this.online.takeEvents());
+    }
     this.handleEvents(events);
     this.trackMovementSounds();
     this.syncEnemies(alpha, dt);
@@ -242,7 +241,7 @@ export class Game {
     };
     this.syncRemotePlayers();
     this.syncProps(dt, focus);
-    this.rocketViews.update(this.sim.rocketSystem?.rockets ?? [], alpha, dt);
+    this.rocketViews.update(this.online ? this.online.rocketStates() : (this.sim.rocketSystem?.rockets ?? []), alpha, dt);
     this.levelView.sync(this.sim.world);
     this.cam.update(focus, this.input.yaw, this.input.pitch, this.sim.world, dt);
     this.effects.update(dt);
@@ -370,7 +369,15 @@ export class Game {
           : null,
     );
     const alive = [...this.sim.enemies.values()].filter((e) => e.defeatedTimer === null).length;
-    this.hud.setWave(`Wave ${this.sim.currentWave} · ${alive} thug${alive === 1 ? '' : 's'} left`);
+    const wave = this.online ? this.online.wave : this.sim.currentWave;
+    this.hud.setWave(`Wave ${wave} · ${alive} thug${alive === 1 ? '' : 's'} left`);
+  }
+
+  /** The hero a player id belongs to: ours or the buddy's from the sim, another online player's from the snapshot. */
+  private heroFor(id: string): HeroParams {
+    if (this.sim.players.has(id)) return this.sim.heroOf(id);
+    const remote = this.online?.remotePlayers()[id];
+    return remote && remote.hero in content.heroes ? getHero(remote.hero) : this.hero;
   }
 
   private handleEvents(events: readonly SimEvent[]): void {
@@ -378,10 +385,10 @@ export class Game {
     for (const ev of events) {
       switch (ev.type) {
         case 'melee': {
-          const who = this.sim.players.get(ev.attacker);
-          if (!who) break;
-          const melee = this.sim.heroOf(ev.attacker).melee;
-          this.effects.slash(who.pos, ev.yaw, ev.step, melee.range);
+          const at = ev.pos ?? this.sim.players.get(ev.attacker)?.pos;
+          if (!at) break;
+          const melee = this.heroFor(ev.attacker).melee;
+          this.effects.slash(at, ev.yaw, ev.step, melee.range);
           this.sfx.swing(ev.step);
           if (ev.hits.length > 0) {
             const heavy = ev.step >= melee.steps.length - 1;
@@ -413,6 +420,8 @@ export class Game {
           else this.sfx.powerDown();
           break;
         case 'break': {
+          if (this.shownBreaks.has(ev.id)) break; // we may have predicted it ourselves and then heard it from the server too
+          this.shownBreaks.add(ev.id);
           const c = this.sim.world.colliders[ev.id];
           if (c) this.effects.debris(c.min, c.max, c.breakable === 2 ? new Color3(0.45, 0.47, 0.55) : new Color3(0.85, 0.45, 0.3));
           this.cam.shake(0.22);

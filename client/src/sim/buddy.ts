@@ -60,11 +60,14 @@ export class BuddyBrain {
     const foe = nearest(enemies, me.pos, ENGAGE_RANGE);
 
     // ---- the combo, shooter side: a thrown car or dumpster near enemies gets a laser bolt ----
+    const airborne = sim.volatileTargets();
     if (hero.laser) {
-      for (const prop of sim.volatileTargets()) {
+      for (const prop of airborne) {
         const c = centre(prop);
         const victims = enemies.filter((e) => dist3(centre(e), c) <= DETONATE_NEAR);
-        if (victims.length > 0 && dist3(hand, c) <= hero.laser.range && seen(c)) {
+        // Wait for the car to be over a group, unless it is about to land and a single enemy is all there is.
+        const worthIt = victims.length >= Math.min(2, enemies.length) || (victims.length > 0 && prop.pos.y < 0.9);
+        if (worthIt && dist3(hand, c) <= hero.laser.range && seen(c)) {
           aim = c;
           intent.fireHeld = true;
           break;
@@ -116,7 +119,8 @@ export class BuddyBrain {
       const d = dist3(hand, c);
       if (hero.laser && d <= hero.laser.range && seen(c)) {
         aim = c;
-        intent.fireHeld = true;
+        // A car in the air is wide to hit (propAssist): do not set it off early with a shot at something else.
+        intent.fireHeld = airborne.length === 0;
         // Rockets are the shooter's other half of the combo; spend them on enemies only if there is nobody to throw cars.
         const hasLifter = [...sim.players.keys()].some((pid) => sim.heroOf(pid).lift !== undefined);
         if (hero.rockets && !hasLifter && me.rocketCooldown <= 0 && me.energy >= hero.rockets.cost) intent.rocketPressed = true;

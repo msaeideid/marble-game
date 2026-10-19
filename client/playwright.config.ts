@@ -32,6 +32,8 @@ export default defineConfig({
           {
             command: 'uv run uvicorn app.main:app --host 127.0.0.1 --port 8000',
             cwd: '../server',
+            // No waves (the movement tests must not be attacked); the debug hooks let tests place enemies and players.
+            env: { VANGUARD_WAVES: '0', VANGUARD_DEBUG: '1' },
             url: 'http://127.0.0.1:8000/health',
             reuseExistingServer: !process.env.CI,
             timeout: 120_000,

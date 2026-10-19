@@ -26,7 +26,7 @@ schemas, so a typo is caught immediately.
 | RAMPART charge | `abilities/charge.json` -> `charge.speed`, `duration`, `cooldown`, `cost`, `damage`, `breakPower` | `breakPower` 2 breaks the reinforced wall |
 | RAMPART toughness / melee | `heroes/bruiser.json`, `abilities/smash.json` | see docs/heroes.md |
 | METALHEAD flight | `abilities/flight.json` -> `speed`, `climbSpeed`, `hoverDrainPerSecond`, `climbDrainPerSecond`, `startCost` | one energy bar also pays for weapons |
-| METALHEAD laser | `abilities/laser.json` -> `damage`, `fireInterval`, `shotCost`, `aimAssist` | dps = damage / fireInterval; never staggers |
+| METALHEAD laser | `abilities/laser.json` -> `damage`, `fireInterval`, `shotCost`, `aimAssist`, `propAssist` (how generous the aim is on a thrown car; raise it if the online combo is too hard) | dps = damage / fireInterval; never staggers |
 | METALHEAD rockets | `abilities/rockets.json` -> `damage`, `splashRadius`, `turnRate`, `lockAngleDegrees`, `cost`, `cooldown` | wider lock cone = more forgiving |
 | METALHEAD fragility | `heroes/flyer.json` -> `health`, `energy` | the design rule: fragile, weak melee, shared energy |
 | VOLTAGE chain lightning | `abilities/chain.json` -> `stunTime`, `jumpRadius`, `maxTargets`, `damage`, `cooldown`, `cost` | stun is the effect; damage stays low |

@@ -1,4 +1,6 @@
+import type { EnemyWire } from '../sim/enemy';
 import type { PropWire } from '../sim/props';
+import type { RocketWire } from '../sim/weapons';
 import type { PlayerWire } from '../sim/wire';
 import type { ServerSnapshot } from './session';
 
@@ -7,6 +9,8 @@ interface Stamped {
   at: number;
   players: ServerSnapshot['players'];
   props: PropWire[];
+  enemies: EnemyWire[];
+  rockets: RocketWire[];
 }
 
 export interface RemoteSample {
@@ -48,7 +52,7 @@ export class SnapshotBuffer {
   constructor(readonly delayMs = 100) {}
 
   push(at: number, snap: ServerSnapshot): void {
-    this.snaps.push({ at, players: snap.players, props: snap.props ?? [] });
+    this.snaps.push({ at, players: snap.players, props: snap.props ?? [], enemies: snap.enemies ?? [], rockets: snap.rockets ?? [] });
     while (this.snaps.length > 2 && this.snaps[1]!.at < at - 2000) this.snaps.shift();
   }
 
@@ -68,6 +72,44 @@ export class SnapshotBuffer {
       out[id] = { name: pb.name, hero: pb.hero ?? 'hero.swinger', state: pa ? lerpWire(pa.state, pb.state, t) : pb.state };
     }
     return out;
+  }
+
+  /** The two snapshots around (now - delay) and how far between them to blend. */
+  private around(now: number): { a: Stamped; b: Stamped; t: number } | null {
+    if (this.snaps.length === 0) return null;
+    const renderAt = now - this.delayMs;
+    let i = this.snaps.length - 1;
+    while (i > 0 && this.snaps[i]!.at > renderAt) i--;
+    const a = this.snaps[i]!;
+    const b = this.snaps[Math.min(i + 1, this.snaps.length - 1)]!;
+    const span = b.at - a.at;
+    return { a, b, t: span > 0 ? Math.min(1, Math.max(0, (renderAt - a.at) / span)) : 1 };
+  }
+
+  /** Enemies at (now - delay): positions and facing blend between snapshots, everything else comes from the later one. */
+  sampleEnemies(now: number): EnemyWire[] {
+    const w = this.around(now);
+    if (!w) return [];
+    return w.b.enemies.map((eb) => {
+      const ea = w.a.enemies.find((e) => e.id === eb.id);
+      if (!ea) return eb;
+      return {
+        ...eb,
+        pos: [lerp(ea.pos[0], eb.pos[0], w.t), lerp(ea.pos[1], eb.pos[1], w.t), lerp(ea.pos[2], eb.pos[2], w.t)],
+        facing: lerpAngle(ea.facing, eb.facing, w.t),
+      };
+    });
+  }
+
+  /** Rockets at (now - delay), blended the same way. */
+  sampleRockets(now: number): RocketWire[] {
+    const w = this.around(now);
+    if (!w) return [];
+    return w.b.rockets.map((rb) => {
+      const ra = w.a.rockets.find((r) => r.id === rb.id);
+      if (!ra) return rb;
+      return { ...rb, pos: [lerp(ra.pos[0], rb.pos[0], w.t), lerp(ra.pos[1], rb.pos[1], w.t), lerp(ra.pos[2], rb.pos[2], w.t)] };
+    });
   }
 
   /** Props at (now - delay): positions blend between the two snapshots, everything else comes from the later one. */

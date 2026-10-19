@@ -16,12 +16,13 @@ npm install
 npm run dev            # http://localhost:5173
 ```
 
-### Play together (spike: movement only)
+### Play together (1-4 players, server-authoritative: enemies, waves and every ability run on the server)
 ```bash
 cd server && uv sync && uv run uvicorn app.main:app --port 8000      # terminal 1
 npm run dev                                                          # terminal 2
 # open two tabs, e.g. http://localhost:5173/?server=ws://localhost:8000/ws&name=Ann
-# add &lag=100&jitter=30 to simulate a bad connection
+# add &lag=100&jitter=30 to simulate a bad connection, &hero=hero.flyer to pick a hero
+# the server runs waves of thugs; VANGUARD_WAVES=0 turns them off, VANGUARD_DEBUG=1 adds test hooks
 ```
 
 ## Controls

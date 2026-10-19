@@ -148,7 +148,7 @@ is free damage for a teammate (RAMPART's combo, METALHEAD's laser). Solo, VOLTAG
 melee gauntlets.
 
 Code: `traceChain`, `StrikeSystem` and `strikePoint` in `client/src/sim/weapons.ts`; the Sim wires them up next to the
-other combat. They are solo-only like all combat (`chainPressed` and `stormPressed` are not sent online).
+other combat. Online they run on the server like all combat.
 
 ## The team-up combo: car bomb
 RAMPART throws a car, METALHEAD shoots it **while it is in the air**, and it explodes.
@@ -170,7 +170,10 @@ cars you throw). `client/src/sim/buddy.ts` is a deliberately simple AI: it produ
 fights with its hero's kit, and knows both halves of the combo. The sim now supports a different hero per player
 (`sim.addPlayer(id, hero)`), which is what makes any of this possible.
 
-Like all combat, detonation is **solo-only** until combat is networked, and will be ported to Python then.
+Online it works between two real players: the detonation is ported to Python and covered by a conformance scenario.
+Because a flying car is seen late and moves fast, the laser has a wider aim assist for thrown props (`laser.propAssist`,
+2.4 m) than for enemies (0.45 m); the AI teammate holds fire at other targets while a car is in the air so it does not
+set it off early.
 
 ## Networking
 Charging changes movement and the world, so it follows the project rule (decision D1): **any mechanic that changes the
@@ -187,15 +190,11 @@ authoritative state is ported to Python with conformance scenarios**.
   carrier's drawn head). The carrier's own `carrying` state is *not* predicted, so a lift or a throw costs one small
   reconciliation correction when the server confirms it. When the last player leaves, the world (broken walls, props)
   resets.
-- **Flight is movement, so it is ported:** `flying` is part of the synced player state, the climb/descend buttons
-  (`jumpHeld`, `descendHeld`) are part of the networked intent, and 9 METALHEAD scenarios (take-off, hover, cruise, landing,
-  running out of fuel, flying into a tower, 4 random runs) agree between TypeScript and Python. Other players see the
-  jet flames from the `flying` flag. The laser and rockets are weapons, so like all combat they are **offline-only until
-  combat is networked** (`fireHeld` and `rocketPressed` are not sent).
-- VOLTAGE's glide uses the same ported flight kit; 3 more scenarios cover it (40 in total). Its lightning is combat and
-  stays offline for now.
-- Combat (melee, snare, laser, rockets, chain lightning, storm strike, enemy hits, a charge's or a thrown prop's damage to enemies) is still solo-only. When it is networked, those get
-  their Python ports too.
+- **Everything is ported.** Flight is part of the movement wire and its scenarios (40 movement scenarios). Combat (enemies,
+  AI, health, melee, snare, charge, laser, rockets, chain lightning, storm strikes, props vs enemies, car bombs, waves,
+  defeat and respawn) is a port of the whole TypeScript `Sim` into `GameSim`, proven by 12 recorded combat scenarios
+  (`shared/conformance/combat/`). See [netcode.md](netcode.md). Your own attacks are shown when the server confirms
+  them (one round trip), not predicted.
 
 ## Tuning (`abilities/charge.json`, `heroes/bruiser.json`, `abilities/smash.json`, and for METALHEAD `heroes/flyer.json`, `abilities/flight.json`, `laser.json`, `rockets.json`)
 | Want | Change |

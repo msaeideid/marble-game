@@ -1114,7 +1114,8 @@
         "fireInterval",
         "shotCost",
         "damage",
-        "aimAssist"
+        "aimAssist",
+        "propAssist"
       ],
       "properties": {
         "range": {
@@ -1130,6 +1131,9 @@
           "$ref": "common.schema.json#/$defs/positive"
         },
         "aimAssist": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "propAssist": {
           "$ref": "common.schema.json#/$defs/nonNegative"
         }
       }

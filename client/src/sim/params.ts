@@ -108,6 +108,11 @@ export interface LaserParams {
   damage: number;
   /** How far (m) off the aim line an enemy's body can be and still be hit. */
   aimAssist: number;
+  /**
+   * The same for a thrown car or dumpster. Wider, because online a flying prop is seen a fraction of a second late and
+   * moves ~17 m/s: the team-up combo has to be hittable at real network latency.
+   */
+  propAssist: number;
 }
 
 /** A homing rocket that locks the enemy nearest the crosshair and bursts for area damage. */

@@ -1,4 +1,4 @@
-# Netcode spike (movement only)
+# Netcode (spike, then heroes, props and combat)
 
 Goal (PLAN.md D4): learn whether server-authoritative multiplayer with a **Python** server is workable before building
 three more heroes. Scope: 2-4 players swing, run, jump and zip in the arena and see each other. No enemies, combat
@@ -75,8 +75,39 @@ Jet flight is movement, so it follows the rule: `flying` is in `PlayerWire`, the
 agree between TypeScript and Python (3 more for VOLTAGE's glide: 40 in total). The laser, rockets and lightning are weapons and stay
 solo-only until combat is networked.
 
+## Update: networked combat
+Everything that is not plain movement now runs on the server too. `server/app/sim/game.py` (`GameSim`) is a line-for-line
+port of the TypeScript `Sim`: enemies and their AI, health, melee, snare, charge, laser, rockets, chain lightning, storm
+strikes, props hitting enemies, car bombs, waves, defeat and respawn.
+
+- **Conformance.** `shared/conformance/combat/` has 12 recorded input logs (melee, charge, snare, laser and rockets,
+  chain and storm, the two-player car bomb, props vs thugs, defeat and respawn, four chaotic two-player 900-tick runs
+  with waves). TypeScript records them; Python must reproduce every player, enemy, rocket, strike, prop, broken wall,
+  wave number and event count to 1e-9 (`server/tests/test_combat_conformance.py`). Nudging a constant in the port makes
+  scenarios fail, so the comparison is not vacuous.
+- **Server loop.** Each player's input runs `GameSim.step_player` (movement and abilities, exactly as the client predicts the
+  movement part); once per tick `step_world` advances enemies, waves, props, rockets and strikes. An empty room is
+  frozen and resets when the last player leaves.
+- **Snapshots** (15 Hz) now also carry `enemies`, `rockets`, `strikes`, `wave`, each player's `combat` state (health,
+  cooldowns, defeat timer) and `events`: everything that happened since the previous snapshot (hits, shots, blasts, wave
+  starts...), in order, delivered once.
+- **Client.** The online client's local sim has `combat: false`: it only predicts the local player's movement and never
+  runs enemy logic. It mirrors the server's enemies into `sim.enemies` (interpolated 100 ms behind, like other players),
+  so the enemy views, health bars, lock-on ring and damage numbers work exactly as in solo play, and it applies the
+  server's health, cooldowns and defeat state to the local player. Events about you are shown at once; other
+  people's after the interpolation delay so they line up with what is drawn.
+- **Intents** now carry every ability button; the server validates them like everything else.
+- **Test hooks.** With `VANGUARD_DEBUG=1` the server has `POST /debug/spawn_enemy` and `POST /debug/teleport`, and
+  `VANGUARD_WAVES=0` turns the waves off. The end-to-end tests use them to place enemies and players exactly.
+- **Cost.** A four-hero wave fight costs about 0.3 ms per server tick (budget 33 ms).
+
 ## Known limits / next steps
-- Movement only. Combat, enemies, health and waves are solo-only for now.
+- Combat has no lag compensation: a hit is judged by the server at the moment it processes your button press, against where
+  things are *then*. Other players and enemies are drawn about 100 ms in the past, so fast moving targets (a thrown car, 17 m/s)
+  are hard to hit by aiming at what you see. The laser has a wider aim assist for thrown props (`laser.propAssist`) for this reason.
+- Your own attacks are not predicted: the slash, zap or rocket appears when the server's event comes back (one round trip).
+- Taking a hit (knockback), energy spent on weapons and respawning change your movement state on the server, so each causes a
+  small reconciliation correction on your screen.
 - One global room, guest names only, no accounts, no reconnect, JSON messages (switch to MessagePack when stable).
 - Remote players are interpolated 100 ms behind and not extrapolated: a stalled connection freezes them in place.
 - Player-vs-player collision is not simulated.

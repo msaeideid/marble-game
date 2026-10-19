@@ -65,6 +65,21 @@ def debug_spawn_enemy(body: dict[str, Any]) -> dict[str, Any]:
     return {"id": enemy.id}
 
 
+@app.post("/debug/teleport")
+def debug_teleport(body: dict[str, Any]) -> dict[str, Any]:
+    """Test hook: move a player. Only exists when the server runs with VANGUARD_DEBUG=1."""
+    if os.environ.get("VANGUARD_DEBUG") != "1":
+        raise HTTPException(status_code=404)
+    room: Room = app.state.room
+    state = room.game.players.get(str(body.get("id")))
+    if state is None:
+        raise HTTPException(status_code=404, detail="no such player")
+    state.pos = Vec3.from_list(body["pos"])
+    state.prev_pos = state.pos.copy()
+    state.vel = Vec3()
+    return {"ok": True}
+
+
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket) -> None:
     room: Room = app.state.room
