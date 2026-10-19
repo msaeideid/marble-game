@@ -19,8 +19,8 @@ from dataclasses import dataclass, field
 from types import SimpleNamespace
 from typing import Any
 
-from .sim.content import load_props
-from .sim.controller import Intent, PlayerState, to_wire
+from .sim.content import load_enemies, load_props
+from .sim.controller import Intent, PlayerState, combat_wire, to_wire
 from .sim.game import GameSim
 from .sim.world import World
 
@@ -31,6 +31,7 @@ MAX_PLAYERS = 4
 MAX_QUEUE = 12  # inputs buffered per player; beyond this the client is too far ahead and new inputs are dropped
 MAX_BUDGET = 3.0  # input-processing tokens a player can bank (absorbs network jitter)
 OUTBOX_LIMIT = 64
+MAX_PENDING_EVENTS = 400  # events kept between two snapshots; beyond this the oldest are dropped
 
 
 def sanitize_intent(raw: Any) -> Intent | None:
@@ -61,6 +62,12 @@ def sanitize_intent(raw: Any) -> Intent | None:
         grabPressed=bool(raw.get("grabPressed", False)),
         jumpHeld=bool(raw.get("jumpHeld", False)),
         descendHeld=bool(raw.get("descendHeld", False)),
+        attackPressed=bool(raw.get("attackPressed", False)),
+        snarePressed=bool(raw.get("snarePressed", False)),
+        fireHeld=bool(raw.get("fireHeld", False)),
+        rocketPressed=bool(raw.get("rocketPressed", False)),
+        chainPressed=bool(raw.get("chainPressed", False)),
+        stormPressed=bool(raw.get("stormPressed", False)),
     )
 
 
@@ -80,10 +87,11 @@ class Peer:
 
 
 class Room:
-    def __init__(self, hero: SimpleNamespace, world: World, tick_rate: int = TICK_RATE) -> None:
+    def __init__(self, hero: SimpleNamespace, world: World, tick_rate: int = TICK_RATE, waves: bool = False) -> None:
         self.hero = hero
         self.world = world
-        self.game = GameSim(world, load_props(), hero)
+        self.game = GameSim(world, load_props(), hero, load_enemies(), waves=waves)
+        self.pending_events: list[dict[str, Any]] = []  # everything that happened since the last snapshot
         self.tick_rate = tick_rate
         self.dt = 1.0 / tick_rate
         self.tick = 0
@@ -111,6 +119,7 @@ class Room:
         self.game.remove_player(pid)  # anything they were carrying drops
         if not self.peers:
             self.game.reset_world()  # the last player left: the next session starts from a fresh level
+            self.pending_events = []
 
     # ---- input ----
     def enqueue_input(self, peer: Peer, seq: int, intent: Intent) -> bool:
@@ -126,6 +135,7 @@ class Room:
     def step(self) -> None:
         """Advance one server tick."""
         t0 = time.perf_counter()
+        self.game.begin_tick()
         for peer in self.peers.values():
             peer.budget = min(MAX_BUDGET, peer.budget + 1.0)
             while peer.budget >= 1.0 and peer.queue:
@@ -134,10 +144,15 @@ class Room:
                 self._apply(peer, intent)
                 peer.ack = seq
                 peer.processed += 1
-        self.game.step_world(self.dt)  # props: once per server tick, after everyone's inputs
+        if self.peers:  # an empty room is frozen: no waves, no enemies chasing nobody
+            self.game.step_world(self.dt)  # enemies, waves, props, rockets, strikes: once per tick, after all inputs
+        self.pending_events.extend(self.game.events)
+        if len(self.pending_events) > MAX_PENDING_EVENTS:
+            del self.pending_events[: len(self.pending_events) - MAX_PENDING_EVENTS]
         self.tick += 1
         if self.tick % SNAPSHOT_EVERY == 0:
             snap = self.snapshot()
+            self.pending_events = []
             for peer in self.peers.values():
                 self._send(peer, snap)
         self.last_tick_ms = (time.perf_counter() - t0) * 1000.0
@@ -153,8 +168,19 @@ class Room:
             "tick": self.tick,
             "broken": self.world.broken_list(),
             "props": self.game.props.to_wire() if self.game.props else [],
+            "enemies": self.game.enemy_wires(),
+            "rockets": self.game.rocket_system.to_wire() if self.game.rocket_system else [],
+            "strikes": self.game.strike_system.to_wire() if self.game.strike_system else [],
+            "wave": self.game.wave,
+            "events": self.pending_events,
             "players": {
-                pid: {"name": p.name, "hero": p.hero.id, "ack": p.ack, "state": to_wire(p.state)}
+                pid: {
+                    "name": p.name,
+                    "hero": p.hero.id,
+                    "ack": p.ack,
+                    "state": to_wire(p.state),
+                    "combat": combat_wire(p.state),
+                }
                 for pid, p in self.peers.items()
             },
         }
