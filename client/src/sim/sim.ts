@@ -1,4 +1,4 @@
-import { createEnemy, stepEnemyPhysics, type EnemyState } from './enemy';
+import { createEnemy, enemyWire, stepEnemyPhysics, type EnemyState, type EnemyWire } from './enemy';
 import { aimDir } from './aim';
 import { stepEnemyAi } from './ai';
 import { meleeTargets, pickSnareTarget, stepMelee } from './combat';
@@ -23,7 +23,7 @@ import type { World } from './world';
 
 /** Things that happened this tick. Views use them for effects; netcode will broadcast them. */
 export type SimEvent =
-  | { type: 'melee'; attacker: string; step: number; yaw: number; hits: string[] }
+  | { type: 'melee'; attacker: string; step: number; yaw: number; pos: Vec3; hits: string[] }
   | { type: 'damage'; target: string; source: string | null; amount: number; shieldLost: number; coreLost: number }
   | { type: 'defeated'; id: string }
   | { type: 'respawn'; id: string }
@@ -187,6 +187,11 @@ export class Sim {
     );
   }
 
+  /** Every enemy's synced state, in spawn order (for snapshots and conformance checks). */
+  get enemyWires(): EnemyWire[] {
+    return [...this.enemies.values()].map(enemyWire);
+  }
+
   /** The synced state of every prop (for snapshots and conformance checks). */
   get propWires(): PropWire[] {
     return this.propSystem?.toWire() ?? [];
@@ -213,7 +218,14 @@ export class Sim {
       e.vel.z += (dz / d) * step.knockback;
       this.damageEnemy(e, step.damage, id);
     }
-    this.events.push({ type: 'melee', attacker: id, step: hitStep, yaw: intent.yaw, hits: struck.map((s) => s.e.id) });
+    this.events.push({
+      type: 'melee',
+      attacker: id,
+      step: hitStep,
+      yaw: intent.yaw,
+      pos: { ...player.pos },
+      hits: struck.map((s) => s.e.id),
+    });
   }
 
   /**

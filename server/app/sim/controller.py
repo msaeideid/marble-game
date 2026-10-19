@@ -5,7 +5,9 @@ from dataclasses import dataclass, field
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
+from .combat import MeleeState
 from .energy import drain, regen, try_spend
+from .health import HealthState, create_health
 from .swing import (
     aim_dir,
     pick_swing_anchor,
@@ -60,6 +62,12 @@ class Intent:
     grabPressed: bool = False
     jumpHeld: bool = False
     descendHeld: bool = False
+    attackPressed: bool = False
+    snarePressed: bool = False
+    fireHeld: bool = False
+    rocketPressed: bool = False
+    chainPressed: bool = False
+    stormPressed: bool = False
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> Intent:
@@ -76,6 +84,12 @@ class Intent:
             grabPressed=bool(d.get("grabPressed", False)),
             jumpHeld=bool(d.get("jumpHeld", False)),
             descendHeld=bool(d.get("descendHeld", False)),
+            attackPressed=bool(d.get("attackPressed", False)),
+            snarePressed=bool(d.get("snarePressed", False)),
+            fireHeld=bool(d.get("fireHeld", False)),
+            rocketPressed=bool(d.get("rocketPressed", False)),
+            chainPressed=bool(d.get("chainPressed", False)),
+            stormPressed=bool(d.get("stormPressed", False)),
         )
 
 
@@ -98,10 +112,27 @@ class PlayerState:
     carrying: tuple[int, str] | None = None  # (prop id, prop type) of the prop held overhead
     grab_cooldown: float = 0.0
     flying: bool = False  # jet flight is on: no gravity, climb/descend with the buttons, drains energy
+    # ---- combat state (not part of the movement wire; see combat_wire) ----
+    health: HealthState = field(default_factory=lambda: HealthState(0.0, 0.0))
+    defeated_timer: float | None = None  # seconds until respawn while defeated
+    melee: MeleeState = field(default_factory=MeleeState)
+    charge_hits: list[str] = field(default_factory=list)  # enemies already struck by the current charge
+    snare_cooldown: float = 0.0
+    laser_cooldown: float = 0.0
+    rocket_cooldown: float = 0.0
+    chain_cooldown: float = 0.0
+    storm_cooldown: float = 0.0
+    invulnerable: float = 0.0  # spawn protection: no damage while > 0
 
 
 def create_player_state(spawn: Vec3, hero: SimpleNamespace) -> PlayerState:
-    return PlayerState(pos=spawn.copy(), prev_pos=spawn.copy(), energy=float(hero.energy.max))
+    return PlayerState(
+        pos=spawn.copy(),
+        prev_pos=spawn.copy(),
+        energy=float(hero.energy.max),
+        health=create_health(hero.health),
+        invulnerable=float(hero.respawnInvulnerable),
+    )
 
 
 @dataclass(slots=True)
@@ -272,6 +303,7 @@ def step_player(
     ):
         s.charge = Charge(float(charge_p.duration), math.sin(intent.yaw), math.cos(intent.yaw))
         s.charge_cooldown = float(charge_p.cooldown)
+        s.charge_hits = []
 
     # ---- horizontal control ----
     mx = max(-1.0, min(1.0, intent.moveX))
@@ -461,4 +493,22 @@ def to_wire(s: PlayerState) -> dict[str, Any]:
             else None
         ),
         "zip": {"anchor": s.zip.anchor.to_list(), "timeLeft": s.zip.time_left} if s.zip else None,
+    }
+
+
+def combat_wire(s: PlayerState) -> dict[str, Any]:
+    """The combat state of a player, sent to clients so their HUD (health, cooldowns) matches the server."""
+    return {
+        "shield": s.health.shield,
+        "core": s.health.core,
+        "defeated": s.defeated_timer,
+        "invulnerable": s.invulnerable,
+        "cooldowns": {
+            "snare": s.snare_cooldown,
+            "laser": s.laser_cooldown,
+            "rocket": s.rocket_cooldown,
+            "chain": s.chain_cooldown,
+            "storm": s.storm_cooldown,
+        },
+        "melee": {"phase": s.melee.phase, "step": s.melee.step},
     }

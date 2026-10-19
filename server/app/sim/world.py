@@ -52,6 +52,8 @@ class World:
         self.broken_version = 0
         self.active: list[Collider] = list(self.colliders)
         self.prop_spawns: list[dict[str, Any]] = list(level.get("props", []))
+        self.enemy_spawns: list[tuple[str, Vec3]] = [(e["type"], Vec3.from_list(e["pos"])) for e in level.get("enemySpawns", [])]
+        self.wave_delay: float = float(level.get("waveDelay", 5))
         self.spawn = Vec3.from_list(level["spawn"])
         self.kill_y: float = float(level["killY"])
         b = level.get("base")

@@ -18,3 +18,8 @@ class Vec3:
     @staticmethod
     def from_list(v: list[float]) -> Vec3:
         return Vec3(float(v[0]), float(v[1]), float(v[2]))
+
+
+def vec(v: Vec3) -> dict[str, float]:
+    """A position as it appears in events (the same {x, y, z} object the TypeScript events carry)."""
+    return {"x": v.x, "y": v.y, "z": v.z}

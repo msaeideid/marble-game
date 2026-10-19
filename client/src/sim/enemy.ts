@@ -69,3 +69,38 @@ export function stepEnemyPhysics(e: EnemyState, def: EnemyParams, world: World, 
   e.grounded = r.hitDown;
   if (r.hitDown || r.hitUp) e.vel.y = 0;
 }
+
+/** The part of an enemy that clients draw (snapshots) and conformance scenarios record. Same shape as the Python server's. */
+export interface EnemyWire {
+  id: string;
+  type: string;
+  pos: [number, number, number];
+  vel: [number, number, number];
+  facing: number;
+  ai: AiState;
+  aiTimer: number;
+  shield: number;
+  core: number;
+  snared: number;
+  poise: number;
+  cooldown: number;
+  defeated: number | null;
+}
+
+export function enemyWire(e: EnemyState): EnemyWire {
+  return {
+    id: e.id,
+    type: e.typeId,
+    pos: [e.pos.x, e.pos.y, e.pos.z],
+    vel: [e.vel.x, e.vel.y, e.vel.z],
+    facing: e.facing,
+    ai: e.aiState,
+    aiTimer: e.aiTimer,
+    shield: e.health.shield,
+    core: e.health.core,
+    snared: e.snaredTimer,
+    poise: e.poiseTimer,
+    cooldown: e.attackCooldown,
+    defeated: e.defeatedTimer,
+  };
+}

@@ -111,3 +111,30 @@ export function wireDistance(a: PlayerWire, b: PlayerWire): number {
   }
   return max;
 }
+
+/** A player's combat state, sent to clients so their HUD (health, cooldowns) matches the server. */
+export interface CombatWire {
+  shield: number;
+  core: number;
+  defeated: number | null;
+  invulnerable: number;
+  cooldowns: { snare: number; laser: number; rocket: number; chain: number; storm: number };
+  melee: { phase: string; step: number };
+}
+
+export function combatWire(s: PlayerState): CombatWire {
+  return {
+    shield: s.health.shield,
+    core: s.health.core,
+    defeated: s.defeatedTimer,
+    invulnerable: s.invulnerable,
+    cooldowns: {
+      snare: s.snareCooldown,
+      laser: s.laserCooldown,
+      rocket: s.rocketCooldown,
+      chain: s.chainCooldown,
+      storm: s.stormCooldown,
+    },
+    melee: { phase: s.melee.phase, step: s.melee.step },
+  };
+}

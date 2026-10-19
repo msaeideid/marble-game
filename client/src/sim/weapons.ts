@@ -92,6 +92,22 @@ export interface RocketState {
   targetId: string | null;
 }
 
+/** A rocket in flight as the server describes it to clients. */
+export interface RocketWire {
+  id: number;
+  owner: string;
+  pos: [number, number, number];
+  dir: [number, number, number];
+  target: string | null;
+}
+
+export interface StrikeWire {
+  id: number;
+  owner: string;
+  pos: [number, number, number];
+  timer: number;
+}
+
 export type RocketEvent =
   | { type: 'rocketLaunch'; id: number; owner: string; locked: string | null }
   | { type: 'explosion'; pos: Vec3; radius: number; owner: string; hits: string[] };
@@ -132,6 +148,16 @@ export class RocketSystem {
     };
     this.rockets.push(r);
     return { type: 'rocketLaunch', id: r.id, owner, locked: targetId };
+  }
+
+  toWire(): RocketWire[] {
+    return this.rockets.map((r) => ({
+      id: r.id,
+      owner: r.owner,
+      pos: [r.pos.x, r.pos.y, r.pos.z],
+      dir: [r.dir.x, r.dir.y, r.dir.z],
+      target: r.targetId,
+    }));
   }
 
   step(dt: number, hooks: RocketHooks): RocketEvent[] {
@@ -313,6 +339,10 @@ export class StrikeSystem {
   private nextId = 1;
 
   constructor(readonly params: TempestParams) {}
+
+  toWire(): StrikeWire[] {
+    return this.strikes.map((s) => ({ id: s.id, owner: s.owner, pos: [s.pos.x, s.pos.y, s.pos.z], timer: s.timer }));
+  }
 
   call(owner: string, pos: Vec3): StrikeEvent {
     const s: StrikeState = { id: this.nextId++, owner, pos: { ...pos }, timer: this.params.delay };

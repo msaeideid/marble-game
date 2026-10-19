@@ -58,6 +58,16 @@ def load_props() -> dict[str, SimpleNamespace]:
     return out
 
 
+@cache
+def load_enemies() -> dict[str, SimpleNamespace]:
+    """Enemy definitions by id (shared/data/enemies)."""
+    out: dict[str, SimpleNamespace] = {}
+    for f in sorted((shared_dir() / "data" / "enemies").glob("*.json")):
+        d = json.loads(f.read_text(encoding="utf8"))
+        out[d["id"]] = _ns(d)
+    return out
+
+
 def hero_ids() -> list[str]:
     """Ids of every hero a player may pick."""
     return list(_load_heroes())
