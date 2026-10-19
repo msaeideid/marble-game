@@ -177,6 +177,17 @@ export interface PropParams {
   /** Hard impacts it survives before breaking. */
   hp: number;
   respawnTime: number;
+  /**
+   * Present on volatile props (cars, dumpsters). A laser bolt or a rocket burst hitting one *while it is thrown*
+   * detonates it: a big blast that damages and stuns enemies and breaks walls up to `breakPower`.
+   */
+  detonation?: {
+    radius: number;
+    damage: number;
+    knockback: number;
+    stunTime: number;
+    breakPower: number;
+  };
   /** Visual hints only. */
   look: 'car' | 'crate' | 'dumpster';
   color: number[];

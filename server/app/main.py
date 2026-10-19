@@ -104,7 +104,9 @@ async def ws_endpoint(ws: WebSocket) -> None:
     except WebSocketDisconnect:
         pass
     finally:
-        writer_task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await writer_task
+        # Leave the room first and unconditionally: the writer may already have died on a dead connection, and
+        # awaiting it below would then re-raise its error and skip this (leaving a ghost player in the room).
         room.remove_peer(peer.id)
+        writer_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError, Exception):
+            await writer_task

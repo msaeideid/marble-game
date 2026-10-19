@@ -8,7 +8,7 @@ See [PLAN.md](PLAN.md) for the plan and [docs/](docs/) for short per-system docs
 and zip-pull, energy, shield-over-core health, melee combo, tether-snare, thug AI with waves, base pad and respawn, hit
 feedback and synthesized sound. Phase 2 has started with a **multiplayer spike** ([docs/netcode.md](docs/netcode.md)):
 several players can swing around together on a Python server. Heroes are data ([docs/heroes.md](docs/heroes.md)): ZIPLASH, the powerhouse RAMPART (charge through breakable walls) the flyer METALHEAD (jets, laser, homing rockets) and the storm-caller VOLTAGE (chain lightning, storm strike) are playable.
-RAMPART can lift and throw props, METALHEAD flies and shoots, VOLTAGE stuns crowds. Next: the team-up combo (throw a car, detonate it mid-air).
+RAMPART can lift and throw props, METALHEAD flies and shoots, VOLTAGE stuns crowds. The team-up combo works (RAMPART throws a car, METALHEAD shoots it mid-air) with an AI teammate to play it solo. Next: networked combat, or more teammate AI.
 
 ## Run it
 ```bash
@@ -41,6 +41,7 @@ npm run dev                                                          # terminal 
 | R or right-mouse | METALHEAD: homing rocket at the enemy under the red lock ring |
 | R or right-mouse | VOLTAGE: chain lightning (stuns the enemy under the red ring and its neighbours) |
 | Q | VOLTAGE: storm strike where the yellow ring is (warning, then a stunning blast) |
+| *AI teammate picker on the start screen* | or `?buddy=hero.bruiser` etc.; try RAMPART + METALHEAD for the car-bomb combo |
 | P / Esc, M | pause, mute |
 
 Gamepad: left stick move, right stick look, A jump (hold to climb), X strike, Y zip / rockets / chain, B snare / lift / storm, RT swing / laser, LT reel / charge / descend.

@@ -175,13 +175,13 @@ describe('breakable walls', () => {
     const strong = structuredClone(rampart);
     strong.charge!.breakPower = 2;
     const sim = makeSimFor('hero.bruiser');
-    const sim2 = Object.assign(Object.create(Object.getPrototypeOf(sim)), sim, { hero: strong });
-    const p = sim2.players.get('p1')!;
-    run(sim2, 10, () => intent());
+    const p = sim.addPlayer('p1', strong); // re-adding a player gives them the upgraded hero
+    p.invulnerable = 0;
+    run(sim, 10, () => intent());
     p.pos = { x: 0, y: 0, z: -16 };
-    run(sim2, 1, () => south({ chargePressed: true }));
-    run(sim2, 40, () => south());
-    expect(sim2.world.broken.has(REINFORCED)).toBe(true);
+    run(sim, 1, () => south({ chargePressed: true }));
+    run(sim, 40, () => south());
+    expect(sim.world.broken.has(REINFORCED)).toBe(true);
   });
 
   it('a wall only breaks once, and the world tracks which', () => {

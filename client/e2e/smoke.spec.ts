@@ -377,3 +377,59 @@ test('VOLTAGE glides, chains lightning through a group and calls a storm strike 
   expect(out.left).toBe(0);
   expect(errors, errors.join('\n')).toEqual([]);
 });
+
+test('team-up combo: an AI RAMPART throws a car and METALHEAD shoots it mid-air', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('./?hero=hero.flyer&buddy=hero.bruiser');
+  // The teammate picker is on the start screen, with the current choice marked.
+  await expect(page.locator('#buddy-select a.selected')).toHaveText('RAMPART');
+  await expect(page.locator('#buddy-select a')).toHaveText(['None', 'RAMPART', 'METALHEAD', 'VOLTAGE', 'ZIPLASH']);
+  await page.locator('#overlay').click();
+  await page.waitForFunction(() => (window.__vanguard?.sim.tick ?? 0) > 3);
+  const out = await page.evaluate(() => {
+    const g = window.__vanguard;
+    g.setPaused(false);
+    const key = (type: string, code: string) => window.dispatchEvent(new KeyboardEvent(type, { code, bubbles: true }));
+    const frames = (n: number) => {
+      for (let i = 0; i < n; i++) g.frame(1 / 30);
+    };
+    frames(10);
+    const me = g.sim.players.get('local')!;
+    me.invulnerable = 999;
+    g.sim.players.get('buddy')!.invulnerable = 999;
+    for (const e of g.sim.enemies.values()) e.snaredTimer = 999; // the wave stands still
+    let thrown = false;
+    let boom: { combo?: boolean; owner?: string; thrower?: string | null } | null = null;
+    for (let i = 0; i < 900 && !boom; i++) {
+      for (const ev of g.sim.events) {
+        if (ev.type === 'throw') thrown = true;
+        if (ev.type === 'detonate') boom = ev;
+      }
+      if (boom) break;
+      // The human METALHEAD shoots any car or dumpster that is in the air.
+      key('keyup', 'KeyK');
+      const v = g.sim.volatileTargets()[0];
+      if (v) {
+        const dx = v.pos.x - me.pos.x;
+        const dy = v.pos.y + v.height / 2 - (me.pos.y + 1.5);
+        const dz = v.pos.z - me.pos.z;
+        g.input.yaw = Math.atan2(dx, dz);
+        g.input.pitch = -Math.asin(dy / Math.hypot(dx, dy, dz));
+        key('keydown', 'KeyK');
+      }
+      frames(1);
+    }
+    key('keyup', 'KeyK');
+    for (const ev of g.sim.events) if (ev.type === 'detonate') boom = ev;
+    const banner = document.getElementById('banner')!.textContent ?? '';
+    return { thrown, boom, banner, meshes: (g.view.scene.meshes as { name: string }[]).filter((m) => m.name === 'hero-body').length };
+  });
+  expect(out.thrown).toBe(true);
+  expect(out.boom).not.toBeNull();
+  expect(out.boom!.combo).toBe(true);
+  expect(out.boom!.owner).toBe('local');
+  expect(out.boom!.thrower).toBe('buddy');
+  expect(out.banner).toBe('TEAM-UP COMBO!');
+  expect(out.meshes).toBe(2); // you and your teammate
+  expect(errors, errors.join('\n')).toEqual([]);
+});

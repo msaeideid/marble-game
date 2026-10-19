@@ -40,6 +40,9 @@ interface VanguardHook {
     >;
     spawnEnemy(type: string, pos: { x: number; y: number; z: number }): { id: string; snaredTimer: number; aiState: string; health: { core: number; shield: number }; defeatedTimer: number | null };
     rocketSystem: { rockets: { id: number }[] } | null;
+    volatileTargets(): { id: string; pos: { x: number; y: number; z: number }; height: number }[];
+    events: { type: string; combo?: boolean; owner?: string; thrower?: string | null }[];
+    step(dt: number, intents: Map<string, unknown>): void;
     strikeSystem: { strikes: { id: number }[] } | null;
   };
   view: {

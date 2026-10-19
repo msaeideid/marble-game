@@ -99,6 +99,10 @@ export type RocketEvent =
 export interface RocketHooks {
   /** Enemies that are alive right now. */
   targets(): Iterable<Target>;
+  /** Thrown volatile props: a rocket stops against them and its burst detonates the ones it catches. */
+  props?(): Iterable<Target>;
+  /** Detonate a thrown volatile prop (id `prop:<n>`) on behalf of a rocket's owner. */
+  detonate?(propId: string, owner: string): void;
   /** Apply blast damage and a shove (horizontal direction and strength) to one enemy. */
   blast(id: string, amount: number, dirX: number, dirZ: number, knockback: number): void;
 }
@@ -134,6 +138,7 @@ export class RocketSystem {
     const events: RocketEvent[] = [];
     const p = this.params;
     const targets = [...hooks.targets()];
+    const props = [...(hooks.props?.() ?? [])];
     const alive: RocketState[] = [];
     for (const r of this.rockets) {
       r.age += dt;
@@ -150,7 +155,7 @@ export class RocketSystem {
         const x = r.pos.x + r.dir.x * at;
         const y = r.pos.y + r.dir.y * at;
         const z = r.pos.z + r.dir.z * at;
-        if (targets.some((t) => touches(t, x, y, z, p.radius))) {
+        if (targets.some((t) => touches(t, x, y, z, p.radius)) || props.some((t) => touches(t, x, y, z, p.radius))) {
           stop = at;
           break;
         }
@@ -160,7 +165,7 @@ export class RocketSystem {
       r.pos = { x: r.pos.x + r.dir.x * travelled, y: r.pos.y + r.dir.y * travelled, z: r.pos.z + r.dir.z * travelled };
 
       if (stop <= dist || r.age >= p.lifetime) {
-        events.push(this.explode(r, targets, hooks));
+        events.push(this.explode(r, targets, props, hooks));
       } else {
         alive.push(r);
       }
@@ -170,9 +175,14 @@ export class RocketSystem {
     return events;
   }
 
-  private explode(r: RocketState, targets: readonly Target[], hooks: RocketHooks): RocketEvent {
+  private explode(r: RocketState, targets: readonly Target[], props: readonly Target[], hooks: RocketHooks): RocketEvent {
     const p = this.params;
     const hits: string[] = [];
+    for (const t of props) {
+      const m = centre(t);
+      const d = Math.hypot(m.x - r.pos.x, m.y - r.pos.y, m.z - r.pos.z) - t.halfWidth;
+      if (d <= p.splashRadius) hooks.detonate?.(t.id, r.owner);
+    }
     for (const t of targets) {
       const m = centre(t);
       const dx = m.x - r.pos.x;

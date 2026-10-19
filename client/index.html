@@ -64,6 +64,11 @@
       #hero-select a { padding: 8px 18px; border-radius: 8px; background: rgba(255,255,255,.12); color: #fff; text-decoration: none; font-weight: 700; border: 2px solid transparent; }
       #hero-select a:hover { background: rgba(255,255,255,.22); }
       #hero-select a.selected { border-color: #7af0ff; background: rgba(122,240,255,.2); }
+      #buddy-label { margin: 10px 0 4px; font-size: 13px; opacity: .8; }
+      #buddy-select { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 0 0 14px; }
+      #buddy-select a { padding: 4px 12px; border-radius: 8px; background: rgba(255,255,255,.1); color: #fff; text-decoration: none; font-size: 13px; border: 2px solid transparent; }
+      #buddy-select a:hover { background: rgba(255,255,255,.22); }
+      #buddy-select a.selected { border-color: #ffb36b; background: rgba(255,179,107,.2); }
       #overlay .go { font-size: 18px; font-weight: 700; animation: pulse 1.2s infinite; }
       @keyframes pulse { 50% { opacity: .45; } }
       #energy-fill.low { background: linear-gradient(90deg, #ff6b6b, #ffb36b); }
@@ -103,6 +108,8 @@
         <h1>VANGUARD</h1>
         <p>Prototype &middot; choose your hero</p>
         <div id="hero-select"></div>
+        <div id="buddy-label">AI teammate (try RAMPART + METALHEAD: throw a car, shoot it mid-air)</div>
+        <div id="buddy-select"></div>
         <table>
           <tr><td>WASD</td><td>Move (Space to jump)</td></tr>
           <tr><td>Mouse</td><td>Look (click to capture, or hold the button and drag)</td></tr>

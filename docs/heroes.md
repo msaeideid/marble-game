@@ -150,6 +150,28 @@ melee gauntlets.
 Code: `traceChain`, `StrikeSystem` and `strikePoint` in `client/src/sim/weapons.ts`; the Sim wires them up next to the
 other combat. They are solo-only like all combat (`chainPressed` and `stormPressed` are not sent online).
 
+## The team-up combo: car bomb
+RAMPART throws a car, METALHEAD shoots it **while it is in the air**, and it explodes.
+
+- A **thrown** car or dumpster is *volatile*. A laser bolt through it, or a rocket bursting next to it, detonates it. A
+  prop sitting on the ground or held in someone's hands is safe, and crates are not volatile.
+- **Blast** (`props/*.json` -> `detonation`): car 55 damage within 4.2 m (down to half at the edge), 1.5 s stun,
+  knockback, and it breaks walls up to tier 2 in range; dumpster 32 damage within 3.2 m, tier 1 walls. The thrown car
+  alone only does 40 to whatever it hits, so the combo is worth far more than either hero acting alone. Nobody on the
+  team is hurt. The prop respawns at home like any destroyed prop.
+- The event says whether it was a **combo** (someone other than the thrower set it off): the game shows "TEAM-UP COMBO!"
+  and a fanfare.
+- A thrown car lands about 12 m away, so the shooter has well under a second to hit it; the laser's aim assist (it is
+  hitscan) makes that fair. Rockets are slower than the car, so for them it works as a "burst near it" bonus.
+
+**Playing it solo:** the start screen has an **AI teammate** picker (or `?buddy=<hero id>`). Pick RAMPART as your
+teammate and play METALHEAD (you shoot the cars it throws), or play RAMPART with a METALHEAD teammate (it shoots the
+cars you throw). `client/src/sim/buddy.ts` is a deliberately simple AI: it produces a normal `PlayerIntent`, follows you,
+fights with its hero's kit, and knows both halves of the combo. The sim now supports a different hero per player
+(`sim.addPlayer(id, hero)`), which is what makes any of this possible.
+
+Like all combat, detonation is **solo-only** until combat is networked, and will be ported to Python then.
+
 ## Networking
 Charging changes movement and the world, so it follows the project rule (decision D1): **any mechanic that changes the
 authoritative state is ported to Python with conformance scenarios**.
@@ -194,3 +216,5 @@ authoritative state is ported to Python with conformance scenarios**.
 | Storm strike power | `tempest.radius`, `damage`, `stunTime`, `cooldown`, `cost` |
 | Storm strike warning | `tempest.delay` (longer = easier to dodge) |
 | VOLTAGE glide | `abilities/stormflight.json` (same fields as METALHEAD's flight) |
+| Car bomb power | `props/car.json` -> `detonation.radius`, `damage`, `stunTime`, `knockback`, `breakPower` |
+| Which props explode | give a prop a `detonation` block (crates have none) |

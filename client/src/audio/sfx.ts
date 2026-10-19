@@ -122,6 +122,12 @@ export class Sfx {
     this.tone(110, 30, 0.5, 'sawtooth', 0.35 * volume);
     this.noise(0.25, 0.3 * volume, 1500, 1, 0.04);
   }
+  /** The team-up combo landing: a fanfare over the blast. */
+  combo(): void {
+    this.tone(392, 392, 0.12, 'square', 0.1);
+    this.tone(523, 523, 0.12, 'square', 0.1, 0.11);
+    this.tone(784, 784, 0.3, 'square', 0.12, 0.22);
+  }
   /** Lightning crack. */
   zap(volume = 1): void {
     this.noise(0.18, 0.45 * volume, 3500, 1.2);

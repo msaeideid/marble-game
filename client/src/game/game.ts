@@ -14,6 +14,7 @@ import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { PlayerView } from '../render/playerView';
 import { createGameView, type GameView } from '../render/scene';
 import { aimDir } from '../sim/aim';
+import { BuddyBrain } from '../sim/buddy';
 import { createPlayerState, handPos } from '../sim/controller';
 import type { AiState } from '../sim/enemy';
 import { FixedStepper, SIM_DT } from '../sim/fixedStep';
@@ -28,6 +29,7 @@ import { Hud } from '../ui/hud';
 import { WorldLabels } from '../ui/worldLabels';
 
 const LOCAL_ID = 'local';
+const BUDDY_ID = 'buddy';
 const DEFAULT_HERO = 'hero.swinger';
 const HITSTOP_LIGHT = 0.05;
 const HITSTOP_HEAVY = 0.09;
@@ -52,6 +54,8 @@ export class Game {
   private readonly labels: WorldLabels;
   private readonly hud = new Hud();
   private readonly hero: HeroParams;
+  /** The AI teammate (solo only), chosen with ?buddy=<hero id>. */
+  private readonly buddy: { brain: BuddyBrain; hero: HeroParams; view: PlayerView } | null = null;
   private readonly levelView: LevelView;
   private readonly propViews: PropViews;
   private readonly rocketViews: RocketViews;
@@ -87,6 +91,18 @@ export class Game {
     buildBaseView(this.view.scene, world);
     const m = this.hero.movement;
     this.playerView = new PlayerView(this.view.scene, m.height, m.halfWidth, m.handHeight, undefined, this.hero.id);
+    const buddyId = new URLSearchParams(window.location.search).get('buddy');
+    if (buddyId && buddyId in content.heroes && !onlineOpts) {
+      const bh = getHero(buddyId);
+      const state = this.sim.addPlayer(BUDDY_ID, bh);
+      state.pos.x += 2;
+      state.prevPos.x += 2;
+      this.buddy = {
+        brain: new BuddyBrain(BUDDY_ID, LOCAL_ID),
+        hero: bh,
+        view: new PlayerView(this.view.scene, bh.movement.height, bh.movement.halfWidth, bh.movement.handHeight, new Color3(1, 0.55, 0.25), bh.id),
+      };
+    }
     this.cam = new FollowCamera(this.view.scene);
     this.effects = new Effects(this.view.scene);
     this.propViews = new PropViews(this.view.scene, content.props);
@@ -111,6 +127,24 @@ export class Game {
         a.addEventListener('click', (e) => e.stopPropagation()); // do not also start the game
         select.appendChild(a);
       }
+    }
+    const buddySelect = document.getElementById('buddy-select');
+    if (buddySelect && !this.online) {
+      const current = new URLSearchParams(window.location.search).get('buddy');
+      const options: [string, string][] = [['', 'None'], ...Object.values(content.heroes).map((h): [string, string] => [h.id, h.displayName])];
+      for (const [id, label] of options) {
+        const q = new URLSearchParams(window.location.search);
+        if (id) q.set('buddy', id);
+        else q.delete('buddy');
+        const a = document.createElement('a');
+        a.href = `?${q.toString()}`;
+        a.textContent = label;
+        a.classList.toggle('selected', (current ?? '') === id);
+        a.addEventListener('click', (e) => e.stopPropagation());
+        buddySelect.appendChild(a);
+      }
+    } else if (buddySelect) {
+      document.getElementById('buddy-label')?.remove();
     }
     const kits = new Set<string>(['melee']);
     if (this.hero.swing) kits.add('swing');
@@ -184,7 +218,9 @@ export class Game {
         intent.chainPressed = false;
         intent.stormPressed = false;
       }
-      this.sim.step(stepDt, new Map([[LOCAL_ID, intent]]));
+      const intents = new Map<string, PlayerIntent>([[LOCAL_ID, intent]]);
+      if (this.buddy) intents.set(BUDDY_ID, this.buddy.brain.think(this.sim));
+      this.sim.step(stepDt, intents);
       this.online?.onLocalStep(intent);
       events.push(...this.sim.events);
     });
@@ -195,6 +231,7 @@ export class Game {
     this.syncEnemies(alpha, dt);
     const aimAnchor = this.previewAnchor();
     this.playerView.update(me, alpha, me.tether || me.zip ? null : aimAnchor, this.clock, this.online?.session.renderOffset);
+    if (this.buddy) this.buddy.view.update(this.sim.players.get(BUDDY_ID)!, alpha, null, this.clock);
     const p = me.prevPos;
     this.online?.session.update(dt);
     const off = this.online?.session.renderOffset ?? { x: 0, y: 0, z: 0 };
@@ -341,11 +378,13 @@ export class Game {
     for (const ev of events) {
       switch (ev.type) {
         case 'melee': {
-          if (ev.attacker !== LOCAL_ID) break;
-          this.effects.slash(me.pos, ev.yaw, ev.step, this.hero.melee.range);
+          const who = this.sim.players.get(ev.attacker);
+          if (!who) break;
+          const melee = this.sim.heroOf(ev.attacker).melee;
+          this.effects.slash(who.pos, ev.yaw, ev.step, melee.range);
           this.sfx.swing(ev.step);
           if (ev.hits.length > 0) {
-            const heavy = ev.step >= this.hero.melee.steps.length - 1;
+            const heavy = ev.step >= melee.steps.length - 1;
             this.hitStop = heavy ? HITSTOP_HEAVY : HITSTOP_LIGHT;
             this.cam.shake(heavy ? 0.14 : 0.06);
             this.sfx.hit(ev.step);
@@ -386,13 +425,12 @@ export class Game {
           this.sfx.hit(2);
           break;
         case 'laser':
-          if (ev.owner !== LOCAL_ID) break;
           this.effects.laser(ev.from, ev.to);
           if (ev.hit) this.effects.spark(ev.to);
           this.sfx.laser();
           break;
         case 'rocketLaunch':
-          if (ev.owner === LOCAL_ID) this.sfx.rocket();
+          this.sfx.rocket();
           break;
         case 'explosion': {
           this.effects.explosion(ev.pos, ev.radius);
@@ -402,6 +440,21 @@ export class Game {
           if (ev.hits.length > 0) this.hitStop = HITSTOP_LIGHT;
           break;
         }
+        case 'detonate': {
+          // A car bomb: a big white-hot fireball, a heavy shake, and a banner when two heroes did it together.
+          this.effects.explosion(ev.pos, ev.radius, new Color3(1, 0.85, 0.5));
+          this.effects.explosion(ev.pos, ev.radius * 0.6, new Color3(1, 0.45, 0.15));
+          const d = Math.hypot(ev.pos.x - me.pos.x, ev.pos.z - me.pos.z);
+          this.sfx.explosion(Math.max(0.4, 1.3 - d / 40));
+          this.cam.shake(Math.max(0.1, 0.4 - d * 0.015));
+          this.hitStop = HITSTOP_HEAVY;
+          if (ev.combo) {
+            this.bannerText = 'TEAM-UP COMBO!';
+            this.bannerTimer = 2;
+            this.sfx.combo();
+          }
+          break;
+        }
         case 'chain':
           this.effects.lightning(ev.points);
           this.sfx.zap();
@@ -409,7 +462,7 @@ export class Game {
           break;
         case 'strikeStart':
           this.effects.strikeWarning(ev.pos, ev.radius, ev.delay);
-          if (ev.owner === LOCAL_ID) this.sfx.strikeCharge();
+          this.sfx.strikeCharge();
           break;
         case 'strikeHit': {
           this.effects.strikeBolt(ev.pos, ev.radius);

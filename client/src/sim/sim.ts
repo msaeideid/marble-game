@@ -36,6 +36,7 @@ export type SimEvent =
   | RocketEvent
   | StrikeEvent
   | { type: 'chain'; owner: string; points: Vec3[]; hits: string[] }
+  | { type: 'detonate'; id: number; pos: Vec3; radius: number; owner: string; thrower: string | null; hits: string[]; combo: boolean }
   | PropEvent;
 
 /** The authoritative-style game simulation. No rendering, DOM or engine imports. */
@@ -52,9 +53,11 @@ export class Sim {
   readonly propSystem: PropSystem | null;
   private readonly propDefs: Record<string, PropParams>;
   /** Homing rockets in flight; null for heroes without the rocket kit. */
-  readonly rocketSystem: RocketSystem | null;
+  rocketSystem: RocketSystem | null = null;
   /** Storm strikes waiting to land; null for heroes without the storm kit. */
-  readonly strikeSystem: StrikeSystem | null;
+  strikeSystem: StrikeSystem | null = null;
+  /** Each player's hero. Players added without one use the sim's default hero. */
+  private readonly heroes = new Map<string, HeroParams>();
 
   /** With `waves` on, the level's enemy spawns are (re)populated whenever the arena is cleared. */
   constructor(
@@ -64,16 +67,28 @@ export class Sim {
     private readonly opts: { waves?: boolean; props?: boolean; propDefs?: Record<string, PropParams> } = {},
   ) {
     this.propDefs = opts.propDefs ?? {};
-    this.rocketSystem = hero.rockets ? new RocketSystem(world, hero.rockets) : null;
-    this.strikeSystem = hero.tempest ? new StrikeSystem(hero.tempest) : null;
+    this.ensureSystems(hero);
     this.propSystem =
       opts.props !== false && world.propSpawns.length > 0 && opts.propDefs ? new PropSystem(world, this.propDefs) : null;
   }
 
-  addPlayer(id: string): PlayerState {
-    const state = createPlayerState(this.world.spawn, this.hero);
+  /** Add a player; `hero` defaults to the sim's own hero, so a different hero can join the same world. */
+  addPlayer(id: string, hero: HeroParams = this.hero): PlayerState {
+    const state = createPlayerState(this.world.spawn, hero);
     this.players.set(id, state);
+    this.heroes.set(id, hero);
+    this.ensureSystems(hero);
     return state;
+  }
+
+  heroOf(id: string): HeroParams {
+    return this.heroes.get(id) ?? this.hero;
+  }
+
+  /** Rockets and storm strikes exist as soon as any hero in the world can use them. */
+  private ensureSystems(hero: HeroParams): void {
+    if (hero.rockets && !this.rocketSystem) this.rocketSystem = new RocketSystem(this.world, hero.rockets);
+    if (hero.tempest && !this.strikeSystem) this.strikeSystem = new StrikeSystem(hero.tempest);
   }
 
   spawnEnemy(typeId: string, pos: Vec3): EnemyState {
@@ -94,14 +109,15 @@ export class Sim {
         if (player.defeatedTimer <= 0) this.respawn(id);
         continue;
       }
+      const hero = this.heroOf(id);
       const intent = intents.get(id) ?? NEUTRAL_INTENT;
       const carry = player.carrying ? carryScales(this.propDefs[player.carrying.def]) : undefined;
-      for (const c of stepPlayer(player, intent, this.hero, this.world, dt, carry)) {
+      for (const c of stepPlayer(player, intent, hero, this.world, dt, carry)) {
         this.events.push({ type: 'break', id: c.id, by: id });
       }
       this.stepCharge(id, player);
       if (this.propSystem && intent.grabPressed) {
-        this.events.push(...this.propSystem.handleGrab(id, player, this.hero, intent.yaw, intent.pitch));
+        this.events.push(...this.propSystem.handleGrab(id, player, hero, intent.yaw, intent.pitch));
       }
       // Hands are full: no striking while carrying.
       this.stepPlayerMelee(id, player, player.carrying ? { ...intent, attackPressed: false } : intent, dt);
@@ -110,9 +126,9 @@ export class Sim {
       this.stepPlayerRockets(id, player, intent, dt);
       this.stepPlayerChain(id, player, intent, dt);
       this.stepPlayerStorm(id, player, intent, dt);
-      regenHealth(player.health, this.hero.health, dt);
+      regenHealth(player.health, hero.health, dt);
       player.invulnerable = Math.max(0, player.invulnerable - dt);
-      this.applyBaseRegen(player, dt);
+      this.applyBaseRegen(id, player, dt);
       if (player.pos.y < this.world.killY) this.respawn(id);
     }
 
@@ -147,7 +163,7 @@ export class Sim {
         holderTop: (pid) => {
           const p = this.players.get(pid);
           if (!p || p.defeatedTimer !== null) return null;
-          return { x: p.pos.x, y: p.pos.y + this.hero.movement.height + 0.05, z: p.pos.z };
+          return { x: p.pos.x, y: p.pos.y + this.heroOf(pid).movement.height + 0.05, z: p.pos.z };
         },
         enemies: () =>
           [...this.enemies.values()]
@@ -177,9 +193,10 @@ export class Sim {
   }
 
   private stepPlayerMelee(id: string, player: PlayerState, intent: PlayerIntent, dt: number): void {
-    const melee = this.hero.melee;
+    const hero = this.heroOf(id);
+    const melee = hero.melee;
     const hitStep = stepMelee(player.melee, intent.attackPressed, melee, dt, (cost) =>
-      trySpend(player, cost, this.hero.energy),
+      trySpend(player, cost, hero.energy),
     );
     if (hitStep === null) return;
 
@@ -203,10 +220,10 @@ export class Sim {
    * Standing on the base pad refills shield and energy fast and core health slowly, but only out of combat
    * (after the normal damage-regen delay has passed), so the pad is a place to recover, not to tank.
    */
-  private applyBaseRegen(player: PlayerState, dt: number): void {
+  private applyBaseRegen(id: string, player: PlayerState, dt: number): void {
     const base = this.world.base;
     if (!base || !this.world.isOnBase(player.pos)) return;
-    const h = this.hero;
+    const h = this.heroOf(id);
     const outOfCombat = player.health.shieldDelay <= 0;
     if (outOfCombat) {
       player.health.shield = Math.min(h.health.shield.max, player.health.shield + base.regenPerSecond * dt);
@@ -221,7 +238,8 @@ export class Sim {
 
   /** A charging hero bowls over each enemy it runs into, once per charge. */
   private stepCharge(id: string, player: PlayerState): void {
-    const charge = this.hero.charge;
+    const hero = this.heroOf(id);
+    const charge = hero.charge;
     if (!charge || !player.charge) return;
     const struck: string[] = [];
     for (const e of this.enemies.values()) {
@@ -244,14 +262,18 @@ export class Sim {
 
   /** Holding fire shoots a bolt every `fireInterval`, each costing a little energy from the shared pool. */
   private stepPlayerLaser(id: string, player: PlayerState, intent: PlayerIntent, dt: number): void {
+    const hero = this.heroOf(id);
     player.laserCooldown = Math.max(0, player.laserCooldown - dt);
-    const p = this.hero.laser;
+    const p = hero.laser;
     if (!p || !intent.fireHeld || player.laserCooldown > 0 || player.carrying) return;
-    if (!trySpend(player, p.shotCost, this.hero.energy)) return;
+    if (!trySpend(player, p.shotCost, hero.energy)) return;
     player.laserCooldown = p.fireInterval;
-    const origin = handPos(player, this.hero);
-    const shot = traceLaser(this.world, origin, aimDir(intent.yaw, intent.pitch), p, this.liveTargets());
-    if (shot.hit) {
+    const origin = handPos(player, hero);
+    const shot = traceLaser(this.world, origin, aimDir(intent.yaw, intent.pitch), p, [...this.liveTargets(), ...this.volatileTargets()]);
+    if (shot.hit?.id.startsWith('prop:')) {
+      // A bolt through a thrown car or dumpster sets it off: the team-up combo.
+      this.detonateProp(Number(shot.hit.id.slice(5)), id);
+    } else if (shot.hit) {
       const e = this.enemies.get(shot.hit.id);
       // A steady beam wears enemies down without stunning them, so they keep coming and you have to keep moving.
       if (e) this.damageEnemy(e, p.damage, id, { stagger: false });
@@ -260,12 +282,13 @@ export class Sim {
   }
 
   private stepPlayerRockets(id: string, player: PlayerState, intent: PlayerIntent, dt: number): void {
+    const hero = this.heroOf(id);
     player.rocketCooldown = Math.max(0, player.rocketCooldown - dt);
-    const p = this.hero.rockets;
+    const p = hero.rockets;
     if (!p || !this.rocketSystem || !intent.rocketPressed || player.rocketCooldown > 0 || player.carrying) return;
-    if (!trySpend(player, p.cost, this.hero.energy)) return;
+    if (!trySpend(player, p.cost, hero.energy)) return;
     player.rocketCooldown = p.cooldown;
-    const hand = handPos(player, this.hero);
+    const hand = handPos(player, hero);
     const dir = aimDir(intent.yaw, intent.pitch);
     const lock = pickLockTarget(this.world, hand, dir, p, this.liveTargets());
     const muzzle = { x: hand.x + dir.x * 0.8, y: hand.y + dir.y * 0.8, z: hand.z + dir.z * 0.8 };
@@ -274,12 +297,13 @@ export class Sim {
 
   /** Chain lightning: shock the enemy under the crosshair and the ones near it. No target, no cost. */
   private stepPlayerChain(id: string, player: PlayerState, intent: PlayerIntent, dt: number): void {
+    const hero = this.heroOf(id);
     player.chainCooldown = Math.max(0, player.chainCooldown - dt);
-    const p = this.hero.chain;
+    const p = hero.chain;
     if (!p || !intent.chainPressed || player.chainCooldown > 0 || player.carrying) return;
-    const hand = handPos(player, this.hero);
+    const hand = handPos(player, hero);
     const { hits } = traceChain(this.world, hand, aimDir(intent.yaw, intent.pitch), p, this.liveTargets());
-    if (hits.length === 0 || !trySpend(player, p.cost, this.hero.energy)) return;
+    if (hits.length === 0 || !trySpend(player, p.cost, hero.energy)) return;
     player.chainCooldown = p.cooldown;
     const points: Vec3[] = [hand];
     hits.forEach((t, i) => {
@@ -294,11 +318,12 @@ export class Sim {
 
   /** Storm strike: call lightning down on the spot you aim at (the sky does nothing). */
   private stepPlayerStorm(id: string, player: PlayerState, intent: PlayerIntent, dt: number): void {
+    const hero = this.heroOf(id);
     player.stormCooldown = Math.max(0, player.stormCooldown - dt);
-    const p = this.hero.tempest;
+    const p = hero.tempest;
     if (!p || !this.strikeSystem || !intent.stormPressed || player.stormCooldown > 0 || player.carrying) return;
-    const at = strikePoint(this.world, handPos(player, this.hero), aimDir(intent.yaw, intent.pitch), p);
-    if (!at || !trySpend(player, p.cost, this.hero.energy)) return;
+    const at = strikePoint(this.world, handPos(player, hero), aimDir(intent.yaw, intent.pitch), p);
+    if (!at || !trySpend(player, p.cost, hero.energy)) return;
     player.stormCooldown = p.cooldown;
     this.events.push(this.strikeSystem.call(id, at));
   }
@@ -332,6 +357,8 @@ export class Sim {
     this.events.push(
       ...this.rocketSystem.step(dt, {
         targets: () => this.liveTargets(),
+        props: () => this.volatileTargets(),
+        detonate: (propId, owner) => this.detonateProp(Number(propId.slice(5)), owner),
         blast: (eid, amount, dirX, dirZ, knockback) => {
           const e = this.enemies.get(eid);
           if (!e) return;
@@ -347,6 +374,58 @@ export class Sim {
     );
   }
 
+  /** Thrown volatile props in the air (what a laser bolt or rocket burst can detonate). */
+  volatileTargets(): Target[] {
+    return this.propSystem?.volatileTargets() ?? [];
+  }
+
+  /**
+   * A thrown car or dumpster goes off: enemies in the blast take damage (less at the edge) and are stunned, weak walls
+   * break. Nobody on the team is hurt. `combo` is true when someone other than the thrower set it off.
+   */
+  private detonateProp(propIndex: number, owner: string): void {
+    const r = this.propSystem?.detonate(propIndex);
+    if (!r) return;
+    const d = r.def.detonation!;
+    this.events.push(...r.events);
+    const hits: string[] = [];
+    for (const e of this.enemies.values()) {
+      if (e.defeatedTimer !== null) continue;
+      const m = this.enemyDefs[e.typeId]!.move;
+      const dx = e.pos.x - r.centre.x;
+      const dy = e.pos.y + m.height / 2 - r.centre.y;
+      const dz = e.pos.z - r.centre.z;
+      const dist = Math.max(0, Math.hypot(dx, dy, dz) - m.halfWidth);
+      if (dist > d.radius) continue;
+      const frac = dist / d.radius;
+      const flat = Math.hypot(dx, dz) || 1;
+      hits.push(e.id);
+      e.vel.x += (dx / flat) * d.knockback * (1 - 0.5 * frac);
+      e.vel.z += (dz / flat) * d.knockback * (1 - 0.5 * frac);
+      this.damageEnemy(e, d.damage * (1 - 0.5 * frac), owner, { stagger: false });
+      this.stun(e, d.stunTime);
+    }
+    for (const c of [...this.world.active]) {
+      if (c.breakable === undefined || c.breakable > d.breakPower) continue;
+      const cx = Math.max(c.min.x, Math.min(r.centre.x, c.max.x));
+      const cy = Math.max(c.min.y, Math.min(r.centre.y, c.max.y));
+      const cz = Math.max(c.min.z, Math.min(r.centre.z, c.max.z));
+      if (Math.hypot(cx - r.centre.x, cy - r.centre.y, cz - r.centre.z) <= d.radius && this.world.breakCollider(c.id)) {
+        this.events.push({ type: 'break', id: c.id, by: `prop:${propIndex}` });
+      }
+    }
+    this.events.push({
+      type: 'detonate',
+      id: propIndex,
+      pos: r.centre,
+      radius: d.radius,
+      owner,
+      thrower: r.thrower,
+      hits,
+      combo: r.thrower !== null && r.thrower !== owner,
+    });
+  }
+
   /** Enemies a weapon can hit right now. */
   liveTargets(): Target[] {
     const out: Target[] = [];
@@ -359,8 +438,9 @@ export class Sim {
   }
 
   private stepPlayerSnare(id: string, player: PlayerState, intent: PlayerIntent, dt: number): void {
+    const hero = this.heroOf(id);
     player.snareCooldown = Math.max(0, player.snareCooldown - dt);
-    const p = this.hero.snare;
+    const p = hero.snare;
     if (!p || !intent.snarePressed || player.snareCooldown > 0) return;
     const candidates = [...this.enemies.values()]
       .filter((e) => e.defeatedTimer === null)
@@ -368,9 +448,9 @@ export class Sim {
         const move = this.enemyDefs[e.typeId]!.move;
         return { e, pos: e.pos, halfWidth: move.halfWidth, height: move.height };
       });
-    const origin = handPos(player, this.hero);
+    const origin = handPos(player, hero);
     const hit = pickSnareTarget(this.world, origin, aimDir(intent.yaw, intent.pitch), p, candidates);
-    if (!hit || !trySpend(player, p.cost, this.hero.energy)) return;
+    if (!hit || !trySpend(player, p.cost, hero.energy)) return;
     player.snareCooldown = p.cooldown;
     hit.e.snaredTimer = p.duration;
     if (hit.e.aiState === 'windup') hit.e.aiState = 'chase';
@@ -423,12 +503,13 @@ export class Sim {
   }
 
   damagePlayer(id: string, amount: number, sourceId: string | null): void {
+    const hero = this.heroOf(id);
     const player = this.players.get(id);
     if (!player || player.defeatedTimer !== null || player.invulnerable > 0) return;
-    const r = applyDamage(player.health, amount, this.hero.health);
+    const r = applyDamage(player.health, amount, hero.health);
     this.events.push({ type: 'damage', target: id, source: sourceId, amount, shieldLost: r.shieldLost, coreLost: r.coreLost });
     if (r.defeated) {
-      player.defeatedTimer = this.hero.respawnDelay;
+      player.defeatedTimer = hero.respawnDelay;
       player.tether = null;
       player.zip = null;
       player.flying = false;
@@ -440,10 +521,11 @@ export class Sim {
 
   /** Reset in place so references held by views and tests stay valid. */
   private respawn(id: string): void {
+    const hero = this.heroOf(id);
     const state = this.players.get(id);
     if (!state) return;
     this.propSystem?.dropHeldBy(id, state.pos);
-    Object.assign(state, createPlayerState(this.world.spawn, this.hero));
+    Object.assign(state, createPlayerState(this.world.spawn, hero));
     this.events.push({ type: 'respawn', id });
   }
 }

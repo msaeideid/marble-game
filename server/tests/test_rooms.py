@@ -460,3 +460,42 @@ def test_the_world_resets_when_the_last_player_leaves(room: Room) -> None:
     assert room.world.broken_list() == []
     assert room.game.props is not None
     assert room.game.props.props[0].pos.x == 3.0  # back at home
+
+
+def test_a_player_whose_connection_dies_mid_send_still_leaves_the_room() -> None:
+    """Regression: the writer task failing on a dead socket used to skip remove_peer, leaving a ghost player."""
+    import asyncio
+
+    from fastapi import WebSocketDisconnect
+
+    from app.main import app, ws_endpoint
+
+    class DyingSocket:
+        def __init__(self) -> None:
+            self.query_params: dict[str, str] = {}
+            self.sent = 0
+
+        async def accept(self) -> None:
+            return None
+
+        async def send_text(self, _: str) -> None:
+            self.sent += 1
+            if self.sent > 1:  # the welcome goes through; every later send hits the dead connection
+                raise RuntimeError("WebSocket is not connected")
+
+        async def close(self) -> None:
+            return None
+
+        async def receive_text(self) -> str:
+            room = app.state.room
+            for peer in room.peers.values():
+                peer.outbox.put_nowait({"t": "snap"})  # the writer tries to send this and fails
+            await asyncio.sleep(0.05)
+            raise WebSocketDisconnect()
+
+    async def run() -> int:
+        app.state.room = build_room()
+        await ws_endpoint(DyingSocket())  # type: ignore[arg-type]
+        return len(app.state.room.peers)
+
+    assert asyncio.run(run()) == 0

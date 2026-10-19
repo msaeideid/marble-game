@@ -17,5 +17,12 @@
     0.9,
     0.25,
     0.3
-  ]
+  ],
+  "detonation": {
+    "radius": 4.2,
+    "damage": 55,
+    "knockback": 14,
+    "stunTime": 1.5,
+    "breakPower": 2
+  }
 }

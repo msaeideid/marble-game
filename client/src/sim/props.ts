@@ -2,6 +2,7 @@ import { aimDir } from './aim';
 import { moveAndCollide, type PlayerState } from './controller';
 import type { HeroParams, LiftParams, PropParams } from './params';
 import type { Vec3 } from './types';
+import type { Target } from './weapons';
 import type { World } from './world';
 
 export type PropMode = 'resting' | 'held' | 'thrown' | 'destroyed';
@@ -24,6 +25,8 @@ export interface PropState {
   home: Vec3;
   /** Enemies already struck by the current throw (not synced). */
   hit: string[];
+  /** Who threw it last (not synced): a team-up combo is a detonation by someone else. */
+  thrower: string | null;
 }
 
 /** The synced part of a prop. This exact shape is in snapshots and in the conformance scenarios. */
@@ -94,6 +97,7 @@ export class PropSystem {
         respawn: 0,
         home: { ...s.pos },
         hit: [],
+        thrower: null,
       };
     });
   }
@@ -173,7 +177,30 @@ export class PropSystem {
     pr.mode = 'thrown';
     pr.holder = null;
     pr.hit = [];
+    pr.thrower = playerId;
     return [{ type: 'throw', id: pr.id, by: playerId }];
+  }
+
+  /** Volatile props that are in the air right now: what a laser bolt or rocket burst can detonate. Ids are `prop:<n>`. */
+  volatileTargets(): Target[] {
+    const out: Target[] = [];
+    for (const pr of this.props) {
+      const def = this.defs[pr.defId]!;
+      if (pr.mode !== 'thrown' || !def.detonation) continue;
+      out.push({ id: `prop:${pr.id}`, pos: pr.pos, halfWidth: def.size.halfWidth, height: def.size.height });
+    }
+    return out;
+  }
+
+  /** Blow up a thrown volatile prop. Returns where and how big, or null if it is not a thrown volatile prop. */
+  detonate(id: number): { centre: Vec3; def: PropParams; thrower: string | null; events: PropEvent[] } | null {
+    const pr = this.props[id];
+    const def = pr ? this.defs[pr.defId] : undefined;
+    if (!pr || !def?.detonation || pr.mode !== 'thrown') return null;
+    const centre = { x: pr.pos.x, y: pr.pos.y + def.size.height / 2, z: pr.pos.z };
+    const events: PropEvent[] = [];
+    this.destroy(pr, def, events);
+    return { centre, def, thrower: pr.thrower, events };
   }
 
   /** A carrier was defeated or left: whatever they held drops where they stood. */

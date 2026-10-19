@@ -32,6 +32,7 @@ schemas, so a typo is caught immediately.
 | VOLTAGE chain lightning | `abilities/chain.json` -> `stunTime`, `jumpRadius`, `maxTargets`, `damage`, `cooldown`, `cost` | stun is the effect; damage stays low |
 | VOLTAGE storm strike | `abilities/tempest.json` -> `radius`, `delay`, `damage`, `stunTime`, `cooldown`, `cost` | longer `delay` = easier to dodge |
 | VOLTAGE glide | `abilities/stormflight.json` | same fields as METALHEAD's `flight.json` |
+| Car bomb (team-up combo) | `props/car.json`, `props/dumpster.json` -> `detonation` (`radius`, `damage`, `stunTime`, `knockback`, `breakPower`) | crates have none; the combo should beat either hero alone |
 | Prop weight / throw | `props/<type>.json` -> `carrySlow`, `throwSpeed`, `throwDamage`, `throwKnockback`, `breakPower`, `hp`, `respawnTime` | `carrySlow` 1 = no slowdown |
 | Lift reach / cooldown | `abilities/lift.json` -> `liftRange`, `cooldown`, `strength` | `strength` scales every throw speed |
 | Where props are | `levels/arena.json` -> `props` | type + position; they respawn there |
