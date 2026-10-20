@@ -28,7 +28,7 @@ async function join(browser: Browser, name: string, hero: string): Promise<Page>
   contexts.push(ctx);
   const page = await ctx.newPage();
   await page.goto(`./?server=${encodeURIComponent(SERVER)}&name=${name}&hero=${hero}`);
-  await page.locator('#overlay').click();
+  await page.locator('#overlay .go').click();
   await page.waitForFunction(() => window.__vanguard?.online?.status === 'online', undefined, { timeout: 15_000 });
   await page.evaluate(() => window.__vanguard.setPaused(false));
   return page;

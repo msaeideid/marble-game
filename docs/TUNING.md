@@ -48,3 +48,5 @@ Hit-stop, camera shake and slash visuals are constants in `client/src/game/game.
 - Upgrades must widen options, not inflate power: `validateUpgrade()` in `sim/upgrades.ts` enforces it in tests.
 - Reference point for difficulty: a stationary player who only mashes strike loses roughly 30-50 of 100 HP per wave
   (waves 1-6) and does not die. Real play (dodging, snaring, swinging) should do better.
+
+Campaign numbers (bosses, armor, rewards, the level gate) are in [CAMPAIGN.md](CAMPAIGN.md#tuning-the-campaign).

@@ -115,7 +115,11 @@ export class Game {
           mission,
           save: this.save,
           params,
-          onEnd: () => this.setPaused(true),
+          // The mission is over: give the mouse back so the result card's buttons can be clicked.
+          onEnd: () => {
+            document.exitPointerLock?.();
+            this.setPaused(true);
+          },
         })
       : null;
     window.addEventListener('pagehide', () => this.session?.flush());

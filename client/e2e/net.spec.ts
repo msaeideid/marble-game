@@ -29,7 +29,7 @@ async function join(browser: Browser, name: string, extra = ''): Promise<Page> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`./?server=${encodeURIComponent(SERVER)}&name=${name}${extra}`);
-  await page.locator('#overlay').click();
+  await page.locator('#overlay .go').click();
   await page.waitForFunction(() => window.__vanguard?.online?.status === 'online', undefined, { timeout: 15_000 });
   await page.waitForFunction(() => (window.__vanguard.online?.session.stats.acked ?? 0) > 0 || true);
   (page as Page & { errors: string[] }).errors = errors;

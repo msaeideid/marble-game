@@ -12,7 +12,7 @@ function watchErrors(page: Page): string[] {
 async function startGame(page: Page): Promise<void> {
   await page.goto('./');
   await expect(page.locator('#overlay')).toBeVisible();
-  await page.locator('#overlay').click();
+  await page.locator('#overlay .go').click();
   await expect(page.locator('#overlay')).toBeHidden();
   await page.waitForFunction(() => (window.__vanguard?.sim.tick ?? 0) > 5);
 }
@@ -171,7 +171,7 @@ test('hero select lists every hero and RAMPART shows only its own controls', asy
 test('RAMPART charges through a weak wall and the wall disappears', async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto('./?hero=hero.bruiser');
-  await page.locator('#overlay').click();
+  await page.locator('#overlay .go').click();
   await page.waitForFunction(() => (window.__vanguard?.sim.tick ?? 0) > 3);
   const out = await page.evaluate(() => {
     const g = window.__vanguard;
@@ -197,7 +197,7 @@ test('RAMPART lifts a car, throws it at the reinforced wall and breaks it', asyn
   const errors = watchErrors(page);
   await page.goto('./?hero=hero.bruiser');
   await expect(page.locator('#overlay tr[data-kit="lift"]')).toBeVisible();
-  await page.locator('#overlay').click();
+  await page.locator('#overlay .go').click();
   await page.waitForFunction(() => (window.__vanguard?.sim.tick ?? 0) > 3);
   const out = await page.evaluate(() => {
     const g = window.__vanguard;
@@ -250,7 +250,7 @@ test('METALHEAD shows only its own controls', async ({ page }) => {
 test('METALHEAD takes off, climbs, shoots a laser and a homing rocket hits the thug', async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto('./?hero=hero.flyer');
-  await page.locator('#overlay').click();
+  await page.locator('#overlay .go').click();
   await page.waitForFunction(() => (window.__vanguard?.sim.tick ?? 0) > 3);
   const out = await page.evaluate(() => {
     const g = window.__vanguard;
@@ -326,7 +326,7 @@ test('VOLTAGE glides, chains lightning through a group and calls a storm strike 
   await expect(page.locator('#hero-select a.selected')).toHaveText('VOLTAGE');
   for (const kit of ['flight', 'chain', 'tempest']) await expect(page.locator(`#overlay tr[data-kit="${kit}"]`)).toBeVisible();
   await expect(page.locator('#overlay tr[data-kit="laser"]')).toBeHidden();
-  await page.locator('#overlay').click();
+  await page.locator('#overlay .go').click();
   await page.waitForFunction(() => (window.__vanguard?.sim.tick ?? 0) > 3);
   const out = await page.evaluate(() => {
     const g = window.__vanguard;
@@ -384,7 +384,7 @@ test('team-up combo: an AI RAMPART throws a car and METALHEAD shoots it mid-air'
   // The teammate picker is on the start screen, with the current choice marked.
   await expect(page.locator('#buddy-select a.selected')).toHaveText('RAMPART');
   await expect(page.locator('#buddy-select a')).toHaveText(['None', 'RAMPART', 'METALHEAD', 'VOLTAGE', 'ZIPLASH']);
-  await page.locator('#overlay').click();
+  await page.locator('#overlay .go').click();
   await page.waitForFunction(() => (window.__vanguard?.sim.tick ?? 0) > 3);
   const out = await page.evaluate(() => {
     const g = window.__vanguard;

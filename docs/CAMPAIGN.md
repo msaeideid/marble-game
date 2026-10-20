@@ -61,12 +61,29 @@ stuns and snares (`resist`) so crowd control helps but cannot lock them down, an
 by `tools/gen_content.py` from templates (deterministic), so they can be regenerated or hand-edited later.
 All have a **ground route** every hero can walk; swingers and flyers get shortcuts over rooftops.
 
-## What is built when
-1. Mission engine, schema, runner (this doc's data model).
-2. Progression: wallet, XP, upgrades, shop rules, local save.
-3. Boss framework: phases, armor, resist, reward.
-4. Content: levels, missions, enemies, bosses, story text.
-5. Game flow: campaign menu, mission HUD, dialogue, rewards, upgrade bay.
+## What is built
+All five parts exist and are tested (`client/src/campaign/`, `client/src/sim/boss.ts`, `client/src/ui/`):
+1. **Mission engine**: `MissionRunner`, schema in `shared/schemas/mission.schema.json`.
+2. **Progression**: `progress.ts` (wallet, XP, unlock rules, shop rules, defensive save) and 21 upgrades.
+3. **Boss framework**: phases of slam, charge and summon, armor, stun/snare/knockback resistance, never staggered.
+4. **Content**: `tools/gen_content.py` writes the levels and missions; integrity tests check every spawn and marker is
+   standable and walkable from the start, each world has a ground route to its boss, and the unlock graph can be finished.
+5. **Game flow**: the Campaign and Upgrade Bay tabs, the mission briefing, objective list, clock, dialogue, boss bar,
+   goal beacon and results card, plus free roam that pays scrap and XP.
+
+## Tuning the campaign
+| Want | Change |
+|---|---|
+| A boss is too easy or hard | `data/enemies/<boss>.json`: `health.core.max`, `armor`, the phase `attacks` (`windup`, `cooldown`, `damage`, `radius`) |
+| Light attacks should hurt VASTOR more or less | his `armor` (every hit loses this much, never more than 80%) |
+| Bosses are stunned too easily | `resist.stun`, `resist.snare`, `resist.knockback` (1 = no resistance) |
+| The VASTOR fight comes too early or late | `missions/vastor.json` -> `requires.level` (XP for level n is 50 * (n-1)^2) |
+| He escapes sooner or later | the boss objective's `escapeAt` (fraction of health) |
+| More or less loot | enemy `reward`, mission `reward`, upgrade `cost` |
+| New missions or places | edit `tools/gen_content.py` and re-run it, or edit the JSON directly |
+
+After adding new data files, a stale cache can hide them from the unit tests; delete `node_modules/.vitest-cache` and
+`client/node_modules/.vite` once.
 
 ## Limits for now
 - **Offline only** (solo, with the AI teammate). The campaign director and bosses live in the TypeScript sim; online co-op

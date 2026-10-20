@@ -19,7 +19,6 @@ interface VanguardHook {
     tick: number;
     currentWave: number;
     propWires: { id: number; def: string; mode: string; holder: string | null; pos: number[] }[];
-    world: { broken: Set<number>; active: { id: number }[] };
     players: Map<
       string,
       {
@@ -42,10 +41,19 @@ interface VanguardHook {
     spawnEnemy(type: string, pos: { x: number; y: number; z: number }): { id: string; snaredTimer: number; aiState: string; health: { core: number; shield: number }; defeatedTimer: number | null };
     rocketSystem: { rockets: { id: number }[] } | null;
     volatileTargets(): { id: string; pos: { x: number; y: number; z: number }; height: number }[];
-    events: { type: string; combo?: boolean; owner?: string; thrower?: string | null }[];
+    events: { type: string; combo?: boolean; owner?: string; thrower?: string | null }[] & unknown[];
     step(dt: number, intents: Map<string, unknown>): void;
     strikeSystem: { strikes: { id: number }[] } | null;
+    damageEnemy(e: unknown, amount: number, source: string | null): void;
+    hero: { energy: { regenPerSecond: number } };
+    world: { colliders: unknown[]; broken: Set<number>; active: { id: number }[] };
   };
+  session: {
+    over: boolean;
+    onStep(events: unknown[], dt: number): unknown[];
+    save: { scrap: number; xp: number; completed: Record<string, number>; upgrades: string[]; flags: string[] };
+    runner: { index: number; status: string; escaped: boolean; mission: { id: string }; bossOf(tag: string): { health: { core: number; shield: number } } | undefined } | null;
+  } | null;
   view: {
     engine: { getRenderingCanvas(): HTMLCanvasElement };
     scene: { meshes: unknown[]; getActiveMeshes(): { length: number }; render(): void };
