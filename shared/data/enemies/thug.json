@@ -29,5 +29,9 @@
   },
   "powerDownTime": 0.8,
   "staggerTime": 0.35,
-  "poiseTime": 0.6
+  "poiseTime": 0.6,
+  "reward": {
+    "scrap": 5,
+    "xp": 10
+  }
 }

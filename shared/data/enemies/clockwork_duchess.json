@@ -1,0 +1,140 @@
+{
+  "id": "boss.clockwork_duchess",
+  "displayName": "The Clockwork Duchess",
+  "health": {
+    "shield": {
+      "max": 0,
+      "regenPerSecond": 0,
+      "regenDelay": 0
+    },
+    "core": {
+      "max": 600,
+      "regenPerSecond": 0,
+      "regenDelay": 0
+    }
+  },
+  "move": {
+    "speed": 3.4,
+    "halfWidth": 1.3,
+    "height": 3.4
+  },
+  "aggroRange": 45,
+  "attack": {
+    "range": 3.6,
+    "damage": 1,
+    "windup": 0.5,
+    "recovery": 0.5,
+    "cooldown": 1,
+    "knockback": 0
+  },
+  "powerDownTime": 1.4,
+  "staggerTime": 0.05,
+  "poiseTime": 99,
+  "reward": {
+    "scrap": 110,
+    "xp": 200
+  },
+  "look": {
+    "color": [
+      0.85,
+      0.7,
+      0.3
+    ],
+    "scale": 1.9
+  },
+  "armor": 4,
+  "resist": {
+    "stun": 0.3,
+    "snare": 0.3,
+    "knockback": 0.15
+  },
+  "boss": {
+    "displayTitle": "The Clockwork Duchess",
+    "phases": [
+      {
+        "fromFraction": 1.0,
+        "speed": 1.0,
+        "attacks": [
+          {
+            "kind": "slam",
+            "windup": 1.0,
+            "cooldown": 4,
+            "range": 6,
+            "radius": 6.0,
+            "damage": 24,
+            "knockback": 13
+          },
+          {
+            "kind": "summon",
+            "windup": 0.9,
+            "cooldown": 15,
+            "enemy": "enemy.brute",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "fromFraction": 0.6,
+        "speed": 1.2,
+        "attacks": [
+          {
+            "kind": "slam",
+            "windup": 0.85,
+            "cooldown": 3.5,
+            "range": 6,
+            "radius": 6.5,
+            "damage": 26,
+            "knockback": 14
+          },
+          {
+            "kind": "charge",
+            "windup": 1.0,
+            "cooldown": 8,
+            "speed": 14,
+            "duration": 1.0,
+            "damage": 22,
+            "knockback": 12
+          },
+          {
+            "kind": "summon",
+            "windup": 0.9,
+            "cooldown": 12,
+            "enemy": "enemy.brute",
+            "count": 2
+          }
+        ]
+      },
+      {
+        "fromFraction": 0.3,
+        "speed": 1.4,
+        "attacks": [
+          {
+            "kind": "slam",
+            "windup": 0.7,
+            "cooldown": 2.8,
+            "range": 6,
+            "radius": 7.0,
+            "damage": 28,
+            "knockback": 15
+          },
+          {
+            "kind": "charge",
+            "windup": 0.8,
+            "cooldown": 6,
+            "speed": 16,
+            "duration": 1.1,
+            "damage": 24,
+            "knockback": 14
+          },
+          {
+            "kind": "summon",
+            "windup": 0.8,
+            "cooldown": 10,
+            "enemy": "enemy.thug",
+            "count": 4
+          }
+        ]
+      }
+    ]
+  }
+}

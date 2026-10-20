@@ -1,0 +1,24 @@
+{
+  "id": "upgrade.swinger.deep_reserves",
+  "displayName": "Deep Reserves",
+  "description": "A slightly bigger energy bar that refills sooner.",
+  "hero": "hero.swinger",
+  "cost": 140,
+  "modifiers": [
+    {
+      "path": "energy.max",
+      "op": "mul",
+      "value": 1.1
+    },
+    {
+      "path": "energy.regenDelay",
+      "op": "mul",
+      "value": 0.8
+    }
+  ],
+  "requires": {
+    "flags": [
+      "world3Done"
+    ]
+  }
+}

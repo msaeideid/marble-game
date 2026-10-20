@@ -1,3 +1,4 @@
+import { stepBossAi, type BossTelegraph } from './boss';
 import { createEnemy, enemyWire, stepEnemyPhysics, type EnemyState, type EnemyWire } from './enemy';
 import { aimDir } from './aim';
 import { stepEnemyAi } from './ai';
@@ -36,6 +37,9 @@ export type SimEvent =
   | RocketEvent
   | StrikeEvent
   | { type: 'chain'; owner: string; points: Vec3[]; hits: string[] }
+  | { type: 'bossTelegraph'; id: string; kind: BossTelegraph['kind']; pos: Vec3; radius: number; delay: number }
+  | { type: 'bossStrike'; id: string; kind: BossTelegraph['kind']; pos: Vec3; radius: number; hits: string[] }
+  | { type: 'bossPhase'; id: string; phase: number }
   | { type: 'detonate'; id: number; pos: Vec3; radius: number; owner: string; thrower: string | null; hits: string[]; combo: boolean }
   | PropEvent;
 
@@ -157,9 +161,12 @@ export class Sim {
         if (enemy.defeatedTimer <= 0) this.enemies.delete(id);
         continue;
       }
-      stepEnemyAi(enemy, def, targets, crowd, dt, {
-        attack: (targetId) => this.enemyHitsPlayer(enemy, def, targetId),
-      });
+      if (def.boss) stepBossAi(enemy, def, targets, dt, this.bossHooks(enemy));
+      else {
+        stepEnemyAi(enemy, def, targets, crowd, dt, {
+          attack: (targetId) => this.enemyHitsPlayer(enemy, def, targetId),
+        });
+      }
       stepEnemyPhysics(enemy, def, this.world, dt);
       regenHealth(enemy.health, def.health, dt);
     }
@@ -189,8 +196,7 @@ export class Sim {
         hitEnemy: (id, damage, dirX, dirZ, knockback) => {
           const e = this.enemies.get(id);
           if (!e) return;
-          e.vel.x += dirX * knockback;
-          e.vel.z += dirZ * knockback;
+          this.shove(e, dirX * knockback, dirZ * knockback);
           this.damageEnemy(e, damage, 'prop');
           if (e.defeatedTimer === null) {
             e.aiState = 'stagger'; // a car to the face always knocks them off balance
@@ -228,8 +234,7 @@ export class Sim {
       const dx = e.pos.x - player.pos.x;
       const dz = e.pos.z - player.pos.z;
       const d = Math.hypot(dx, dz) || 1;
-      e.vel.x += (dx / d) * step.knockback;
-      e.vel.z += (dz / d) * step.knockback;
+      this.shove(e, (dx / d) * step.knockback, (dz / d) * step.knockback);
       this.damageEnemy(e, step.damage, id);
     }
     this.events.push({
@@ -277,8 +282,7 @@ export class Sim {
       if (!ahead || Math.hypot(dx, dz) > charge.hitRadius + half || Math.abs(e.pos.y - player.pos.y) > 2) continue;
       player.chargeHits.push(e.id);
       struck.push(e.id);
-      e.vel.x += player.charge.dirX * charge.knockback;
-      e.vel.z += player.charge.dirZ * charge.knockback;
+      this.shove(e, player.charge.dirX * charge.knockback, player.charge.dirZ * charge.knockback);
       this.damageEnemy(e, charge.damage, id);
       e.aiState = 'stagger'; // a charge always knocks the enemy off balance, poise or not
       e.aiTimer = this.enemyDefs[e.typeId]!.staggerTime;
@@ -362,8 +366,7 @@ export class Sim {
         shock: (eid, damage, stunTime, dirX, dirZ, knockback) => {
           const e = this.enemies.get(eid);
           if (!e) return;
-          e.vel.x += dirX * knockback;
-          e.vel.z += dirZ * knockback;
+          this.shove(e, dirX * knockback, dirZ * knockback);
           this.damageEnemy(e, damage, 'storm', { stagger: false });
           this.stun(e, stunTime);
         },
@@ -371,10 +374,48 @@ export class Sim {
     );
   }
 
+  /** What a boss can do to the world, wired to this sim. */
+  private bossHooks(boss: EnemyState) {
+    return {
+      area: (at: Vec3, radius: number, damage: number, knockback: number, skip: readonly string[]): string[] => {
+        const hit: string[] = [];
+        for (const [pid, p] of this.players) {
+          if (p.defeatedTimer !== null || skip.includes(pid)) continue;
+          const half = this.heroOf(pid).movement.halfWidth;
+          const dx = p.pos.x - at.x;
+          const dz = p.pos.z - at.z;
+          const d = Math.hypot(dx, dz);
+          if (d > radius + half || Math.abs(p.pos.y - at.y) > 3) continue;
+          hit.push(pid);
+          p.vel.x += (dx / (d || 1)) * knockback;
+          p.vel.z += (dz / (d || 1)) * knockback;
+          this.damagePlayer(pid, damage, boss.id);
+        }
+        return hit;
+      },
+      spawn: (type: string, pos: Vec3) => {
+        if (this.enemyDefs[type]) this.spawnEnemy(type, pos);
+      },
+      count: (type: string) => [...this.enemies.values()].filter((e) => e.typeId === type && e.defeatedTimer === null).length,
+      telegraph: (t: BossTelegraph) => this.events.push({ type: 'bossTelegraph', id: boss.id, kind: t.kind, pos: t.pos, radius: t.radius, delay: t.delay }),
+      strike: (info: { kind: BossTelegraph['kind']; pos: Vec3; radius: number; hits: string[] }) =>
+        this.events.push({ type: 'bossStrike', id: boss.id, ...info }),
+      phase: (phase: number) => this.events.push({ type: 'bossPhase', id: boss.id, phase }),
+    };
+  }
+
+  /** Push an enemy sideways, less so if it is heavy (`resist.knockback`). */
+  private shove(e: EnemyState, dx: number, dz: number): void {
+    const k = this.enemyDefs[e.typeId]?.resist?.knockback ?? 1;
+    e.vel.x += dx * k;
+    e.vel.z += dz * k;
+  }
+
   /** Shock an enemy still: it cannot move or attack for `seconds`, even if it had poise. */
   private stun(e: EnemyState, seconds: number): void {
     if (e.defeatedTimer !== null) return;
-    e.aiTimer = e.aiState === 'stagger' ? Math.max(e.aiTimer, seconds) : seconds;
+    const scaled = seconds * (this.enemyDefs[e.typeId]?.resist?.stun ?? 1);
+    e.aiTimer = e.aiState === 'stagger' ? Math.max(e.aiTimer, scaled) : scaled;
     e.aiState = 'stagger';
   }
 
@@ -388,8 +429,7 @@ export class Sim {
         blast: (eid, amount, dirX, dirZ, knockback) => {
           const e = this.enemies.get(eid);
           if (!e) return;
-          e.vel.x += dirX * knockback;
-          e.vel.z += dirZ * knockback;
+          this.shove(e, dirX * knockback, dirZ * knockback);
           this.damageEnemy(e, amount, 'rocket');
           if (e.defeatedTimer === null) {
             e.aiState = 'stagger'; // a rocket always knocks them off balance
@@ -426,8 +466,7 @@ export class Sim {
       const frac = dist / d.radius;
       const flat = Math.hypot(dx, dz) || 1;
       hits.push(e.id);
-      e.vel.x += (dx / flat) * d.knockback * (1 - 0.5 * frac);
-      e.vel.z += (dz / flat) * d.knockback * (1 - 0.5 * frac);
+      this.shove(e, (dx / flat) * d.knockback * (1 - 0.5 * frac), (dz / flat) * d.knockback * (1 - 0.5 * frac));
       this.damageEnemy(e, d.damage * (1 - 0.5 * frac), owner, { stagger: false });
       this.stun(e, d.stunTime);
     }
@@ -478,7 +517,7 @@ export class Sim {
     const hit = pickSnareTarget(this.world, origin, aimDir(intent.yaw, intent.pitch), p, candidates);
     if (!hit || !trySpend(player, p.cost, hero.energy)) return;
     player.snareCooldown = p.cooldown;
-    hit.e.snaredTimer = p.duration;
+    hit.e.snaredTimer = p.duration * (this.enemyDefs[hit.e.typeId]?.resist?.snare ?? 1);
     if (hit.e.aiState === 'windup') hit.e.aiState = 'chase';
     this.events.push({ type: 'snare', source: id, target: hit.e.id });
   }
@@ -517,6 +556,8 @@ export class Sim {
   damageEnemy(enemy: EnemyState, amount: number, sourceId: string | null, opts: { stagger?: boolean } = {}): void {
     if (enemy.defeatedTimer !== null) return;
     const def = this.enemyDefs[enemy.typeId]!;
+    // Armor takes a flat amount off every hit (never more than 80% of it): light attacks barely scratch armored enemies.
+    if (def.armor) amount = Math.max(amount * 0.2, amount - def.armor);
     const r = applyDamage(enemy.health, amount, def.health);
     this.events.push({ type: 'damage', target: enemy.id, source: sourceId, amount, shieldLost: r.shieldLost, coreLost: r.coreLost });
     if (r.defeated) {

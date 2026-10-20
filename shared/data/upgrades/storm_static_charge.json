@@ -1,0 +1,17 @@
+{
+  "id": "upgrade.storm.static_charge",
+  "displayName": "Static Charge",
+  "description": "Energy regenerates 25% faster.",
+  "hero": "hero.storm",
+  "cost": 60,
+  "modifiers": [
+    {
+      "path": "energy.regenPerSecond",
+      "op": "mul",
+      "value": 1.25
+    }
+  ],
+  "requires": {
+    "level": 2
+  }
+}

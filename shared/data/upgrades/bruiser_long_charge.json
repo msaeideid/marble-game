@@ -1,0 +1,24 @@
+{
+  "id": "upgrade.bruiser.long_charge",
+  "displayName": "Long Charge",
+  "description": "Charge further, and charge again sooner.",
+  "hero": "hero.bruiser",
+  "cost": 100,
+  "modifiers": [
+    {
+      "path": "charge.duration",
+      "op": "mul",
+      "value": 1.3
+    },
+    {
+      "path": "charge.cooldown",
+      "op": "mul",
+      "value": 0.8
+    }
+  ],
+  "requires": {
+    "flags": [
+      "world2Done"
+    ]
+  }
+}

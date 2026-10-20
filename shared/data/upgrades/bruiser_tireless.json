@@ -1,0 +1,17 @@
+{
+  "id": "upgrade.bruiser.tireless",
+  "displayName": "Tireless",
+  "description": "Energy regenerates 30% faster.",
+  "hero": "hero.bruiser",
+  "cost": 60,
+  "modifiers": [
+    {
+      "path": "energy.regenPerSecond",
+      "op": "mul",
+      "value": 1.3
+    }
+  ],
+  "requires": {
+    "level": 2
+  }
+}

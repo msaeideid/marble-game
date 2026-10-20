@@ -1,0 +1,24 @@
+{
+  "id": "upgrade.storm.fast_storms",
+  "displayName": "Fast Storms",
+  "description": "Storm strikes recharge sooner and land a little quicker.",
+  "hero": "hero.storm",
+  "cost": 100,
+  "modifiers": [
+    {
+      "path": "tempest.cooldown",
+      "op": "mul",
+      "value": 0.75
+    },
+    {
+      "path": "tempest.delay",
+      "op": "mul",
+      "value": 0.85
+    }
+  ],
+  "requires": {
+    "flags": [
+      "world2Done"
+    ]
+  }
+}

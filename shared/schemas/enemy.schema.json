@@ -88,6 +88,163 @@
     },
     "poiseTime": {
       "$ref": "common.schema.json#/$defs/nonNegative"
+    },
+    "reward": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scrap",
+        "xp"
+      ],
+      "properties": {
+        "scrap": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "xp": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        }
+      }
+    },
+    "armor": {
+      "$ref": "common.schema.json#/$defs/nonNegative"
+    },
+    "resist": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stun": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "snare": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "knockback": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "look": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "color"
+      ],
+      "properties": {
+        "color": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "scale": {
+          "$ref": "common.schema.json#/$defs/positive"
+        }
+      }
+    },
+    "boss": {
+      "$ref": "#/definitions/boss"
+    }
+  },
+  "definitions": {
+    "boss": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "displayTitle",
+        "phases"
+      ],
+      "properties": {
+        "displayTitle": {
+          "type": "string",
+          "minLength": 1
+        },
+        "phases": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "fromFraction",
+              "speed",
+              "attacks"
+            ],
+            "properties": {
+              "fromFraction": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "speed": {
+                "$ref": "common.schema.json#/$defs/positive"
+              },
+              "attacks": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "kind",
+                    "windup",
+                    "cooldown"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "slam",
+                        "charge",
+                        "summon"
+                      ]
+                    },
+                    "windup": {
+                      "$ref": "common.schema.json#/$defs/positive"
+                    },
+                    "cooldown": {
+                      "$ref": "common.schema.json#/$defs/nonNegative"
+                    },
+                    "range": {
+                      "$ref": "common.schema.json#/$defs/positive"
+                    },
+                    "radius": {
+                      "$ref": "common.schema.json#/$defs/positive"
+                    },
+                    "damage": {
+                      "$ref": "common.schema.json#/$defs/nonNegative"
+                    },
+                    "knockback": {
+                      "$ref": "common.schema.json#/$defs/nonNegative"
+                    },
+                    "speed": {
+                      "$ref": "common.schema.json#/$defs/positive"
+                    },
+                    "duration": {
+                      "$ref": "common.schema.json#/$defs/positive"
+                    },
+                    "enemy": {
+                      "$ref": "common.schema.json#/$defs/id"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

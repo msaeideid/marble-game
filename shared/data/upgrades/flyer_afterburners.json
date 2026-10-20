@@ -1,0 +1,24 @@
+{
+  "id": "upgrade.flyer.afterburners",
+  "displayName": "Afterburners",
+  "description": "Fly faster and turn quicker.",
+  "hero": "hero.flyer",
+  "cost": 100,
+  "modifiers": [
+    {
+      "path": "flight.speed",
+      "op": "mul",
+      "value": 1.2
+    },
+    {
+      "path": "flight.accel",
+      "op": "mul",
+      "value": 1.2
+    }
+  ],
+  "requires": {
+    "flags": [
+      "world2Done"
+    ]
+  }
+}

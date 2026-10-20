@@ -1,4 +1,5 @@
 import { moveAndCollide } from './controller';
+import { createBossState, KNOCKBACK_FRICTION, type BossState } from './boss';
 import { createHealth, type HealthState } from './health';
 import type { EnemyParams } from './params';
 import type { Vec3 } from './types';
@@ -26,6 +27,8 @@ export interface EnemyState {
   snaredTimer: number;
   /** While > 0, hits cannot stagger this enemy. */
   poiseTimer: number;
+  /** Boss behaviour state, for enemies whose definition has a `boss` block. */
+  boss: BossState | null;
 }
 
 export function createEnemy(id: string, def: EnemyParams, pos: Vec3): EnemyState {
@@ -43,13 +46,12 @@ export function createEnemy(id: string, def: EnemyParams, pos: Vec3): EnemyState
     aiTimer: 0,
     attackCooldown: 0,
     snaredTimer: 0,
-    poiseTimer: 0,
+    poiseTimer: def.boss ? 1e9 : 0, // bosses are never staggered by hits
+    boss: def.boss ? createBossState() : null,
   };
 }
 
 const GRAVITY = 28;
-/** Fraction of horizontal knockback speed lost per second. */
-const KNOCKBACK_FRICTION = 8;
 
 /** Gravity, knockback decay and collision for one enemy. AI steering (S4) adds to `vel` before this runs. */
 export function stepEnemyPhysics(e: EnemyState, def: EnemyParams, world: World, dt: number): void {

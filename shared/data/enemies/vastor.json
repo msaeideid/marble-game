@@ -1,0 +1,140 @@
+{
+  "id": "boss.vastor",
+  "displayName": "VASTOR",
+  "health": {
+    "shield": {
+      "max": 0,
+      "regenPerSecond": 0,
+      "regenDelay": 0
+    },
+    "core": {
+      "max": 800,
+      "regenPerSecond": 0,
+      "regenDelay": 0
+    }
+  },
+  "move": {
+    "speed": 3.8,
+    "halfWidth": 1.8,
+    "height": 4.6
+  },
+  "aggroRange": 60,
+  "attack": {
+    "range": 4.0,
+    "damage": 1,
+    "windup": 0.5,
+    "recovery": 0.5,
+    "cooldown": 1,
+    "knockback": 0
+  },
+  "powerDownTime": 2.0,
+  "staggerTime": 0.05,
+  "poiseTime": 99,
+  "reward": {
+    "scrap": 150,
+    "xp": 300
+  },
+  "look": {
+    "color": [
+      0.4,
+      0.3,
+      0.6
+    ],
+    "scale": 2.6
+  },
+  "armor": 5,
+  "resist": {
+    "stun": 0.3,
+    "snare": 0.3,
+    "knockback": 0.15
+  },
+  "boss": {
+    "displayTitle": "VASTOR, the Worldbreaker",
+    "phases": [
+      {
+        "fromFraction": 1.0,
+        "speed": 1.0,
+        "attacks": [
+          {
+            "kind": "slam",
+            "windup": 1.0,
+            "cooldown": 3.6,
+            "range": 6.5,
+            "radius": 6.5,
+            "damage": 26,
+            "knockback": 14
+          },
+          {
+            "kind": "summon",
+            "windup": 1.0,
+            "cooldown": 14,
+            "enemy": "enemy.shard",
+            "count": 3
+          }
+        ]
+      },
+      {
+        "fromFraction": 0.65,
+        "speed": 1.2,
+        "attacks": [
+          {
+            "kind": "slam",
+            "windup": 0.9,
+            "cooldown": 3.2,
+            "range": 6.5,
+            "radius": 7.0,
+            "damage": 28,
+            "knockback": 15
+          },
+          {
+            "kind": "charge",
+            "windup": 1.0,
+            "cooldown": 6,
+            "speed": 16,
+            "duration": 0.9,
+            "damage": 24,
+            "knockback": 14
+          },
+          {
+            "kind": "summon",
+            "windup": 0.9,
+            "cooldown": 12,
+            "enemy": "enemy.shard",
+            "count": 4
+          }
+        ]
+      },
+      {
+        "fromFraction": 0.35,
+        "speed": 1.4,
+        "attacks": [
+          {
+            "kind": "slam",
+            "windup": 0.75,
+            "cooldown": 2.6,
+            "range": 6.5,
+            "radius": 7.5,
+            "damage": 30,
+            "knockback": 16
+          },
+          {
+            "kind": "charge",
+            "windup": 0.8,
+            "cooldown": 5,
+            "speed": 18,
+            "duration": 1.0,
+            "damage": 26,
+            "knockback": 15
+          },
+          {
+            "kind": "summon",
+            "windup": 0.8,
+            "cooldown": 10,
+            "enemy": "enemy.brute",
+            "count": 2
+          }
+        ]
+      }
+    ]
+  }
+}

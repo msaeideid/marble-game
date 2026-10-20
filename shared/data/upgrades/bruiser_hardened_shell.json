@@ -1,0 +1,24 @@
+{
+  "id": "upgrade.bruiser.hardened_shell",
+  "displayName": "Hardened Shell",
+  "description": "Your shield and core start recovering sooner after a hit.",
+  "hero": "hero.bruiser",
+  "cost": 140,
+  "modifiers": [
+    {
+      "path": "health.shield.regenDelay",
+      "op": "mul",
+      "value": 0.7
+    },
+    {
+      "path": "health.core.regenDelay",
+      "op": "mul",
+      "value": 0.7
+    }
+  ],
+  "requires": {
+    "flags": [
+      "world3Done"
+    ]
+  }
+}

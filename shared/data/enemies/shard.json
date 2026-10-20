@@ -1,0 +1,45 @@
+{
+  "id": "enemy.shard",
+  "displayName": "Shard",
+  "health": {
+    "shield": {
+      "max": 0,
+      "regenPerSecond": 0,
+      "regenDelay": 0
+    },
+    "core": {
+      "max": 25,
+      "regenPerSecond": 0,
+      "regenDelay": 0
+    }
+  },
+  "move": {
+    "speed": 7.5,
+    "halfWidth": 0.35,
+    "height": 1.5
+  },
+  "aggroRange": 30,
+  "attack": {
+    "range": 1.9,
+    "damage": 6,
+    "windup": 0.35,
+    "recovery": 0.5,
+    "cooldown": 1.0,
+    "knockback": 4
+  },
+  "powerDownTime": 0.8,
+  "staggerTime": 0.3,
+  "poiseTime": 0.5,
+  "reward": {
+    "scrap": 4,
+    "xp": 8
+  },
+  "look": {
+    "color": [
+      0.7,
+      0.4,
+      0.95
+    ],
+    "scale": 0.85
+  }
+}

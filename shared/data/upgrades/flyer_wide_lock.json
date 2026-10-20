@@ -1,0 +1,22 @@
+{
+  "id": "upgrade.flyer.wide_lock",
+  "displayName": "Wide Lock",
+  "description": "Rockets lock on from further off-centre and the laser forgives a worse aim.",
+  "hero": "hero.flyer",
+  "cost": 80,
+  "modifiers": [
+    {
+      "path": "rockets.lockAngleDegrees",
+      "op": "mul",
+      "value": 1.4
+    },
+    {
+      "path": "laser.aimAssist",
+      "op": "mul",
+      "value": 1.3
+    }
+  ],
+  "requires": {
+    "level": 2
+  }
+}

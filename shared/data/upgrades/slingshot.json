@@ -1,0 +1,24 @@
+{
+  "id": "upgrade.swinger.slingshot",
+  "displayName": "Slingshot",
+  "description": "A stronger launch when you let go of the tether.",
+  "hero": "hero.swinger",
+  "cost": 120,
+  "modifiers": [
+    {
+      "path": "swing.releaseBoost",
+      "op": "mul",
+      "value": 1.5
+    },
+    {
+      "path": "swing.maxSpeed",
+      "op": "mul",
+      "value": 1.15
+    }
+  ],
+  "requires": {
+    "flags": [
+      "world2Done"
+    ]
+  }
+}

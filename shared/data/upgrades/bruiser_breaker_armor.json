@@ -1,0 +1,19 @@
+{
+  "id": "upgrade.bruiser.breaker_armor",
+  "displayName": "Breaker Armor",
+  "description": "Your charge can smash reinforced walls.",
+  "hero": "hero.bruiser",
+  "cost": 120,
+  "modifiers": [
+    {
+      "path": "charge.breakPower",
+      "op": "add",
+      "value": 1
+    }
+  ],
+  "requires": {
+    "flags": [
+      "world1Done"
+    ]
+  }
+}

@@ -1,0 +1,400 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "mission.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "title",
+    "chapter",
+    "kind",
+    "level",
+    "summary",
+    "requires",
+    "objectives",
+    "spawns",
+    "dialogue",
+    "reward"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "chapter": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "kind": {
+      "enum": [
+        "story",
+        "challenge"
+      ]
+    },
+    "level": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requires": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "missions": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/id"
+          }
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "timeLimit": {
+      "$ref": "common.schema.json#/$defs/positive"
+    },
+    "noDamage": {
+      "type": "boolean"
+    },
+    "objectives": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "kind"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "enum": [
+              "do",
+              "defeat",
+              "reach",
+              "survive",
+              "boss"
+            ]
+          },
+          "action": {
+            "enum": [
+              "move",
+              "jump",
+              "strike",
+              "special",
+              "fly",
+              "swing"
+            ]
+          },
+          "amount": {
+            "$ref": "common.schema.json#/$defs/positive"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "enemyType": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "pos": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number"
+            }
+          },
+          "radius": {
+            "$ref": "common.schema.json#/$defs/positive"
+          },
+          "seconds": {
+            "$ref": "common.schema.json#/$defs/positive"
+          },
+          "tag": {
+            "type": "string",
+            "minLength": 1
+          },
+          "escapeAt": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "exclusiveMaximum": 1
+          }
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "do"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "action",
+                "amount"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "defeat"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "count"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "reach"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "pos",
+                "radius"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "survive"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "seconds"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "boss"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "tag"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "spawns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "when",
+          "enemies"
+        ],
+        "properties": {
+          "when": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "start"
+                ],
+                "properties": {
+                  "start": {
+                    "const": true
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "objective",
+                  "event"
+                ],
+                "properties": {
+                  "objective": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "event": {
+                    "enum": [
+                      "start",
+                      "complete"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          "enemies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type",
+                "pos"
+              ],
+              "properties": {
+                "type": {
+                  "$ref": "common.schema.json#/$defs/id"
+                },
+                "pos": {
+                  "type": "array",
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "spread": {
+                  "$ref": "common.schema.json#/$defs/positive"
+                },
+                "tag": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "dialogue": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "when",
+          "speaker",
+          "text"
+        ],
+        "properties": {
+          "when": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "start"
+                ],
+                "properties": {
+                  "start": {
+                    "const": true
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "objective",
+                  "event"
+                ],
+                "properties": {
+                  "objective": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "event": {
+                    "enum": [
+                      "start",
+                      "complete"
+                    ]
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "complete"
+                ],
+                "properties": {
+                  "complete": {
+                    "const": true
+                  }
+                }
+              }
+            ]
+          },
+          "speaker": {
+            "type": "string",
+            "minLength": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "reward": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scrap",
+        "xp"
+      ],
+      "properties": {
+        "scrap": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "xp": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

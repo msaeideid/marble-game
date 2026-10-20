@@ -1,0 +1,24 @@
+{
+  "id": "upgrade.flyer.fast_rockets",
+  "displayName": "Fast Rockets",
+  "description": "Rockets fly faster and recharge sooner.",
+  "hero": "hero.flyer",
+  "cost": 120,
+  "modifiers": [
+    {
+      "path": "rockets.cooldown",
+      "op": "mul",
+      "value": 0.8
+    },
+    {
+      "path": "rockets.speed",
+      "op": "mul",
+      "value": 1.15
+    }
+  ],
+  "requires": {
+    "flags": [
+      "world1Done"
+    ]
+  }
+}

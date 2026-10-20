@@ -1,0 +1,17 @@
+{
+  "id": "upgrade.storm.glide_tuning",
+  "displayName": "Glide Tuning",
+  "description": "Hovering costs 30% less energy.",
+  "hero": "hero.storm",
+  "cost": 80,
+  "modifiers": [
+    {
+      "path": "flight.hoverDrainPerSecond",
+      "op": "mul",
+      "value": 0.7
+    }
+  ],
+  "requires": {
+    "level": 2
+  }
+}

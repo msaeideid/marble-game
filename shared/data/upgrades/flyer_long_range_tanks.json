@@ -1,0 +1,22 @@
+{
+  "id": "upgrade.flyer.long_range_tanks",
+  "displayName": "Long-range Tanks",
+  "description": "Jets burn 20% less energy.",
+  "hero": "hero.flyer",
+  "cost": 100,
+  "modifiers": [
+    {
+      "path": "flight.hoverDrainPerSecond",
+      "op": "mul",
+      "value": 0.8
+    },
+    {
+      "path": "flight.climbDrainPerSecond",
+      "op": "mul",
+      "value": 0.8
+    }
+  ],
+  "requires": {
+    "level": 2
+  }
+}

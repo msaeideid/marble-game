@@ -1,0 +1,22 @@
+{
+  "id": "upgrade.bruiser.iron_grip",
+  "displayName": "Iron Grip",
+  "description": "Lift props from further away and throw again sooner.",
+  "hero": "hero.bruiser",
+  "cost": 80,
+  "modifiers": [
+    {
+      "path": "lift.cooldown",
+      "op": "mul",
+      "value": 0.6
+    },
+    {
+      "path": "lift.liftRange",
+      "op": "mul",
+      "value": 1.4
+    }
+  ],
+  "requires": {
+    "level": 2
+  }
+}

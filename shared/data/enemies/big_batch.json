@@ -1,0 +1,109 @@
+{
+  "id": "boss.big_batch",
+  "displayName": "Big Batch",
+  "health": {
+    "shield": {
+      "max": 0,
+      "regenPerSecond": 0,
+      "regenDelay": 0
+    },
+    "core": {
+      "max": 450,
+      "regenPerSecond": 0,
+      "regenDelay": 0
+    }
+  },
+  "move": {
+    "speed": 3.6,
+    "halfWidth": 1.4,
+    "height": 3.6
+  },
+  "aggroRange": 40,
+  "attack": {
+    "range": 3.5,
+    "damage": 1,
+    "windup": 0.5,
+    "recovery": 0.5,
+    "cooldown": 1,
+    "knockback": 0
+  },
+  "powerDownTime": 1.4,
+  "staggerTime": 0.05,
+  "poiseTime": 99,
+  "reward": {
+    "scrap": 80,
+    "xp": 150
+  },
+  "look": {
+    "color": [
+      1.0,
+      0.55,
+      0.75
+    ],
+    "scale": 2.0
+  },
+  "armor": 3,
+  "resist": {
+    "stun": 0.3,
+    "snare": 0.3,
+    "knockback": 0.15
+  },
+  "boss": {
+    "displayTitle": "Big Batch, the Runaway Mixer",
+    "phases": [
+      {
+        "fromFraction": 1.0,
+        "speed": 1.0,
+        "attacks": [
+          {
+            "kind": "slam",
+            "windup": 0.9,
+            "cooldown": 4,
+            "range": 5.5,
+            "radius": 5.0,
+            "damage": 20,
+            "knockback": 12
+          },
+          {
+            "kind": "summon",
+            "windup": 0.8,
+            "cooldown": 14,
+            "enemy": "enemy.thug",
+            "count": 2
+          }
+        ]
+      },
+      {
+        "fromFraction": 0.5,
+        "speed": 1.25,
+        "attacks": [
+          {
+            "kind": "slam",
+            "windup": 0.75,
+            "cooldown": 3.2,
+            "range": 5.5,
+            "radius": 5.5,
+            "damage": 22,
+            "knockback": 13
+          },
+          {
+            "kind": "charge",
+            "windup": 0.9,
+            "cooldown": 7,
+            "speed": 15,
+            "duration": 0.9,
+            "damage": 20,
+            "knockback": 12
+          },
+          {
+            "kind": "summon",
+            "windup": 0.8,
+            "cooldown": 12,
+            "enemy": "enemy.thug",
+            "count": 3
+          }
+        ]
+      }
+    ]
+  }
+}

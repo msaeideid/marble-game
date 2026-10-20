@@ -1,0 +1,22 @@
+{
+  "id": "upgrade.swinger.snare_master",
+  "displayName": "Snare Master",
+  "description": "Snares hold enemies longer and cost less energy.",
+  "hero": "hero.swinger",
+  "cost": 80,
+  "modifiers": [
+    {
+      "path": "snare.duration",
+      "op": "mul",
+      "value": 1.5
+    },
+    {
+      "path": "snare.cost",
+      "op": "mul",
+      "value": 0.8
+    }
+  ],
+  "requires": {
+    "level": 2
+  }
+}

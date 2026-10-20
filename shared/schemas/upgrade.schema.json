@@ -3,23 +3,73 @@
   "$id": "upgrade.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "displayName", "hero", "cost", "modifiers"],
+  "required": [
+    "id",
+    "displayName",
+    "hero",
+    "cost",
+    "modifiers"
+  ],
   "properties": {
-    "id": { "$ref": "common.schema.json#/$defs/id" },
-    "displayName": { "type": "string", "minLength": 1 },
-    "hero": { "$ref": "common.schema.json#/$defs/id" },
-    "cost": { "$ref": "common.schema.json#/$defs/nonNegative" },
+    "id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hero": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "cost": {
+      "$ref": "common.schema.json#/$defs/nonNegative"
+    },
     "modifiers": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["path", "op", "value"],
+        "required": [
+          "path",
+          "op",
+          "value"
+        ],
         "properties": {
-          "path": { "type": "string", "pattern": "^[a-zA-Z]+(\\.[a-zA-Z0-9]+)+$" },
-          "op": { "enum": ["mul", "add"] },
-          "value": { "type": "number" }
+          "path": {
+            "type": "string",
+            "pattern": "^[a-zA-Z]+(\\.[a-zA-Z0-9]+)+$"
+          },
+          "op": {
+            "enum": [
+              "mul",
+              "add"
+            ]
+          },
+          "value": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requires": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     }

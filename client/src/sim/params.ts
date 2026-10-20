@@ -198,9 +198,51 @@ export interface PropParams {
   color: number[];
 }
 
+/** One thing a boss can do. `windup` is the telegraph; `cooldown` is the pause before it may be chosen again. */
+export interface BossAttack {
+  kind: 'slam' | 'charge' | 'summon';
+  windup: number;
+  cooldown: number;
+  /** slam: how close to the target the boss must be to start it (m). */
+  range?: number;
+  /** slam: radius of the ground ring. */
+  radius?: number;
+  damage?: number;
+  knockback?: number;
+  /** charge: speed and duration of the rush. */
+  speed?: number;
+  duration?: number;
+  /** summon: what to call, and how many. */
+  enemy?: string;
+  count?: number;
+}
+
+export interface BossPhase {
+  /** This phase is active while the boss has at most this fraction of its health left (1 = from the start). */
+  fromFraction: number;
+  /** Walking speed multiplier. */
+  speed: number;
+  attacks: BossAttack[];
+}
+
+export interface BossParams {
+  displayTitle: string;
+  phases: BossPhase[];
+}
+
 export interface EnemyParams {
   id: string;
   displayName: string;
+  /** Scrap and XP the player earns for defeating it. */
+  reward?: { scrap: number; xp: number };
+  /** Flat damage taken off every hit (never below 20% of the hit): light attacks barely scratch armored enemies. */
+  armor?: number;
+  /** 0..1 multipliers on how long stuns and snares last and how far hits shove it (1 = full). */
+  resist?: { stun?: number; snare?: number; knockback?: number };
+  /** Visual only: tint and size multiplier. */
+  look?: { color: number[]; scale?: number };
+  /** Present on bosses: a phase list that drives their behaviour instead of the plain thug AI. */
+  boss?: BossParams;
   health: HealthParams;
   move: { speed: number; halfWidth: number; height: number };
   aggroRange: number;

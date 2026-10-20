@@ -1,0 +1,24 @@
+{
+  "id": "upgrade.swinger.zip_boost",
+  "displayName": "Zip Boost",
+  "description": "Faster zip-pulls that reach further.",
+  "hero": "hero.swinger",
+  "cost": 100,
+  "modifiers": [
+    {
+      "path": "zip.speed",
+      "op": "mul",
+      "value": 1.2
+    },
+    {
+      "path": "zip.range",
+      "op": "mul",
+      "value": 1.25
+    }
+  ],
+  "requires": {
+    "flags": [
+      "world1Done"
+    ]
+  }
+}

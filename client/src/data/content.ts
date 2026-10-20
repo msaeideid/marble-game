@@ -52,6 +52,9 @@ export interface UpgradeData {
   displayName: string;
   hero: string;
   cost: number;
+  description?: string;
+  /** What it takes to buy it: a player level and/or story flags (a world beaten). */
+  requires?: { level?: number; flags?: string[] };
   modifiers: { path: string; op: 'mul' | 'add'; value: number }[];
 }
 

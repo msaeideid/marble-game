@@ -1,0 +1,19 @@
+{
+  "id": "upgrade.storm.big_storm",
+  "displayName": "Big Storm",
+  "description": "Storm strikes cover a wider circle.",
+  "hero": "hero.storm",
+  "cost": 120,
+  "modifiers": [
+    {
+      "path": "tempest.radius",
+      "op": "mul",
+      "value": 1.25
+    }
+  ],
+  "requires": {
+    "flags": [
+      "world3Done"
+    ]
+  }
+}

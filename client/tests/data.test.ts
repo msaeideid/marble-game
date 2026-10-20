@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveHero, type AbilityData } from '../src/data/content';
 import { applyUpgrades, MAX_RAW_POWER_MULTIPLIER, validateUpgrade } from '../src/sim/upgrades';
 import arena from '@shared/levels/arena.json';
+import { getHero } from '../src/data';
 import { content, hero } from './helpers';
 
 const sharedDir = fileURLToPath(new URL('../../shared/', import.meta.url));
@@ -63,7 +64,7 @@ describe('content cross-references', () => {
   it('every upgrade targets an existing hero and a real numeric parameter', () => {
     for (const u of Object.values(content.upgrades)) {
       expect(content.heroes[u.hero]).toBeDefined();
-      expect(() => applyUpgrades(hero, [u])).not.toThrow();
+      expect(() => applyUpgrades(getHero(u.hero), [u])).not.toThrow();
     }
   });
 
