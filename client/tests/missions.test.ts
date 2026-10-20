@@ -72,7 +72,7 @@ describe('objectives', () => {
       run(8);
     }
     expect(runner.index).toBe(3);
-    tick({}, [{ type: 'charge', id: 'p1', hits: [] }]);
+    tick({}, [{ type: 'throw', id: 0, by: 'p1' }]);
     expect(runner.status).toBe('complete');
   });
 

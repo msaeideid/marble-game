@@ -1,4 +1,3 @@
-import arena from '@shared/levels/arena.json';
 import { Sfx } from '../audio/sfx';
 import { content, getHero } from '../data';
 import { InputController } from '../input/inputController';
@@ -15,6 +14,12 @@ import { PlayerView } from '../render/playerView';
 import { createGameView, type GameView } from '../render/scene';
 import { aimDir } from '../sim/aim';
 import { BuddyBrain } from '../sim/buddy';
+import { CampaignSession } from '../campaign/session';
+import { has, loadSave, ownedFor, writeSave, type SaveData } from '../campaign/progress';
+import { MissionHud } from '../ui/missionHud';
+import { buildMenu } from '../ui/menu';
+import { applyUpgrades } from '../sim/upgrades';
+import type { MissionEvent } from '../campaign/missions';
 import { createPlayerState, handPos } from '../sim/controller';
 import type { AiState } from '../sim/enemy';
 import { FixedStepper, SIM_DT } from '../sim/fixedStep';
@@ -72,24 +77,52 @@ export class Game {
   private readonly shownBreaks = new Set<number>();
   private wasLocked = false;
 
+  /** The campaign layer (missions, scrap, XP, the save); null in plain sandbox play and online. */
+  readonly session: CampaignSession | null;
+  private save: SaveData;
+  private readonly params: URLSearchParams;
+  private readonly missionHud = new MissionHud();
+
   constructor(private readonly canvas: HTMLCanvasElement) {
-    const heroId = new URLSearchParams(window.location.search).get('hero') ?? DEFAULT_HERO;
-    this.hero = getHero(heroId in content.heroes ? heroId : DEFAULT_HERO);
-    const world = new World(arena);
+    const params = new URLSearchParams(window.location.search);
+    this.params = params;
+    const heroId = params.get('hero') ?? DEFAULT_HERO;
+    const baseHero = getHero(heroId in content.heroes ? heroId : DEFAULT_HERO);
     const onlineOpts = onlineOptionsFromUrl(window.location.search);
+    this.save = loadSave();
+    const mission = !onlineOpts && params.get('mission') ? (content.missions[params.get('mission')!] ?? null) : null;
+    const campaign = !onlineOpts && (mission !== null || params.has('campaign'));
+    // In the campaign your hero wears the upgrades you bought; the plain sandbox always uses the base kit.
+    this.hero = campaign ? applyUpgrades(baseHero, ownedFor(this.save, baseHero.id, content.upgrades)) : baseHero;
+    const levelId = mission ? mission.level : campaign && has(this.save, 'vastorEscaped') ? 'arena_damaged' : 'arena';
+    const levelData = content.levels[levelId] ?? content.levels['arena']!;
+    const world = new World(levelData);
     // Online play is server-authoritative: enemies, waves, props and every ability run on the server. The local sim
     // only predicts the local player's movement, and the client draws what the server streams.
     this.sim = new Sim(world, this.hero, content.enemies, {
-      waves: !onlineOpts,
+      waves: !onlineOpts && !mission,
       props: !onlineOpts,
       combat: !onlineOpts,
       propDefs: content.props,
     });
     this.sim.addPlayer(LOCAL_ID);
+    this.session = campaign
+      ? new CampaignSession({
+          sim: this.sim,
+          content,
+          hud: this.missionHud,
+          localId: LOCAL_ID,
+          mission,
+          save: this.save,
+          params,
+          onEnd: () => this.setPaused(true),
+        })
+      : null;
+    window.addEventListener('pagehide', () => this.session?.flush());
     this.online = onlineOpts ? new OnlineClient(this.sim, LOCAL_ID, onlineOpts) : null;
 
-    this.view = createGameView(canvas);
-    this.levelView = buildLevelView(this.view.scene, world);
+    this.view = createGameView(canvas, levelData.theme?.sky);
+    this.levelView = buildLevelView(this.view.scene, world, levelData.theme);
     buildBaseView(this.view.scene, world);
     const m = this.hero.movement;
     this.playerView = new PlayerView(this.view.scene, m.height, m.halfWidth, m.handHeight, undefined, this.hero.id);
@@ -130,6 +163,7 @@ export class Game {
         select.appendChild(a);
       }
     }
+    this.bindMenu();
     const buddySelect = document.getElementById('buddy-select');
     if (buddySelect && !this.online) {
       const current = new URLSearchParams(window.location.search).get('buddy');
@@ -187,7 +221,47 @@ export class Game {
     window.addEventListener('blur', () => this.setPaused(true));
   }
 
+  /** The start screen's Campaign and Upgrade Bay tabs, or the mission briefing when a mission is loaded. */
+  private bindMenu(): void {
+    const mission = this.session?.runner?.mission;
+    if (this.session) {
+      // Playing the campaign: show the briefing instead of the tabs.
+      for (const id of ['menu-tabs', 'tab-campaign', 'tab-bay']) document.getElementById(id)?.style.setProperty('display', 'none');
+      const brief = document.getElementById('brief')!;
+      brief.style.display = 'block';
+      const h = document.createElement('h2');
+      h.textContent = mission ? mission.title : 'Free roam in Brightport';
+      const p = document.createElement('p');
+      p.textContent = mission ? mission.summary : 'Fight waves of thugs for scrap and XP. Spend them in the Upgrade Bay.';
+      const back = document.createElement('a');
+      back.className = 'back';
+      back.textContent = '\u2190 Back to the menu';
+      const q = new URLSearchParams();
+      for (const k of ['hero', 'buddy']) if (this.params.get(k)) q.set(k, this.params.get(k)!);
+      q.set('tab', 'campaign');
+      back.href = `?${q.toString()}`;
+      back.addEventListener('click', (e) => e.stopPropagation());
+      brief.replaceChildren(h, p, back);
+      return;
+    }
+    if (this.online) {
+      for (const id of ['menu-tabs', 'tab-campaign', 'tab-bay']) document.getElementById(id)?.style.setProperty('display', 'none');
+      return;
+    }
+    buildMenu({
+      content,
+      save: this.save,
+      onSave: (s) => {
+        this.save = s;
+        writeSave(s);
+      },
+      params: this.params,
+      tab: this.params.get('tab') ?? 'play',
+    });
+  }
+
   setPaused(paused: boolean): void {
+    if (this.session?.over) paused = true; // a finished mission stays finished
     this.paused = paused;
     this.overlay.classList.toggle('hidden', !paused);
     if (!paused) this.sfx.unlock();
@@ -207,6 +281,7 @@ export class Game {
     if (!this.paused) this.input.pollLook(dt);
 
     const events: SimEvent[] = [];
+    const missionEvents: MissionEvent[] = [];
     const alpha = this.stepper.advance(simDt, (stepDt) => {
       const m = this.input.sample();
       const intent: PlayerIntent = { ...m, yaw: this.input.yaw, pitch: this.input.pitch };
@@ -217,6 +292,7 @@ export class Game {
       this.sim.step(stepDt, intents);
       this.online?.onLocalStep(intent);
       events.push(...this.sim.events);
+      if (this.session) missionEvents.push(...this.session.onStep(this.sim.events, stepDt));
     });
 
     const me = this.sim.players.get(LOCAL_ID)!;
@@ -226,6 +302,8 @@ export class Game {
       events.push(...this.online.takeEvents());
     }
     this.handleEvents(events);
+    this.handleMissionEvents(missionEvents);
+    this.session?.frame(dt);
     this.trackMovementSounds();
     this.syncEnemies(alpha, dt);
     const aimAnchor = this.previewAnchor();
@@ -244,6 +322,8 @@ export class Game {
     this.rocketViews.update(this.online ? this.online.rocketStates() : (this.sim.rocketSystem?.rockets ?? []), alpha, dt);
     this.levelView.sync(this.sim.world);
     this.cam.update(focus, this.input.yaw, this.input.pitch, this.sim.world, dt);
+    const target = this.session?.runner?.objective;
+    this.effects.setBeacon(target?.kind === 'reach' && !this.session?.over ? this.session!.runner!.marker() : null, target?.kind === 'reach' ? target.radius : 4);
     this.effects.update(dt);
     scene.render();
     this.labels.update(dt);
@@ -370,7 +450,20 @@ export class Game {
     );
     const alive = [...this.sim.enemies.values()].filter((e) => e.defeatedTimer === null).length;
     const wave = this.online ? this.online.wave : this.sim.currentWave;
-    this.hud.setWave(`Wave ${wave} · ${alive} thug${alive === 1 ? '' : 's'} left`);
+    this.hud.setWave(this.session?.runner ? '' : `Wave ${wave} · ${alive} thug${alive === 1 ? '' : 's'} left`);
+  }
+
+  private handleMissionEvents(events: readonly MissionEvent[]): void {
+    for (const ev of events) {
+      if (ev.type === 'objectiveDone') this.sfx.respawn();
+      if (ev.type === 'bossEscape') {
+        this.cam.shake(0.45);
+        this.sfx.explosion(1.4);
+        this.bannerText = 'He escapes!';
+        this.bannerTimer = 3;
+      }
+      if (ev.type === 'missionComplete' && !ev.escaped) this.sfx.combo();
+    }
   }
 
   /** The hero a player id belongs to: ours or the buddy's from the sim, another online player's from the snapshot. */
@@ -462,6 +555,29 @@ export class Game {
             this.bannerTimer = 2;
             this.sfx.combo();
           }
+          break;
+        }
+        case 'bossTelegraph':
+          // A red warning on the ground: get out of the ring (or out of the way) before it fills.
+          if (ev.radius > 0) this.effects.strikeWarning(ev.pos, ev.radius, ev.delay, new Color3(1, 0.3, 0.3));
+          this.sfx.strikeCharge();
+          break;
+        case 'bossStrike':
+          if (ev.kind === 'summon') {
+            this.sfx.wave();
+            break;
+          }
+          this.effects.explosion(ev.pos, Math.max(1.5, ev.radius * 0.6), new Color3(1, 0.4, 0.3));
+          this.cam.shake(ev.kind === 'slam' ? 0.35 : 0.2);
+          this.sfx.explosion(1.2);
+          if (ev.hits.includes(LOCAL_ID)) this.hitStop = HITSTOP_HEAVY;
+          break;
+        case 'bossPhase': {
+          const boss = this.sim.enemies.get(ev.id);
+          const name = boss ? (content.enemies[boss.typeId]?.displayName ?? 'The boss') : 'The boss';
+          this.bannerText = `${name} is getting serious!`;
+          this.bannerTimer = 2.5;
+          this.sfx.wave();
           break;
         }
         case 'chain':

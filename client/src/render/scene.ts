@@ -11,12 +11,12 @@ export interface GameView {
 }
 
 /** Engine, scene, sky and lights. Everything bright and flat for the low-poly look. */
-export function createGameView(canvas: HTMLCanvasElement): GameView {
+export function createGameView(canvas: HTMLCanvasElement, skyColor: number[] = [0.55, 0.78, 0.95]): GameView {
   const engine = new Engine(canvas, true, { stencil: false });
   const scene = new Scene(engine);
-  scene.clearColor = new Color4(0.55, 0.78, 0.95, 1);
+  scene.clearColor = new Color4(skyColor[0]!, skyColor[1]!, skyColor[2]!, 1);
   scene.fogMode = Scene.FOGMODE_LINEAR;
-  scene.fogColor = new Color3(0.55, 0.78, 0.95);
+  scene.fogColor = new Color3(skyColor[0]!, skyColor[1]!, skyColor[2]!);
   scene.fogStart = 120;
   scene.fogEnd = 320;
 

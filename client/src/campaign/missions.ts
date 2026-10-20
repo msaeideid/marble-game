@@ -97,7 +97,7 @@ export class MissionRunner {
   private specials = 0;
   private flown = 0;
   private swings = 0;
-  private prev: { x: number; z: number; grounded: boolean; tether: boolean; zip: boolean } | null = null;
+  private prev: { x: number; z: number; grounded: boolean; tether: boolean; zip: boolean; charge: boolean } | null = null;
 
   constructor(
     readonly mission: MissionData,
@@ -270,9 +270,6 @@ export class MissionRunner {
       case 'snare':
         if (ev.source === this.localId) this.specials++;
         return;
-      case 'charge':
-        if (ev.id === this.localId) this.specials++;
-        return;
       case 'lift':
       case 'throw':
         if (ev.by === this.localId) this.specials++;
@@ -283,7 +280,7 @@ export class MissionRunner {
   }
 
   private watchPlayer(me: NonNullable<ReturnType<Sim['players']['get']>>, dt: number): void {
-    const now = { x: me.pos.x, z: me.pos.z, grounded: me.grounded, tether: me.tether !== null, zip: me.zip !== null };
+    const now = { x: me.pos.x, z: me.pos.z, grounded: me.grounded, tether: me.tether !== null, zip: me.zip !== null, charge: me.charge !== null };
     const prev = this.prev;
     if (prev) {
       const step = Math.hypot(now.x - prev.x, now.z - prev.z);
@@ -294,6 +291,7 @@ export class MissionRunner {
         this.specials++;
       }
       if (!prev.zip && now.zip) this.specials++;
+      if (!prev.charge && now.charge) this.specials++; // starting a charge counts, whether or not it hits anything
     }
     if (me.flying) this.flown += dt;
     this.prev = now;

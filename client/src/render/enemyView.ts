@@ -16,14 +16,16 @@ const DOWN = new Color3(0.6, 0.6, 0.7);
 export class EnemyView {
   private readonly mesh: Mesh;
   private readonly mat: StandardMaterial;
+  private readonly base: Color3;
   private flash = 0;
   private clock = 0;
 
   constructor(scene: Scene, readonly id: string, private readonly def: EnemyParams) {
     this.mat = new StandardMaterial(`enemy-${id}`, scene);
     this.mat.specularColor = Color3.Black();
-    this.mat.diffuseColor = BASE;
-    this.mat.emissiveColor = BASE.scale(0.35);
+    this.base = def.look ? new Color3(def.look.color[0]!, def.look.color[1]!, def.look.color[2]!) : BASE;
+    this.mat.diffuseColor = this.base;
+    this.mat.emissiveColor = this.base.scale(0.35);
     this.mesh = CreateCapsule(`enemy-${id}`, { height: def.move.height, radius: def.move.halfWidth }, scene);
     this.mesh.material = this.mat;
   }
@@ -46,7 +48,7 @@ export class EnemyView {
     this.mesh.rotation.y = e.facing;
 
     this.flash = Math.max(0, this.flash - dt);
-    let c = BASE;
+    let c = this.base;
     if (e.defeatedTimer !== null) c = DOWN;
     else if (this.flash > 0) c = FLASH;
     else if (e.snaredTimer > 0) c = SNARED;

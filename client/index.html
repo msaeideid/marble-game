@@ -69,6 +69,43 @@
       #buddy-select a { padding: 4px 12px; border-radius: 8px; background: rgba(255,255,255,.1); color: #fff; text-decoration: none; font-size: 13px; border: 2px solid transparent; }
       #buddy-select a:hover { background: rgba(255,255,255,.22); }
       #buddy-select a.selected { border-color: #ffb36b; background: rgba(255,179,107,.2); }
+      #menu-tabs { display: flex; gap: 8px; justify-content: center; margin: 6px 0 12px; }
+      #menu-tabs a { padding: 6px 16px; border-radius: 8px; background: rgba(255,255,255,.1); color: #fff; text-decoration: none; font-weight: 700; border: 2px solid transparent; }
+      #menu-tabs a.selected { border-color: #7af0ff; background: rgba(122,240,255,.2); }
+      #brief { display: none; margin: 8px 0 12px; text-align: left; }
+      #brief h2 { margin: 0 0 4px; } #brief .back { color: #9fe8ff; font-size: 13px; }
+      .wallet { display: flex; gap: 14px; justify-content: center; margin: 4px 0 10px; font-weight: 700; }
+      .wallet .scrap { color: #ffd34d; } .wallet .xp { opacity: .8; font-weight: 500; }
+      .campaign, .bay { text-align: left; }
+      .campaign .hint, .bay .hint { font-size: 12px; opacity: .7; margin: 4px 0 10px; text-align: center; }
+      .campaign .chapter h3 { margin: 14px 0 0; } .campaign .blurb { font-size: 12px; opacity: .7; margin: 0 0 6px; }
+      a.play { display: inline-block; padding: 5px 14px; border-radius: 8px; background: #2fbf71; color: #fff; text-decoration: none; font-weight: 700; margin-right: 8px; }
+      a.play.wide { display: block; text-align: center; padding: 8px; margin: 0; }
+      .mission-card { background: rgba(255,255,255,.08); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
+      .mission-card.locked { opacity: .55; } .mission-card.done { border-left: 4px solid #2fbf71; }
+      .mc-head { display: flex; gap: 8px; align-items: center; } .mc-head .tag { font-size: 11px; opacity: .7; border: 1px solid rgba(255,255,255,.4); border-radius: 6px; padding: 0 6px; }
+      .mc-head .tick { color: #5dff8a; margin-left: auto; } .mc-sum { font-size: 13px; opacity: .85; margin: 3px 0 6px; }
+      .mission-card .need { font-size: 12px; color: #ffb3a0; } .mission-card .reward { font-size: 12px; color: #ffd34d; }
+      .bay-heroes { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 6px; }
+      .bay-heroes a { padding: 4px 12px; border-radius: 8px; background: rgba(255,255,255,.1); color: #fff; text-decoration: none; border: 2px solid transparent; }
+      .bay-heroes a.selected { border-color: #ffb36b; background: rgba(255,179,107,.2); }
+      .upgrade { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; background: rgba(255,255,255,.08); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; align-items: center; }
+      .upgrade .desc { grid-column: 1; font-size: 12px; opacity: .8; } .upgrade button, .upgrade .state { grid-column: 2; grid-row: 1 / span 2; }
+      .upgrade.owned { opacity: .6; } .upgrade.locked { opacity: .5; } .upgrade .state { font-size: 12px; }
+      .upgrade button { padding: 6px 12px; border-radius: 8px; border: 0; background: #ffd34d; color: #222; font-weight: 700; cursor: pointer; } .upgrade button:disabled { opacity: .4; cursor: not-allowed; }
+      #mission { position: absolute; left: 12px; top: 84px; max-width: 330px; background: rgba(0,0,0,.42); border-radius: 8px; padding: 8px 12px; font-size: 14px; display: none; }
+      #mission h3 { margin: 0 0 4px; font-size: 15px; } #mission ul { margin: 0; padding: 0; }
+      #mission li { list-style: none; opacity: .5; margin: 2px 0; } #mission li.current { opacity: 1; font-weight: 700; } #mission li.done { opacity: .45; text-decoration: line-through; }
+      #mission-timer { margin-top: 4px; font-weight: 700; } #mission-timer.low { color: #ff8a8a; }
+      #dialogue { position: absolute; left: 50%; bottom: 70px; transform: translateX(-50%); max-width: min(640px, 90vw); background: rgba(10,20,40,.78);
+        padding: 8px 16px; border-radius: 10px; display: none; font-size: 15px; } #dialogue b { color: #9fe8ff; }
+      #bossbar { position: absolute; top: 44px; left: 50%; transform: translateX(-50%); width: min(520px, 80vw); display: none; text-align: center; font-weight: 800; letter-spacing: 1px; }
+      #bossbar .bar { height: 14px; border-radius: 7px; background: rgba(0,0,0,.5); overflow: hidden; margin-top: 3px; }
+      #boss-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #b13cff, #ff5d9a); transition: width .1s linear; }
+      #result { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(15,25,45,.8); z-index: 30; color: #fff; text-align: center; }
+      #result .card { max-width: 460px; padding: 24px 28px; } #result h2 { margin: 0 0 10px; } #result .buttons { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+      #result a { padding: 8px 18px; border-radius: 8px; background: rgba(255,255,255,.15); color: #fff; text-decoration: none; font-weight: 700; } #result a.primary { background: #2fbf71; }
+      body.result #overlay { display: none; }
       #overlay .go { font-size: 18px; font-weight: 700; animation: pulse 1.2s infinite; }
       @keyframes pulse { 50% { opacity: .45; } }
       #energy-fill.low { background: linear-gradient(90deg, #ff6b6b, #ffb36b); }
@@ -94,6 +131,9 @@
         <div class="chip" id="storm-chip" style="display:none">Q &middot; Storm</div>
         <div class="chip" id="rocket-chip" style="display:none">R &middot; Rockets</div>
       </div>
+      <div id="mission"><h3 id="mission-title"></h3><ul id="mission-objectives"></ul><div id="mission-timer"></div></div>
+      <div id="dialogue"></div>
+      <div id="bossbar"><div id="boss-name"></div><div class="bar"><div id="boss-fill"></div></div></div>
       <div id="banner"></div>
       <div id="energy"><div id="energy-fill"></div></div>
       <div class="status" id="build">VANGUARD prototype</div>
@@ -103,6 +143,7 @@
       </div>
     </div>
     <div id="labels"></div>
+    <div id="result"></div>
     <div id="overlay">
       <div class="card">
         <h1>VANGUARD</h1>
@@ -110,6 +151,11 @@
         <div id="hero-select"></div>
         <div id="buddy-label">AI teammate (try RAMPART + METALHEAD: throw a car, shoot it mid-air)</div>
         <div id="buddy-select"></div>
+        <div id="menu-tabs"></div>
+        <div id="brief"></div>
+        <div id="tab-campaign" style="display:none"></div>
+        <div id="tab-bay" style="display:none"></div>
+        <div id="tab-play">
         <table>
           <tr><td>WASD</td><td>Move (Space to jump)</td></tr>
           <tr><td>Mouse</td><td>Look (click to capture, or hold the button and drag)</td></tr>
@@ -127,6 +173,7 @@
           <tr data-kit="charge"><td>Shift / C</td><td>Charge: bulldoze enemies and smash weak walls (orange)</td></tr>
           <tr><td>M / P</td><td>Mute / pause</td></tr>
         </table>
+        </div>
         <div class="go">Click to play</div>
       </div>
     </div>

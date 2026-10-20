@@ -6,7 +6,7 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import type { Mesh } from '@babylonjs/core/Meshes/mesh';
 import type { Scene } from '@babylonjs/core/scene';
 import type { ColliderKind } from '../sim/types';
-import type { World } from '../sim/world';
+import type { LevelTheme, World } from '../sim/world';
 
 const PALETTE: Record<ColliderKind, Color3[]> = {
   ground: [new Color3(0.5, 0.78, 0.5)],
@@ -34,7 +34,11 @@ export interface LevelView {
   sync(world: World): void;
 }
 
-export function buildLevelView(scene: Scene, world: World): LevelView {
+export function buildLevelView(scene: Scene, world: World, theme?: LevelTheme): LevelView {
+  const rgb = (c: number[]) => new Color3(c[0]!, c[1]!, c[2]!);
+  const palette: Record<ColliderKind, Color3[]> = theme
+    ? { ...PALETTE, ground: [rgb(theme.ground)], building: theme.buildings.map(rgb) }
+    : PALETTE;
   const instances: ReturnType<Mesh['createInstance']>[] = [];
   let shownVersion = -1;
   const sources = new Map<string, Mesh>();
@@ -43,7 +47,7 @@ export function buildLevelView(scene: Scene, world: World): LevelView {
     let mesh = sources.get(key);
     if (!mesh) {
       mesh = CreateBox(`src-${key}`, { size: 1 }, scene);
-      mesh.material = flatMaterial(scene, `mat-${key}`, PALETTE[kind][variant]!);
+      mesh.material = flatMaterial(scene, `mat-${key}`, palette[kind][variant]!);
       mesh.isVisible = false;
       sources.set(key, mesh);
     }
@@ -51,7 +55,7 @@ export function buildLevelView(scene: Scene, world: World): LevelView {
   };
 
   world.colliders.forEach((c, i) => {
-    const variant = c.kind === 'wall' ? Math.min((c.breakable ?? 1) - 1, 1) : i % PALETTE[c.kind].length;
+    const variant = c.kind === 'wall' ? Math.min((c.breakable ?? 1) - 1, 1) : i % palette[c.kind].length;
     const inst = sourceFor(c.kind, variant).createInstance(`c${i}`);
     inst.scaling.set(c.max.x - c.min.x, c.max.y - c.min.y, c.max.z - c.min.z);
     inst.position.set((c.min.x + c.max.x) / 2, (c.min.y + c.max.y) / 2, (c.min.z + c.max.z) / 2);

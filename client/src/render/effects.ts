@@ -68,6 +68,7 @@ export class Effects {
   private boltMat: StandardMaterial | null = null;
   private warnings: Warning[] = [];
   private stormMarker: Mesh | null = null;
+  private beacon: Mesh | null = null;
   private stormMarkerMat: StandardMaterial | null = null;
   private puffSource: Mesh | null = null;
   private sparkSource: Mesh | null = null;
@@ -149,12 +150,12 @@ export class Effects {
   }
 
   /** The warning ring of a storm strike: it fills up over `delay` seconds, then the strike lands. */
-  strikeWarning(pos: Vec3, radius: number, delay: number): void {
+  strikeWarning(pos: Vec3, radius: number, delay: number, color = new Color3(1, 0.9, 0.3)): void {
     const ring = CreateDisc('strike-ring', { radius, tessellation: 32 }, this.scene);
     const fill = CreateDisc('strike-fill', { radius, tessellation: 32 }, this.scene);
-    const ringMat = this.glow(new Color3(1, 0.9, 0.3));
+    const ringMat = this.glow(color);
     ringMat.alpha = 0.3;
-    const fillMat = this.glow(new Color3(1, 0.95, 0.6));
+    const fillMat = this.glow(color.scale(0.85));
     fillMat.alpha = 0.55;
     for (const [m, mat, dy] of [
       [ring, ringMat, 0.06],
@@ -174,6 +175,22 @@ export class Effects {
     const top = { x: pos.x + (Math.random() - 0.5) * 2, y: pos.y + 40, z: pos.z + (Math.random() - 0.5) * 2 };
     this.segment(pos, top, this.boltMat, 0.9, 0.28);
     this.explosion(pos, radius, new Color3(1, 0.95, 0.5));
+  }
+
+  /** A tall glowing column marking where the mission wants you to go (null hides it). */
+  setBeacon(at: Vec3 | null, radius: number): void {
+    if (!this.beacon) {
+      const m = CreateCylinder('beacon', { height: 40, diameter: 2, tessellation: 20 }, this.scene);
+      const mat = this.glow(new Color3(1, 0.9, 0.35));
+      mat.alpha = 0.28;
+      m.material = mat;
+      this.beacon = m;
+    }
+    this.beacon.isVisible = at !== null;
+    if (at) {
+      this.beacon.position.set(at.x, at.y + 20, at.z);
+      this.beacon.scaling.set(radius, 1, radius);
+    }
   }
 
   /** A ring on the ground where a storm strike would land right now (null hides it). */
