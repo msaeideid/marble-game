@@ -1,0 +1,132 @@
+{
+  "id": "mission.tutorial",
+  "title": "Training Day",
+  "chapter": "chapter.city",
+  "kind": "story",
+  "level": "tutorial",
+  "summary": "Learn to move, strike and use your special. Then show the thugs who's boss.",
+  "requires": {},
+  "objectives": [
+    {
+      "id": "move",
+      "text": "Run around (WASD)",
+      "kind": "do",
+      "action": "move",
+      "amount": 12
+    },
+    {
+      "id": "jump",
+      "text": "Jump twice (Space)",
+      "kind": "do",
+      "action": "jump",
+      "amount": 2
+    },
+    {
+      "id": "strike",
+      "text": "Strike 4 times (J or click)",
+      "kind": "do",
+      "action": "strike",
+      "amount": 4
+    },
+    {
+      "id": "special",
+      "text": "Use your special ability twice (see the controls)",
+      "kind": "do",
+      "action": "special",
+      "amount": 2
+    },
+    {
+      "id": "fight",
+      "text": "Defeat 3 thugs",
+      "kind": "defeat",
+      "count": 3,
+      "enemyType": "enemy.thug"
+    },
+    {
+      "id": "exit",
+      "text": "Head to the glowing marker",
+      "kind": "reach",
+      "pos": [
+        0,
+        0.01,
+        38
+      ],
+      "radius": 4
+    }
+  ],
+  "spawns": [
+    {
+      "when": {
+        "objective": "fight",
+        "event": "start"
+      },
+      "enemies": [
+        {
+          "type": "enemy.thug",
+          "pos": [
+            0,
+            0.01,
+            22
+          ],
+          "count": 3,
+          "spread": 2.0
+        }
+      ]
+    }
+  ],
+  "dialogue": [
+    {
+      "when": {
+        "start": true
+      },
+      "speaker": "Dot",
+      "text": "Welcome to Brightport! I'm Dot, your dispatcher. Let's check the suit. Try running around."
+    },
+    {
+      "when": {
+        "objective": "move",
+        "event": "complete"
+      },
+      "speaker": "Dot",
+      "text": "Smooth! Now hop. The city has lots of puddles."
+    },
+    {
+      "when": {
+        "objective": "jump",
+        "event": "complete"
+      },
+      "speaker": "Dot",
+      "text": "Great. Give the air a few good punches."
+    },
+    {
+      "when": {
+        "objective": "strike",
+        "event": "complete"
+      },
+      "speaker": "Dot",
+      "text": "Nice combo. Your hero has a special move too: check the controls and try it out!"
+    },
+    {
+      "when": {
+        "objective": "fight",
+        "event": "start"
+      },
+      "speaker": "Dot",
+      "text": "Uh-oh, three thugs just wandered in. They look grumpy. Handle it!"
+    },
+    {
+      "when": {
+        "complete": true
+      },
+      "speaker": "Dot",
+      "text": "Training complete! Out in the city there are challenges for scrap and XP. Spend scrap at the upgrade bay."
+    }
+  ],
+  "reward": {
+    "scrap": 30,
+    "xp": 60,
+    "flags": [
+      "tutorialDone"
+    ]
+  }
+}

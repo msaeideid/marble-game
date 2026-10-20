@@ -1,0 +1,46 @@
+{
+  "id": "mission.challenge.untouchable",
+  "title": "Untouchable",
+  "chapter": "chapter.city",
+  "kind": "challenge",
+  "level": "arena",
+  "summary": "Survive 30 seconds without taking a hit.",
+  "requires": {
+    "missions": [
+      "mission.tutorial"
+    ]
+  },
+  "objectives": [
+    {
+      "id": "hold",
+      "text": "Survive 30 seconds without a scratch",
+      "kind": "survive",
+      "seconds": 30
+    }
+  ],
+  "spawns": [
+    {
+      "when": {
+        "start": true
+      },
+      "enemies": [
+        {
+          "type": "enemy.thug",
+          "pos": [
+            0,
+            0.01,
+            20
+          ],
+          "count": 4,
+          "spread": 2.0
+        }
+      ]
+    }
+  ],
+  "dialogue": [],
+  "reward": {
+    "scrap": 30,
+    "xp": 60
+  },
+  "noDamage": true
+}

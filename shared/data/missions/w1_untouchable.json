@@ -1,0 +1,46 @@
+{
+  "id": "mission.w1.untouchable",
+  "title": "Sugarworks: Untouchable",
+  "chapter": "chapter.world1",
+  "kind": "challenge",
+  "level": "sugarworks",
+  "summary": "Stay alive for 30 seconds without being hit.",
+  "requires": {
+    "missions": [
+      "mission.vastor"
+    ]
+  },
+  "objectives": [
+    {
+      "id": "hold",
+      "text": "Survive 30 seconds without a scratch",
+      "kind": "survive",
+      "seconds": 30
+    }
+  ],
+  "spawns": [
+    {
+      "when": {
+        "start": true
+      },
+      "enemies": [
+        {
+          "type": "enemy.thug",
+          "pos": [
+            33.0,
+            0.01,
+            -3.0
+          ],
+          "count": 3,
+          "spread": 1.4
+        }
+      ]
+    }
+  ],
+  "dialogue": [],
+  "reward": {
+    "scrap": 45,
+    "xp": 70
+  },
+  "noDamage": true
+}

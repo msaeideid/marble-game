@@ -1,0 +1,123 @@
+{
+  "id": "mission.finale",
+  "title": "The Shard Engine",
+  "chapter": "chapter.finale",
+  "kind": "story",
+  "level": "finale",
+  "summary": "VASTOR's engine hums at the heart of it all. This time he has nowhere to run.",
+  "requires": {
+    "missions": [
+      "mission.w3.main"
+    ],
+    "flags": [
+      "world3Done"
+    ]
+  },
+  "objectives": [
+    {
+      "id": "guards",
+      "text": "Clear the engine's guards (8)",
+      "kind": "defeat",
+      "count": 8
+    },
+    {
+      "id": "boss",
+      "text": "Defeat VASTOR for good",
+      "kind": "boss",
+      "tag": "vastor"
+    }
+  ],
+  "spawns": [
+    {
+      "when": {
+        "start": true
+      },
+      "enemies": [
+        {
+          "type": "enemy.shard",
+          "pos": [
+            0,
+            0.01,
+            10
+          ],
+          "count": 5,
+          "spread": 2.0
+        }
+      ]
+    },
+    {
+      "when": {
+        "start": true
+      },
+      "enemies": [
+        {
+          "type": "enemy.brute",
+          "pos": [
+            0,
+            0.01,
+            20
+          ],
+          "count": 3,
+          "spread": 2.5
+        }
+      ]
+    },
+    {
+      "when": {
+        "objective": "guards",
+        "event": "complete"
+      },
+      "enemies": [
+        {
+          "type": "boss.vastor",
+          "pos": [
+            0,
+            0.01,
+            23.400000000000002
+          ],
+          "count": 1,
+          "spread": 1.0,
+          "tag": "vastor"
+        }
+      ]
+    }
+  ],
+  "dialogue": [
+    {
+      "when": {
+        "start": true
+      },
+      "speaker": "Dot",
+      "text": "This is it. All four of you, one Worldbreaker. You've got upgrades, a plan, and snacks. Go!"
+    },
+    {
+      "when": {
+        "objective": "boss",
+        "event": "start"
+      },
+      "speaker": "VASTOR",
+      "text": "You again! Fine. Let me show you what a REAL world breaking looks like!"
+    },
+    {
+      "when": {
+        "complete": true
+      },
+      "speaker": "VASTOR",
+      "text": "...Okay. Okay! You win. The worlds are yours. Please stop hitting me."
+    },
+    {
+      "when": {
+        "complete": true
+      },
+      "speaker": "Dot",
+      "text": "You did it! Brightport, Sugarworks, Cloudspire, Gearhollow: all safe. Take a bow, heroes."
+    }
+  ],
+  "reward": {
+    "scrap": 300,
+    "xp": 500,
+    "flags": [
+      "gameComplete"
+    ]
+  }
+}

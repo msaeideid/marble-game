@@ -1,0 +1,55 @@
+{
+  "id": "mission.w3.dash",
+  "title": "Gearhollow: Dash",
+  "chapter": "chapter.world3",
+  "kind": "challenge",
+  "level": "gearhollow",
+  "summary": "Touch three markers fast.",
+  "requires": {
+    "missions": [
+      "mission.vastor"
+    ]
+  },
+  "objectives": [
+    {
+      "id": "d1",
+      "text": "Marker 1",
+      "kind": "reach",
+      "pos": [
+        45.0,
+        0.01,
+        -27.0
+      ],
+      "radius": 4
+    },
+    {
+      "id": "d2",
+      "text": "Marker 2",
+      "kind": "reach",
+      "pos": [
+        -9.0,
+        0.01,
+        27.0
+      ],
+      "radius": 4
+    },
+    {
+      "id": "d3",
+      "text": "Marker 3",
+      "kind": "reach",
+      "pos": [
+        27.0,
+        0.01,
+        -9.0
+      ],
+      "radius": 4
+    }
+  ],
+  "spawns": [],
+  "dialogue": [],
+  "reward": {
+    "scrap": 35,
+    "xp": 55
+  },
+  "timeLimit": 60
+}

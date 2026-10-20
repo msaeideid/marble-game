@@ -1,0 +1,46 @@
+{
+  "id": "mission.w3.untouchable",
+  "title": "Gearhollow: Untouchable",
+  "chapter": "chapter.world3",
+  "kind": "challenge",
+  "level": "gearhollow",
+  "summary": "Stay alive for 30 seconds without being hit.",
+  "requires": {
+    "missions": [
+      "mission.vastor"
+    ]
+  },
+  "objectives": [
+    {
+      "id": "hold",
+      "text": "Survive 30 seconds without a scratch",
+      "kind": "survive",
+      "seconds": 30
+    }
+  ],
+  "spawns": [
+    {
+      "when": {
+        "start": true
+      },
+      "enemies": [
+        {
+          "type": "enemy.brute",
+          "pos": [
+            27.0,
+            0.01,
+            -1.0
+          ],
+          "count": 3,
+          "spread": 1.2
+        }
+      ]
+    }
+  ],
+  "dialogue": [],
+  "reward": {
+    "scrap": 45,
+    "xp": 70
+  },
+  "noDamage": true
+}

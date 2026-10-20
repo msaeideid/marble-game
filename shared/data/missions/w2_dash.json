@@ -1,0 +1,55 @@
+{
+  "id": "mission.w2.dash",
+  "title": "Cloudspire: Dash",
+  "chapter": "chapter.world2",
+  "kind": "challenge",
+  "level": "cloudspire",
+  "summary": "Touch three markers fast.",
+  "requires": {
+    "missions": [
+      "mission.vastor"
+    ]
+  },
+  "objectives": [
+    {
+      "id": "d1",
+      "text": "Marker 1",
+      "kind": "reach",
+      "pos": [
+        -22,
+        0.01,
+        -22
+      ],
+      "radius": 4
+    },
+    {
+      "id": "d2",
+      "text": "Marker 2",
+      "kind": "reach",
+      "pos": [
+        44,
+        0.01,
+        0
+      ],
+      "radius": 4
+    },
+    {
+      "id": "d3",
+      "text": "Marker 3",
+      "kind": "reach",
+      "pos": [
+        -44,
+        0.01,
+        44
+      ],
+      "radius": 4
+    }
+  ],
+  "spawns": [],
+  "dialogue": [],
+  "reward": {
+    "scrap": 35,
+    "xp": 55
+  },
+  "timeLimit": 60
+}

@@ -1,0 +1,46 @@
+{
+  "id": "mission.w3.sweep",
+  "title": "Gearhollow: Sweep",
+  "chapter": "chapter.world3",
+  "kind": "challenge",
+  "level": "gearhollow",
+  "summary": "Clear a pack before the clock runs out.",
+  "requires": {
+    "missions": [
+      "mission.vastor"
+    ]
+  },
+  "objectives": [
+    {
+      "id": "sweep",
+      "text": "Defeat 8 enemies",
+      "kind": "defeat",
+      "count": 8
+    }
+  ],
+  "spawns": [
+    {
+      "when": {
+        "start": true
+      },
+      "enemies": [
+        {
+          "type": "enemy.brute",
+          "pos": [
+            -27.0,
+            0.01,
+            -45.0
+          ],
+          "count": 8,
+          "spread": 1.2
+        }
+      ]
+    }
+  ],
+  "dialogue": [],
+  "reward": {
+    "scrap": 40,
+    "xp": 60
+  },
+  "timeLimit": 70
+}

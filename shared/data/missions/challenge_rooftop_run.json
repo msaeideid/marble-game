@@ -1,0 +1,55 @@
+{
+  "id": "mission.challenge.rooftop_run",
+  "title": "Rooftop Run",
+  "chapter": "chapter.city",
+  "kind": "challenge",
+  "level": "arena",
+  "summary": "Touch three markers around the block, fast.",
+  "requires": {
+    "missions": [
+      "mission.tutorial"
+    ]
+  },
+  "objectives": [
+    {
+      "id": "r1",
+      "text": "Marker 1",
+      "kind": "reach",
+      "pos": [
+        20,
+        0.01,
+        20
+      ],
+      "radius": 4
+    },
+    {
+      "id": "r2",
+      "text": "Marker 2",
+      "kind": "reach",
+      "pos": [
+        -20,
+        0.01,
+        20
+      ],
+      "radius": 4
+    },
+    {
+      "id": "r3",
+      "text": "Marker 3",
+      "kind": "reach",
+      "pos": [
+        -20,
+        0.01,
+        -20
+      ],
+      "radius": 4
+    }
+  ],
+  "spawns": [],
+  "dialogue": [],
+  "reward": {
+    "scrap": 25,
+    "xp": 50
+  },
+  "timeLimit": 40
+}

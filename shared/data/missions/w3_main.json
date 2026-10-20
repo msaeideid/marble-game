@@ -1,0 +1,191 @@
+{
+  "id": "mission.w3.main",
+  "title": "Gearhollow",
+  "chapter": "chapter.world3",
+  "kind": "story",
+  "level": "gearhollow",
+  "summary": "A maze of tunnels and gears. Some walls look weak. A certain strong hero could do something about that.",
+  "requires": {
+    "missions": [
+      "mission.w2.main"
+    ]
+  },
+  "objectives": [
+    {
+      "id": "wp1",
+      "text": "Follow the main path to the first marker",
+      "kind": "reach",
+      "pos": [
+        -63.0,
+        0.01,
+        9.0
+      ],
+      "radius": 4
+    },
+    {
+      "id": "camp1",
+      "text": "Clear the first camp (4 enemies)",
+      "kind": "defeat",
+      "count": 4
+    },
+    {
+      "id": "wp2",
+      "text": "Press on to the second marker",
+      "kind": "reach",
+      "pos": [
+        9.0,
+        0.01,
+        9.0
+      ],
+      "radius": 4
+    },
+    {
+      "id": "camp2",
+      "text": "Clear the second camp",
+      "kind": "defeat",
+      "count": 6
+    },
+    {
+      "id": "wp3",
+      "text": "Head for the third marker",
+      "kind": "reach",
+      "pos": [
+        9.0,
+        0.01,
+        63.0
+      ],
+      "radius": 4
+    },
+    {
+      "id": "gate",
+      "text": "Reach the gate of the The Clockwork Duchess's lair",
+      "kind": "reach",
+      "pos": [
+        27.0,
+        0.01,
+        27.0
+      ],
+      "radius": 4
+    },
+    {
+      "id": "boss",
+      "text": "Defeat The Clockwork Duchess",
+      "kind": "boss",
+      "tag": "boss"
+    }
+  ],
+  "spawns": [
+    {
+      "when": {
+        "objective": "camp1",
+        "event": "start"
+      },
+      "enemies": [
+        {
+          "type": "enemy.brute",
+          "pos": [
+            -27.0,
+            0.01,
+            -9.0
+          ],
+          "count": 4,
+          "spread": 1.2
+        }
+      ]
+    },
+    {
+      "when": {
+        "objective": "camp2",
+        "event": "start"
+      },
+      "enemies": [
+        {
+          "type": "enemy.brute",
+          "pos": [
+            9.0,
+            0.01,
+            45.0
+          ],
+          "count": 4,
+          "spread": 1.2
+        }
+      ]
+    },
+    {
+      "when": {
+        "objective": "camp2",
+        "event": "start"
+      },
+      "enemies": [
+        {
+          "type": "enemy.thug",
+          "pos": [
+            9.0,
+            0.01,
+            45.0
+          ],
+          "count": 2,
+          "spread": 1.6
+        }
+      ]
+    },
+    {
+      "when": {
+        "objective": "gate",
+        "event": "complete"
+      },
+      "enemies": [
+        {
+          "type": "boss.clockwork_duchess",
+          "pos": [
+            45.0,
+            0.01,
+            45.0
+          ],
+          "count": 1,
+          "spread": 1.0,
+          "tag": "boss"
+        }
+      ]
+    }
+  ],
+  "dialogue": [
+    {
+      "when": {
+        "start": true
+      },
+      "speaker": "Dot",
+      "text": "Gearhollow is all tunnels and ticking. Some of the walls look wobbly, so strong heroes can make shortcuts!"
+    },
+    {
+      "when": {
+        "objective": "wp1",
+        "event": "complete"
+      },
+      "speaker": "Dot",
+      "text": "Brutes! They hit hard but they're slow. Use the corners."
+    },
+    {
+      "when": {
+        "objective": "boss",
+        "event": "start"
+      },
+      "speaker": "Dot",
+      "text": "The Clockwork Duchess runs this place like clockwork. Her slams are big and she calls for help."
+    },
+    {
+      "when": {
+        "complete": true
+      },
+      "speaker": "Dot",
+      "text": "The Duchess has stopped ticking! VASTOR's engine is the only thing left. He's waiting for you."
+    }
+  ],
+  "reward": {
+    "scrap": 120,
+    "xp": 250,
+    "flags": [
+      "world3Done"
+    ]
+  }
+}

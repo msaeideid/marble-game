@@ -23,6 +23,7 @@ const KINDS: [string, string][] = [
   ['enemies', 'enemy.schema.json'],
   ['upgrades', 'upgrade.schema.json'],
   ['props', 'prop.schema.json'],
+  ['missions', 'mission.schema.json'],
 ];
 
 describe('data files match their JSON schemas', () => {
@@ -36,6 +37,15 @@ describe('data files match their JSON schemas', () => {
         expect(ok).toBe(true);
       });
     }
+  }
+
+  for (const f of readdirSync(sharedDir + 'levels')) {
+    it(`levels/${f}`, () => {
+      const validate = ajv.getSchema('level.schema.json')!;
+      const ok = validate(readJson(`levels/${f}`));
+      expect(validate.errors ?? []).toEqual([]);
+      expect(ok).toBe(true);
+    });
   }
 
   it('rejects an ability whose block does not match its kind', () => {

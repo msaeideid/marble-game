@@ -1,0 +1,47 @@
+{
+  "id": "mission.w2.heavies",
+  "title": "Cloudspire: Heavies",
+  "chapter": "chapter.world2",
+  "kind": "challenge",
+  "level": "cloudspire",
+  "summary": "Take down the big ones.",
+  "requires": {
+    "missions": [
+      "mission.vastor"
+    ]
+  },
+  "objectives": [
+    {
+      "id": "heavies",
+      "text": "Defeat 2 brutes",
+      "kind": "defeat",
+      "count": 2,
+      "enemyType": "enemy.brute"
+    }
+  ],
+  "spawns": [
+    {
+      "when": {
+        "start": true
+      },
+      "enemies": [
+        {
+          "type": "enemy.brute",
+          "pos": [
+            44,
+            0.01,
+            0
+          ],
+          "count": 2,
+          "spread": 3.0
+        }
+      ]
+    }
+  ],
+  "dialogue": [],
+  "reward": {
+    "scrap": 50,
+    "xp": 80
+  },
+  "timeLimit": 90
+}

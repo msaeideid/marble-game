@@ -1,0 +1,47 @@
+{
+  "id": "mission.challenge.thug_rush",
+  "title": "Thug Rush",
+  "chapter": "chapter.city",
+  "kind": "challenge",
+  "level": "arena",
+  "summary": "Six thugs, fifty seconds.",
+  "requires": {
+    "missions": [
+      "mission.tutorial"
+    ]
+  },
+  "objectives": [
+    {
+      "id": "rush",
+      "text": "Defeat 6 thugs",
+      "kind": "defeat",
+      "count": 6,
+      "enemyType": "enemy.thug"
+    }
+  ],
+  "spawns": [
+    {
+      "when": {
+        "start": true
+      },
+      "enemies": [
+        {
+          "type": "enemy.thug",
+          "pos": [
+            0,
+            0.01,
+            14
+          ],
+          "count": 6,
+          "spread": 2.0
+        }
+      ]
+    }
+  ],
+  "dialogue": [],
+  "reward": {
+    "scrap": 25,
+    "xp": 50
+  },
+  "timeLimit": 50
+}

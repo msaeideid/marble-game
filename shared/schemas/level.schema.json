@@ -1,0 +1,200 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "level.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "spawn",
+    "killY",
+    "colliders"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sky",
+        "ground",
+        "buildings"
+      ],
+      "properties": {
+        "sky": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "ground": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "buildings": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        }
+      }
+    },
+    "spawn": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "number"
+      }
+    },
+    "killY": {
+      "type": "number"
+    },
+    "waveDelay": {
+      "type": "number",
+      "minimum": 0
+    },
+    "base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pos",
+        "radius",
+        "regenPerSecond"
+      ],
+      "properties": {
+        "pos": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "number"
+          }
+        },
+        "radius": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "regenPerSecond": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "enemySpawns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "pos"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "pos": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "props": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "pos"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "pos": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "colliders": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "min",
+          "max"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "ground",
+              "building",
+              "crate",
+              "wall"
+            ]
+          },
+          "min": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number"
+            }
+          },
+          "max": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number"
+            }
+          },
+          "breakable": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    }
+  }
+}

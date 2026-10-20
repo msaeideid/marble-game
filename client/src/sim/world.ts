@@ -1,7 +1,16 @@
 import type { Collider, Vec3 } from './types';
 
+/** Colours that make a level look different (flat-shaded); a level without a theme uses the city palette. */
+export interface LevelTheme {
+  sky: number[];
+  ground: number[];
+  buildings: number[][];
+}
+
 export interface LevelData {
   id: string;
+  name?: string;
+  theme?: LevelTheme;
   spawn: number[];
   killY: number;
   waveDelay?: number;

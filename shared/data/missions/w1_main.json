@@ -1,0 +1,191 @@
+{
+  "id": "mission.w1.main",
+  "title": "Sugarworks",
+  "chapter": "chapter.world1",
+  "kind": "story",
+  "level": "sugarworks",
+  "summary": "A candy factory has gone wild. Sticky floors, grumpy mixers, and a boss that won't stop stirring.",
+  "requires": {
+    "missions": [
+      "mission.vastor"
+    ]
+  },
+  "objectives": [
+    {
+      "id": "wp1",
+      "text": "Follow the main path to the first marker",
+      "kind": "reach",
+      "pos": [
+        -77.0,
+        0.01,
+        11.0
+      ],
+      "radius": 4
+    },
+    {
+      "id": "camp1",
+      "text": "Clear the first camp (4 enemies)",
+      "kind": "defeat",
+      "count": 4
+    },
+    {
+      "id": "wp2",
+      "text": "Press on to the second marker",
+      "kind": "reach",
+      "pos": [
+        11.0,
+        0.01,
+        11.0
+      ],
+      "radius": 4
+    },
+    {
+      "id": "camp2",
+      "text": "Clear the second camp",
+      "kind": "defeat",
+      "count": 6
+    },
+    {
+      "id": "wp3",
+      "text": "Head for the third marker",
+      "kind": "reach",
+      "pos": [
+        11.0,
+        0.01,
+        77.0
+      ],
+      "radius": 4
+    },
+    {
+      "id": "gate",
+      "text": "Reach the gate of the Big Batch's lair",
+      "kind": "reach",
+      "pos": [
+        33.0,
+        0.01,
+        33.0
+      ],
+      "radius": 4
+    },
+    {
+      "id": "boss",
+      "text": "Defeat Big Batch, the Runaway Mixer",
+      "kind": "boss",
+      "tag": "boss"
+    }
+  ],
+  "spawns": [
+    {
+      "when": {
+        "objective": "camp1",
+        "event": "start"
+      },
+      "enemies": [
+        {
+          "type": "enemy.thug",
+          "pos": [
+            -33.0,
+            0.01,
+            -11.0
+          ],
+          "count": 4,
+          "spread": 1.4
+        }
+      ]
+    },
+    {
+      "when": {
+        "objective": "camp2",
+        "event": "start"
+      },
+      "enemies": [
+        {
+          "type": "enemy.thug",
+          "pos": [
+            11.0,
+            0.01,
+            55.0
+          ],
+          "count": 4,
+          "spread": 1.4
+        }
+      ]
+    },
+    {
+      "when": {
+        "objective": "camp2",
+        "event": "start"
+      },
+      "enemies": [
+        {
+          "type": "enemy.shard",
+          "pos": [
+            11.0,
+            0.01,
+            55.0
+          ],
+          "count": 2,
+          "spread": 1.7999999999999998
+        }
+      ]
+    },
+    {
+      "when": {
+        "objective": "gate",
+        "event": "complete"
+      },
+      "enemies": [
+        {
+          "type": "boss.big_batch",
+          "pos": [
+            55.0,
+            0.01,
+            55.0
+          ],
+          "count": 1,
+          "spread": 1.0,
+          "tag": "boss"
+        }
+      ]
+    }
+  ],
+  "dialogue": [
+    {
+      "when": {
+        "start": true
+      },
+      "speaker": "Dot",
+      "text": "The Sugarworks smells amazing and is extremely dangerous. VASTOR's shards got into the machines. Follow the markers!"
+    },
+    {
+      "when": {
+        "objective": "wp1",
+        "event": "complete"
+      },
+      "speaker": "Dot",
+      "text": "Thugs on the sugar line. Try not to get stuck to anything."
+    },
+    {
+      "when": {
+        "objective": "boss",
+        "event": "start"
+      },
+      "speaker": "Dot",
+      "text": "That's Big Batch, the mixer VASTOR woke up. It's huge, it's armored and it is VERY mixed up."
+    },
+    {
+      "when": {
+        "complete": true
+      },
+      "speaker": "Dot",
+      "text": "Big Batch is out of batter! Something new for your suit is in the bay. Next stop: Cloudspire!"
+    }
+  ],
+  "reward": {
+    "scrap": 120,
+    "xp": 250,
+    "flags": [
+      "world1Done"
+    ]
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "id": "mission.vastor",
+  "title": "The Worldbreaker",
+  "chapter": "chapter.city",
+  "kind": "story",
+  "level": "vastor_arena",
+  "summary": "A shadow falls over Brightport. VASTOR has arrived. He is very tall, very armored, and very rude.",
+  "requires": {
+    "missions": [
+      "mission.tutorial"
+    ],
+    "level": 3
+  },
+  "objectives": [
+    {
+      "id": "shards",
+      "text": "Clear the shard swarm (6)",
+      "kind": "defeat",
+      "count": 6,
+      "enemyType": "enemy.shard"
+    },
+    {
+      "id": "boss",
+      "text": "Fight VASTOR",
+      "kind": "boss",
+      "tag": "vastor",
+      "escapeAt": 0.3
+    }
+  ],
+  "spawns": [
+    {
+      "when": {
+        "start": true
+      },
+      "enemies": [
+        {
+          "type": "enemy.shard",
+          "pos": [
+            0,
+            0.01,
+            10
+          ],
+          "count": 6,
+          "spread": 2.0
+        }
+      ]
+    },
+    {
+      "when": {
+        "objective": "shards",
+        "event": "complete"
+      },
+      "enemies": [
+        {
+          "type": "boss.vastor",
+          "pos": [
+            0,
+            0.01,
+            21.6
+          ],
+          "count": 1,
+          "spread": 1.0,
+          "tag": "vastor"
+        }
+      ]
+    }
+  ],
+  "dialogue": [
+    {
+      "when": {
+        "start": true
+      },
+      "speaker": "Dot",
+      "text": "Big readings downtown! Something is crushing buildings. I don't like it. Get there!"
+    },
+    {
+      "when": {
+        "start": true
+      },
+      "speaker": "VASTOR",
+      "text": "Hm. A city. How charming. How BREAKABLE."
+    },
+    {
+      "when": {
+        "objective": "boss",
+        "event": "start"
+      },
+      "speaker": "VASTOR",
+      "text": "You tiny sparks! I am VASTOR, the Worldbreaker! Try to dent me!"
+    },
+    {
+      "when": {
+        "objective": "boss",
+        "event": "complete"
+      },
+      "speaker": "VASTOR",
+      "text": "Impressive. You hurt me! ...I'll be back, with all of the worlds behind me!"
+    },
+    {
+      "when": {
+        "complete": true
+      },
+      "speaker": "Dot",
+      "text": "He got away, and half the skyline came with him. He's heading for the Sugarworks. Upgrade, then follow!"
+    }
+  ],
+  "reward": {
+    "scrap": 100,
+    "xp": 200,
+    "flags": [
+      "vastorEscaped"
+    ]
+  }
+}

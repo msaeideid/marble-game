@@ -1,0 +1,55 @@
+{
+  "id": "mission.w1.dash",
+  "title": "Sugarworks: Dash",
+  "chapter": "chapter.world1",
+  "kind": "challenge",
+  "level": "sugarworks",
+  "summary": "Touch three markers fast.",
+  "requires": {
+    "missions": [
+      "mission.vastor"
+    ]
+  },
+  "objectives": [
+    {
+      "id": "d1",
+      "text": "Marker 1",
+      "kind": "reach",
+      "pos": [
+        55.0,
+        0.01,
+        -33.0
+      ],
+      "radius": 4
+    },
+    {
+      "id": "d2",
+      "text": "Marker 2",
+      "kind": "reach",
+      "pos": [
+        -11.0,
+        0.01,
+        33.0
+      ],
+      "radius": 4
+    },
+    {
+      "id": "d3",
+      "text": "Marker 3",
+      "kind": "reach",
+      "pos": [
+        33.0,
+        0.01,
+        -11.0
+      ],
+      "radius": 4
+    }
+  ],
+  "spawns": [],
+  "dialogue": [],
+  "reward": {
+    "scrap": 35,
+    "xp": 55
+  },
+  "timeLimit": 60
+}

@@ -17,6 +17,8 @@ import type {
   TempestParams,
   ZipParams,
 } from '../sim/params';
+import type { MissionData } from '../campaign/missions';
+import type { LevelData } from '../sim/world';
 
 /** Shapes of the JSON files in shared/data (validated against shared/schemas by the test suite). */
 export interface HeroData {
@@ -65,6 +67,9 @@ export interface Content {
   enemies: Record<string, EnemyParams>;
   upgrades: Record<string, UpgradeData>;
   props: Record<string, PropParams>;
+  missions: Record<string, MissionData>;
+  /** Every level by id (shared/levels). */
+  levels: Record<string, LevelData>;
 }
 
 function indexById<T extends { id: string }>(modules: Record<string, T>, what: string): Record<string, T> {
@@ -97,6 +102,14 @@ export function loadContent(): Content {
     upgrades: indexById(
       import.meta.glob<UpgradeData>('@shared/data/upgrades/*.json', { eager: true, import: 'default' }),
       'upgrade',
+    ),
+    missions: indexById(
+      import.meta.glob<MissionData>('@shared/data/missions/*.json', { eager: true, import: 'default' }),
+      'mission',
+    ),
+    levels: indexById(
+      import.meta.glob<LevelData>('@shared/levels/*.json', { eager: true, import: 'default' }),
+      'level',
     ),
   };
 }

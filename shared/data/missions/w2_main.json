@@ -1,0 +1,191 @@
+{
+  "id": "mission.w2.main",
+  "title": "Cloudspire",
+  "chapter": "chapter.world2",
+  "kind": "story",
+  "level": "cloudspire",
+  "summary": "Islands in the sky, linked by thin bridges. Mind the gaps (or fly over them).",
+  "requires": {
+    "missions": [
+      "mission.w1.main"
+    ]
+  },
+  "objectives": [
+    {
+      "id": "wp1",
+      "text": "Follow the main path to the first marker",
+      "kind": "reach",
+      "pos": [
+        22,
+        0.01,
+        -22
+      ],
+      "radius": 4
+    },
+    {
+      "id": "camp1",
+      "text": "Clear the first camp (4 enemies)",
+      "kind": "defeat",
+      "count": 4
+    },
+    {
+      "id": "wp2",
+      "text": "Press on to the second marker",
+      "kind": "reach",
+      "pos": [
+        0,
+        0.01,
+        0
+      ],
+      "radius": 4
+    },
+    {
+      "id": "camp2",
+      "text": "Clear the second camp",
+      "kind": "defeat",
+      "count": 6
+    },
+    {
+      "id": "wp3",
+      "text": "Head for the third marker",
+      "kind": "reach",
+      "pos": [
+        -22,
+        0.01,
+        22
+      ],
+      "radius": 4
+    },
+    {
+      "id": "gate",
+      "text": "Reach the gate of the Gale Warden's lair",
+      "kind": "reach",
+      "pos": [
+        0,
+        0.01,
+        44
+      ],
+      "radius": 4
+    },
+    {
+      "id": "boss",
+      "text": "Defeat Gale Warden, Keeper of the Spire",
+      "kind": "boss",
+      "tag": "boss"
+    }
+  ],
+  "spawns": [
+    {
+      "when": {
+        "objective": "camp1",
+        "event": "start"
+      },
+      "enemies": [
+        {
+          "type": "enemy.shard",
+          "pos": [
+            44,
+            0.01,
+            -44
+          ],
+          "count": 4,
+          "spread": 1.4
+        }
+      ]
+    },
+    {
+      "when": {
+        "objective": "camp2",
+        "event": "start"
+      },
+      "enemies": [
+        {
+          "type": "enemy.shard",
+          "pos": [
+            -44,
+            0.01,
+            0
+          ],
+          "count": 4,
+          "spread": 1.4
+        }
+      ]
+    },
+    {
+      "when": {
+        "objective": "camp2",
+        "event": "start"
+      },
+      "enemies": [
+        {
+          "type": "enemy.brute",
+          "pos": [
+            -44,
+            0.01,
+            0
+          ],
+          "count": 2,
+          "spread": 1.7999999999999998
+        }
+      ]
+    },
+    {
+      "when": {
+        "objective": "gate",
+        "event": "complete"
+      },
+      "enemies": [
+        {
+          "type": "boss.gale_warden",
+          "pos": [
+            44,
+            0.01,
+            44
+          ],
+          "count": 1,
+          "spread": 1.0,
+          "tag": "boss"
+        }
+      ]
+    }
+  ],
+  "dialogue": [
+    {
+      "when": {
+        "start": true
+      },
+      "speaker": "Dot",
+      "text": "Cloudspire! Floating islands, a lot of wind, and not a lot of floor. Stick to the bridges, or take the high road."
+    },
+    {
+      "when": {
+        "objective": "wp1",
+        "event": "complete"
+      },
+      "speaker": "Dot",
+      "text": "Shards ahead. They're fast, so keep moving."
+    },
+    {
+      "when": {
+        "objective": "boss",
+        "event": "start"
+      },
+      "speaker": "Dot",
+      "text": "The Gale Warden guards the spire. It charges, so dodge sideways!"
+    },
+    {
+      "when": {
+        "complete": true
+      },
+      "speaker": "Dot",
+      "text": "The Warden has calmed down. The wind feels nicer already. Down below, a clockwork city is ticking..."
+    }
+  ],
+  "reward": {
+    "scrap": 120,
+    "xp": 250,
+    "flags": [
+      "world2Done"
+    ]
+  }
+}
